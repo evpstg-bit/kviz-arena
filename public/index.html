@@ -51,7 +51,9 @@ function render(){
  <div class="card"><h2>Провести свой квиз</h2><p class="mut">Создайте вопросы и запустите игру на большом экране.</p><button class="sec" onclick="view='edit';msg='';render()">Создать квиз</button></div>`;
  if(view==='edit')return editor();
  if(!S)return a.innerHTML='<p class="c mut">Подключение…</p>';
+ if(S.state==='ended'){if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
  S.host?host():player();
+ if(S.host&&S.state!=='final')a.insertAdjacentHTML('beforeend','<div class="c" style="margin-top:24px"><button class="sec" onclick="endGame()">Завершить игру</button></div>');
 }
 function editor(){
  app().innerHTML=`<h1>Редактор квиза</h1><div class="card"><input type="text" value="${esc(quiz.title)}" oninput="quiz.title=this.value" placeholder="Название">
@@ -123,6 +125,14 @@ async function join(){
  if(r.error){msg=r.error;return render()}
  pin=p;me=r.id;connect();
 }
+async function leave(){
+ if(!confirm('Выйти из игры? Ваши очки будут потеряны.'))return;
+ await act('leave');if(es)es.close();location.reload();
+}
+async function endGame(){
+ if(!confirm('Завершить игру для всех игроков?'))return;
+ await act('end');if(es)es.close();location.reload();
+}
 function lead(list){return list.map((p,i)=>`<div class="lb"><span>${i+1}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}
 function host(){
  const a=app(),q=S.q;
@@ -142,7 +152,7 @@ function host(){
 }
 function player(){
  const a=app(),p=S.me||{name:'',score:0,rank:0};
- const head=`<div class="row" style="justify-content:space-between"><b>${esc(p.name)}</b><b>${p.score} очков</b></div>`;
+ const head=`<div class="row" style="justify-content:space-between"><b>${esc(p.name)}</b><b>${p.score} очков</b><button class="sec" style="padding:4px 12px" onclick="leave()">Выйти</button></div>`;
  if(S.state==='lobby')return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Вы в игре!</h1><p class="mut">Ваше имя на экране ведущего. Ждём начала…</p></div>`;
  if(S.state==='question'){
   if(p.answered)return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Ответ принят ✓</h1><p class="mut">Ждём остальных…</p></div>`;

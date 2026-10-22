@@ -87,6 +87,13 @@ http.createServer(async(req,res)=>{
         Object.assign(p,{score:p.score+pts,lastQ:g.qi,lastA:j,lastPts:pts});
         if([...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
       }
+    }else if(p&&b.type==='leave'){
+      g.players.delete(b.id);
+      [...g.clients].filter(c=>c.id===b.id).forEach(c=>{c.res.end();g.clients.delete(c)});
+      if(g.state==='question'&&g.players.size&&[...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
+    }else if(host&&b.type==='end'){
+      g.state='ended';clearTimeout(g.timer);push(g);
+      setTimeout(()=>{g.clients.forEach(c=>c.res.end());games.delete(g.pin)},1500);
     }
     return json(res,{ok:1});
   }
