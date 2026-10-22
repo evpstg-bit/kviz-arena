@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Квиз-арена</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f2edf9;--fg:#1d1233;--card:#fff;--mut:#6b6280;--pri:#46178f;--bd:#d9d0ea;--c0:#e21b3c;--c1:#1368ce;--c2:#d89e00;--c3:#26890c}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#1a0f2e;--fg:#f4eefc;--card:#2a1a47;--mut:#a99bc4;--pri:#8b5cf6;--bd:#43306b}}
+:root[data-theme=dark]{--bg:#1a0f2e;--fg:#f4eefc;--card:#2a1a47;--mut:#a99bc4;--pri:#8b5cf6;--bd:#43306b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+#app{max-width:880px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:2.2rem;margin:.2em 0;text-align:center}h2{margin:.3em 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:12px 0}
+input[type=text]{width:100%;padding:12px;border-radius:10px;border:2px solid var(--bd);background:var(--bg);color:var(--fg);font-size:1rem;margin:4px 0}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:12px 20px;background:var(--pri);color:#fff;font-weight:700}
+button.sec{background:transparent;color:var(--fg);border:2px solid var(--bd)}
+button:disabled{opacity:.5}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.c{text-align:center}.mut{color:var(--mut)}
+.pin{font-size:3.4rem;font-weight:900;letter-spacing:.15em;color:var(--pri)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ans{min-height:90px;font-size:1.15rem;color:#fff;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:12px}
+.ans.dim{opacity:.35}
+.a0{background:var(--c0)}.a1{background:var(--c1)}.a2{background:var(--c2)}.a3{background:var(--c3)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.chip{background:var(--pri);color:#fff;padding:6px 14px;border-radius:99px;font-weight:600}
+.bar{height:10px;background:var(--bd);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri);width:100%}
+.lb{display:flex;justify-content:space-between;padding:10px 14px;border-radius:10px;background:var(--card);border:1px solid var(--bd);margin:6px 0;font-weight:600}
+.big{font-size:1.6rem;font-weight:800}.ok{color:var(--c3)}.bad{color:var(--c0)}
+.qe label{display:flex;gap:8px;align-items:center}.qe input[type=radio]{width:20px;height:20px}
+.cnt{display:flex;align-items:flex-end;gap:8px;height:150px;margin:10px 0}.cnt div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;color:#fff;font-weight:700;border-radius:8px 8px 0 0;min-height:24px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}h1{font-size:1.8rem}}
+</style></head><body><div id="app"><p class="c mut">Загрузка…</p></div>
+<script>
+const SH=['▲','◆','●','■'];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let me='',pin='',S=null,view='home',msg='',t0=0,es=null;
+let quiz={title:'Мой квиз',T:20,q:[
+ {t:'Столица Франции?',a:['Берлин','Париж','Мадрид','Рим'],c:1},
+ {t:'Сколько будет 7 × 8?',a:['54','56','48','64'],c:1},
+ {t:'Самая большая планета Солнечной системы?',a:['Земля','Сатурн','Юпитер','Марс'],c:2}]};
+const $=id=>document.getElementById(id),app=()=>$('app');
+const api=(p,o)=>fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
+const act=(type,a)=>api('action',{pin,id:me,type,a});
+
+function render(){
+ const a=app();
+ if(view==='home')return a.innerHTML=`<h1>🎯 Квиз-арена</h1><p class="c mut">Играйте в викторины вместе — как в Kahoot</p>
+ <div class="card"><h2>Присоединиться к игре</h2><input type="text" id="jp" placeholder="PIN-код игры" inputmode="numeric" maxlength="6"><input type="text" id="jn" placeholder="Ваш никнейм" maxlength="16">
+ <p class="bad">${esc(msg)}</p><button onclick="join()">Играть</button></div>
+ <div class="card"><h2>Провести свой квиз</h2><p class="mut">Создайте вопросы и запустите игру на большом экране.</p><button class="sec" onclick="view='edit';msg='';render()">Создать квиз</button></div>`;
+ if(view==='edit')return editor();
+ if(!S)return a.innerHTML='<p class="c mut">Подключение…</p>';
+ S.host?host():player();
+}
+function editor(){
+ app().innerHTML=`<h1>Редактор квиза</h1><div class="card"><input type="text" value="${esc(quiz.title)}" oninput="quiz.title=this.value" placeholder="Название">
+ <label class="mut">Секунд на вопрос: <input type="number" value="${quiz.T}" min="5" max="120" style="width:80px" oninput="quiz.T=Math.max(5,+this.value||20)"></label></div>`+
+ quiz.q.map((q,i)=>`<div class="card qe"><b>Вопрос ${i+1}</b> <button class="sec" style="float:right;padding:4px 10px" onclick="quiz.q.splice(${i},1);editor()">✕</button>
+ <input type="text" value="${esc(q.t)}" oninput="quiz.q[${i}].t=this.value" placeholder="Текст вопроса">`+
+ q.a.map((x,j)=>`<label><input type="radio" name="c${i}" ${q.c===j?'checked':''} onchange="quiz.q[${i}].c=${j}"><span style="color:var(--c${j})">${SH[j]}</span><input type="text" value="${esc(x)}" oninput="quiz.q[${i}].a[${j}]=this.value" placeholder="Вариант ${j+1}"></label>`).join('')+
+ `<p class="mut" style="margin:4px 0 0">Отметьте кружком правильный ответ</p></div>`).join('')+
+ `<div class="row"><button class="sec" onclick="quiz.q.push({t:'',a:['','','',''],c:0});editor()">+ Вопрос</button><button onclick="start()">🚀 Запустить игру</button><button class="sec" onclick="view='home';render()">Назад</button></div><p class="bad">${esc(msg)}</p>`;
+}
+function connect(){
+ if(es)es.close();
+ es=new EventSource('/api/events?pin='+pin+'&id='+me);
+ es.onmessage=e=>{S=JSON.parse(e.data);t0=Date.now()-S.elapsed;view='game';render()};
+}
+async function start(){
+ const ok=quiz.q.length&&quiz.q.every(q=>q.t.trim()&&q.a.every(x=>x.trim()));
+ if(!ok){msg='Заполните все вопросы и варианты ответов';return editor()}
+ const r=await api('create',{quiz});
+ if(r.error){msg=r.error;return editor()}
+ pin=r.pin;me=r.id;connect();
+}
+async function join(){
+ const p=$('jp').value.trim(),n=$('jn').value.trim();
+ if(!/^\d{6}$/.test(p)||!n){msg='Введите 6-значный PIN и никнейм';return render()}
+ const r=await api('join',{pin:p,name:n});
+ if(r.error){msg=r.error;return render()}
+ pin=p;me=r.id;connect();
+}
+function lead(list){return list.map((p,i)=>`<div class="lb"><span>${i+1}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}
+function host(){
+ const a=app(),q=S.q;
+ if(S.state==='lobby')return a.innerHTML=`<div class="c"><p class="mut">Откройте этот сайт на телефоне и введите PIN:</p><div class="pin">${S.pin}</div><h2>${esc(S.title)}</h2>
+ <div class="chips">${S.names.map(n=>`<span class="chip">${esc(n)}</span>`).join('')||'<span class="mut">Ждём игроков…</span>'}</div><p class="big">${S.names.length} игроков</p>
+ <button ${S.names.length?'':'disabled'} onclick="act('start')">Начать</button></div>`;
+ if(S.state==='question')return a.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span class="big" id="tm">${S.T}</span><span class="mut">Ответили: ${S.answered} / ${S.names.length}</span></div><div class="bar"><i id="tb"></i></div>
+  <h1 style="margin:30px 0">${esc(q.t)}</h1><div class="grid">${q.a.map((x,j)=>`<div class="ans a${j}" style="padding:14px">${SH[j]} ${esc(x)}</div>`).join('')}</div><div class="c" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить</button></div>`;
+ if(S.state==='results'){
+  const mx=Math.max(1,...S.counts),last=S.qi>=S.total-1;
+  return a.innerHTML=`<h2 class="c">${esc(q.t)}</h2><div class="cnt">${S.counts.map((n,j)=>`<div class="a${j}" style="height:${Math.max(16,n/mx*100)}%;${j===S.correct?'outline:4px solid var(--fg)':'opacity:.45'}">${n}<br>${SH[j]}${j===S.correct?' ✓':''}</div>`).join('')}</div>
+  <p class="c ok big">Правильный ответ: ${esc(q.a[S.correct])}</p><h2>Лидеры</h2>${lead(S.top)}
+  <div class="c" style="margin-top:14px"><button onclick="act('next')">${last?'Итоги':'Следующий вопрос'}</button></div>`;
+ }
+ const m=['🥇','🥈','🥉'];
+ a.innerHTML=`<h1>🏆 Победители</h1>${S.top.map((p,i)=>`<div class="lb big"><span>${m[i]||i+1+'.'} ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}<div class="c"><button onclick="location.reload()">Новая игра</button></div>`;
+}
+function player(){
+ const a=app(),p=S.me||{name:'',score:0,rank:0};
+ const head=`<div class="row" style="justify-content:space-between"><b>${esc(p.name)}</b><b>${p.score} очков</b></div>`;
+ if(S.state==='lobby')return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Вы в игре!</h1><p class="mut">Ваше имя на экране ведущего. Ждём начала…</p></div>`;
+ if(S.state==='question'){
+  if(p.answered)return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Ответ принят ✓</h1><p class="mut">Ждём остальных…</p></div>`;
+  return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">Вопрос ${S.qi+1}</h2><div class="grid" style="margin-top:20px">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j}" style="justify-content:center;font-size:3rem" onclick="act('answer',${j})">${SH[j]}</button>`).join('')}</div>`;
+ }
+ if(S.state==='results'){
+  const ans=p.lastA>=0,ok=ans&&p.lastA===S.correct;
+  return a.innerHTML=head+`<div class="c" style="margin-top:50px"><h1 class="${ok?'ok':'bad'}">${ok?'Верно! 🎉':ans?'Неверно':'Время вышло'}</h1>${ok?`<p class="big">+${p.pts}</p>`:''}<p class="mut">Вы на ${p.rank} месте</p></div>`;
+ }
+ a.innerHTML=head+`<div class="c" style="margin-top:50px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Место: ${p.rank}</p><button onclick="location.reload()">На главную</button></div>`;
+}
+setInterval(()=>{
+ if(!S||S.state!=='question')return;
+ const left=Math.max(0,S.T-(Date.now()-t0)/1000);
+ if($('tm'))$('tm').textContent=Math.ceil(left);
+ if($('tb'))$('tb').style.width=left/S.T*100+'%';
+},250);
+render();
+</script></body></html>
