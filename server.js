@@ -1,13 +1,14 @@
 // Квиз-арена: сервер без зависимостей (только Node.js 16+). Запуск: node server.js
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
+const MAX_PLAYERS=100;
 const PORT=process.env.PORT||3000,games=new Map();
 const rid=()=>crypto.randomBytes(6).toString('hex');
 const str=(s,n)=>String(s??'').slice(0,n);
 
 function ranked(g){return [...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score)}
-function view(g,id){
-  const R=ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
-  const v={state:g.state,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:g.quiz.T,
+function view(g,id,R0){
+  const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
+  const v={state:g.state,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:g.quiz.q[g.qi].T,
     elapsed:Date.now()-g.qStart,host,top:R.slice(0,5).map(p=>({name:p.name,score:p.score}))};
   if(g.state==='question'||g.state==='results')v.q=host?{t:q.t,a:q.a}:{n:q.a.length,t:q.t};
   if(g.state==='results')v.correct=q.c;
@@ -20,17 +21,17 @@ function view(g,id){
   }
   return v;
 }
-function push(g){g.clients.forEach(c=>c.res.write('data: '+JSON.stringify(view(g,c.id))+'\n\n'))}
+function push(g){const R=ranked(g);g.clients.forEach(c=>c.res.write('data: '+JSON.stringify(view(g,c.id,R))+'\n\n'))}
 function startQ(g){
   g.state='question';g.qStart=Date.now();clearTimeout(g.timer);
-  g.timer=setTimeout(()=>toResults(g),g.quiz.T*1000+500);push(g);
+  g.timer=setTimeout(()=>toResults(g),g.quiz.q[g.qi].T*1000+500);push(g);
 }
 function toResults(g){if(g.state!=='question')return;clearTimeout(g.timer);g.state='results';push(g)}
 
 function parseQuiz(z){
-  if(!z||!Array.isArray(z.q)||!z.q.length||z.q.length>60)return null;
-  const q=z.q.map(x=>({t:str(x.t,300).trim(),a:(x.a||[]).slice(0,4).map(s=>str(s,150).trim()),c:+x.c}));
-  if(!q.every(x=>x.t&&x.a.length===4&&x.a.every(Boolean)&&x.c>=0&&x.c<4))return null;
+  if(!z||!Array.isArray(z.q)||!z.q.length||z.q.length>100)return null;
+  const q=z.q.map(x=>({t:str(x.t,300).trim(),a:(x.a||[]).slice(0,4).map(s=>str(s,150).trim()),c:+x.c,T:Math.min(240,Math.max(5,+x.T||+z.T||20))}));
+  if(!q.every(x=>x.t&&x.a.length>=2&&x.a.every(Boolean)&&x.c>=0&&x.c<x.a.length))return null;
   return{title:str(z.title,80)||'Квиз',T:Math.min(120,Math.max(5,+z.T||20)),q};
 }
 function body(req){return new Promise(r=>{let d='';req.on('data',c=>{d+=c;if(d.length>2e6)req.destroy()});req.on('end',()=>{try{r(JSON.parse(d))}catch{r({})}})})}
@@ -38,6 +39,11 @@ const json=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x');
+  if(req.method==='GET'&&u.pathname==='/xlsx.js'){
+    const f=[path.join(__dirname,'public','xlsx.mini.min.js'),path.join(__dirname,'xlsx.mini.min.js')].find(p=>fs.existsSync(p));
+    if(!f){res.writeHead(404);return res.end()}
+    return fs.readFile(f,(e,b)=>{res.writeHead(200,{'Content-Type':'application/javascript'});res.end(b)});
+  }
   if(req.method==='GET'&&u.pathname==='/'){
     const f=[path.join(__dirname,'public','index.html'),path.join(__dirname,'index.html')].find(p=>fs.existsSync(p));
     if(!f){res.writeHead(500,{'Content-Type':'text/plain; charset=utf-8'});return res.end('Не найден файл public/index.html')}
@@ -63,6 +69,7 @@ http.createServer(async(req,res)=>{
   if(!g)return json(res,{error:'Игра не найдена'},404);
   if(u.pathname==='/api/join'){
     const name=str(b.name,16).trim();
+    if(g.players.size>=MAX_PLAYERS)return json(res,{error:'Игра заполнена (максимум '+MAX_PLAYERS+' игроков)'},400);
     if(!name||g.state!=='lobby')return json(res,{error:g.state!=='lobby'?'Игра уже началась':'Введите имя'},400);
     if([...g.players.values()].some(p=>p.name.toLowerCase()===name.toLowerCase()))return json(res,{error:'Это имя занято'},400);
     const id=rid();g.players.set(id,{name,score:0,lastQ:-1,lastA:-1,lastPts:0});push(g);return json(res,{id});
@@ -74,7 +81,7 @@ http.createServer(async(req,res)=>{
     else if(host&&b.type==='next'&&g.state==='results'){
       if(g.qi>=g.quiz.q.length-1){g.state='final';push(g)}else{g.qi++;startQ(g)}
     }else if(p&&b.type==='answer'&&g.state==='question'){
-      const T=g.quiz.T*1000,el=Date.now()-g.qStart,j=+b.a;
+      const T=g.quiz.q[g.qi].T*1000,el=Date.now()-g.qStart,j=+b.a;
       if(p.lastQ!==g.qi&&el<=T+300&&j>=0&&j<4){
         const pts=j===g.quiz.q[g.qi].c?Math.round(1000*(1-Math.min(el,T)/T/2)):0;
         Object.assign(p,{score:p.score+pts,lastQ:g.qi,lastA:j,lastPts:pts});
