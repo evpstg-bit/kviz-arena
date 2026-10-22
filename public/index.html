@@ -12,7 +12,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-
 #app{max-width:880px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:2.2rem;margin:.2em 0;text-align:center}h2{margin:.3em 0}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:12px 0}
-input[type=text]{width:100%;padding:12px;border-radius:10px;border:2px solid var(--bd);background:var(--bg);color:var(--fg);font-size:1rem;margin:4px 0}
+input[type=text],input[type=password]{width:100%;padding:12px;border-radius:10px;border:2px solid var(--bd);background:var(--bg);color:var(--fg);font-size:1rem;margin:4px 0}
 button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:12px 20px;background:var(--pri);color:#fff;font-weight:700}
 button.sec{background:transparent;color:var(--fg);border:2px solid var(--bd)}
 button:disabled{opacity:.5}
@@ -20,7 +20,7 @@ button:disabled{opacity:.5}
 .pin{font-size:3.4rem;font-weight:900;letter-spacing:.15em;color:var(--pri)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ans{min-height:90px;font-size:1.15rem;color:#fff;display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;border-radius:12px}
-.ans.dim{opacity:.35}
+.ans.dim{opacity:.35}.ans.sel{outline:4px solid var(--fg);outline-offset:2px}
 .a0{background:var(--c0)}.a1{background:var(--c1)}.a2{background:var(--c2)}.a3{background:var(--c3)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.chip{background:var(--pri);color:#fff;padding:6px 14px;border-radius:99px;font-weight:600}
 .bar{height:10px;background:var(--bd);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri);width:100%}
@@ -34,11 +34,12 @@ button:disabled{opacity:.5}
 <script>
 const SH=['▲','◆','●','■'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,es=null;
-let quiz={title:'Мой квиз',T:20,q:[
- {t:'Столица Франции?',a:['Берлин','Париж','Мадрид','Рим'],c:1},
- {t:'Сколько будет 7 × 8?',a:['54','56','48','64'],c:1},
- {t:'Самая большая планета Солнечной системы?',a:['Земля','Сатурн','Юпитер','Марс'],c:2}]};
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,es=null,INFO={urls:[],needPass:false},pass='';
+let quiz={title:'Мой квиз',T:20,mode:'classic',K:4,q:[
+ {t:'Столица Франции?',a:['Берлин','Париж','Мадрид','Рим'],cs:[1]},
+ {t:'Сколько будет 7 × 8?',a:['54','56','48','64'],cs:[1]},
+ {t:'Какие числа простые? (выберите все)',a:['2','4','7','9'],cs:[0,2]}]};
+const KN=['Красные','Синие','Жёлтые','Зелёные'];let sel=[];
 const $=id=>document.getElementById(id),app=()=>$('app');
 const api=(p,o)=>fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
 const act=(type,a)=>api('action',{pin,id:me,type,a});
@@ -51,20 +52,27 @@ function render(){
  <div class="card"><h2>Провести свой квиз</h2><p class="mut">Создайте вопросы и запустите игру на большом экране.</p><button class="sec" onclick="view='edit';msg='';render()">Создать квиз</button></div>`;
  if(view==='edit')return editor();
  if(!S)return a.innerHTML='<p class="c mut">Подключение…</p>';
- if(S.state==='ended'){if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
+ if(S.state==='kicked'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}
+ if(S.state==='ended'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
  S.host?host():player();
  if(S.host&&S.state!=='final')a.insertAdjacentHTML('beforeend','<div class="c" style="margin-top:24px"><button class="sec" onclick="endGame()">Завершить игру</button></div>');
 }
+function tg(i,j,on){const c=quiz.q[i].cs;quiz.q[i].cs=on?[...new Set([...c,j])].sort((a,b)=>a-b):c.filter(x=>x!==j)}
 function editor(){
+ const K=quiz.mode==='kingdoms';
  app().innerHTML=`<h1>Редактор квиза</h1><div class="card"><input type="text" value="${esc(quiz.title)}" oninput="quiz.title=this.value" placeholder="Название">
  <label class="mut">Секунд на вопрос по умолчанию: <input type="number" value="${quiz.T}" min="5" max="240" style="width:80px" oninput="quiz.T=Math.max(5,+this.value||20)"></label></div>
- <div class="card"><b>📥 Импорт из Excel (шаблон Kahoot)</b><p class="mut" style="margin:6px 0">Загрузите .xlsx — текущие вопросы будут заменены. Если в «правильных ответах» указано несколько номеров, засчитывается первый.</p>
+ <div class="card qe"><b>🎮 Режим игры</b>
+ <label><input type="radio" name="mode" ${K?'':'checked'} onchange="quiz.mode='classic';editor()"><span><b>Classic</b> — каждый играет сам за себя, очки за правильность и скорость</span></label>
+ <label><input type="radio" name="mode" ${K?'checked':''} onchange="quiz.mode='kingdoms';editor()"><span><b>Color Kingdoms</b> — студенты делятся на цветные королевства; верные ответы захватывают клетки карты</span></label>
+ ${K?`<label class="mut" style="margin-top:6px">Количество королевств: <select onchange="quiz.K=+this.value" style="font:inherit;padding:6px">${[2,3,4].map(n=>`<option ${quiz.K===n?'selected':''}>${n}</option>`).join('')}</select></label>`:''}</div>
+ <div class="card"><b>📥 Импорт из Excel (шаблон Kahoot)</b><p class="mut" style="margin:6px 0">Загрузите .xlsx — текущие вопросы будут заменены. Если в «правильных ответах» несколько номеров (например, 1,3), студентам нужно отметить их все.</p>
  <div class="row"><input type="file" id="xf" accept=".xlsx,.xls" onchange="importX(this)"><button class="sec" onclick="tpl()">Скачать шаблон</button></div><p class="ok">${esc(info)}</p></div>`+
  quiz.q.map((q,i)=>`<div class="card qe"><b>Вопрос ${i+1}</b> <button class="sec" style="float:right;padding:4px 10px" onclick="quiz.q.splice(${i},1);editor()">✕</button>
  <input type="text" value="${esc(q.t)}" oninput="quiz.q[${i}].t=this.value" placeholder="Текст вопроса">`+
- q.a.map((x,j)=>`<label><input type="radio" name="c${i}" ${q.c===j?'checked':''} onchange="quiz.q[${i}].c=${j}"><span style="color:var(--c${j})">${SH[j]}</span><input type="text" value="${esc(x)}" oninput="quiz.q[${i}].a[${j}]=this.value" placeholder="Вариант ${j+1}"></label>`).join('')+
- `<label class="mut">Секунд: <input type="number" min="5" max="240" value="${q.T||''}" placeholder="${quiz.T}" style="width:90px" oninput="quiz.q[${i}].T=+this.value||undefined"></label></div>`).join('')+
- `<div class="row"><button class="sec" onclick="quiz.q.push({t:'',a:['','','',''],c:0});editor()">+ Вопрос</button><button onclick="start()">🚀 Запустить игру</button><button class="sec" onclick="view='home';render()">Назад</button></div><p class="bad">${esc(msg)}</p>`;
+ q.a.map((x,j)=>`<label><input type="checkbox" ${q.cs.includes(j)?'checked':''} onchange="tg(${i},${j},this.checked)"><span style="color:var(--c${j})">${SH[j]}</span><input type="text" value="${esc(x)}" oninput="quiz.q[${i}].a[${j}]=this.value" placeholder="Вариант ${j+1}"></label>`).join('')+
+ `<p class="mut" style="margin:4px 0">Отметьте галочкой правильный ответ. Если отметить несколько — студенты должны выбрать их все.</p><label class="mut">Секунд: <input type="number" min="5" max="240" value="${q.T||''}" placeholder="${quiz.T}" style="width:90px" oninput="quiz.q[${i}].T=+this.value||undefined"></label></div>`).join('')+
+ `${INFO.needPass?`<div class="card"><input type="password" placeholder="Пароль преподавателя" value="${esc(pass)}" oninput="pass=this.value"></div>`:''}<div class="row"><button class="sec" onclick="quiz.q.push({t:'',a:['','','',''],cs:[0]});editor()">+ Вопрос</button><button onclick="start()">🚀 Запустить игру</button><button class="sec" onclick="view='home';render()">Назад</button></div><p class="bad">${esc(msg)}</p>`;
 }
 function parseRows(rows){
  const cls=v=>{v=String(v??'').trim();if(/correct|правильн/i.test(v))return'c';if(/time|врем|лимит/i.test(v))return't';
@@ -77,10 +85,10 @@ function parseRows(rows){
   const row=rows[r],t=String(row[col.q]??'').trim();if(!t)continue;
   const a=[0,1,2,3].map(j=>col['a'+j]===undefined?'':String(row[col['a'+j]]??'').trim());
   while(a.length&&!a[a.length-1])a.pop();
-  const nums=String(row[col.c]??'').split(/[^0-9]+/).filter(Boolean).map(Number),c=nums.length?nums[0]-1:-1;
+  const cs=[...new Set(String(row[col.c]??'').split(/[^0-9]+/).filter(Boolean).map(n=>+n-1))].filter(n=>n>=0&&n<a.length).sort((x,y)=>x-y);
   if(a.length<2||a.some(x=>!x)){errors.push('Строка '+(r+1)+': нужно минимум 2 варианта без пропусков');continue}
-  if(!(c>=0&&c<a.length)){errors.push('Строка '+(r+1)+': не указан правильный ответ');continue}
-  const T=+row[col.t];q.push({t,a,c,T:T>0?Math.min(240,Math.max(5,T)):undefined});
+  if(!cs.length){errors.push('Строка '+(r+1)+': не указан правильный ответ');continue}
+  const T=+row[col.t];q.push({t,a,cs,T:T>0?Math.min(240,Math.max(5,T)):undefined});
  }
  return{q,errors};
 }
@@ -98,23 +106,29 @@ async function importX(inp){
 function tpl(){
  if(typeof XLSX==='undefined'){msg='Библиотека Excel не загрузилась';return editor()}
  const H=['','Question - max 120 characters','Answer 1 - max 75 characters','Answer 2 - max 75 characters','Answer 3 - max 75 characters','Answer 4 - max 75 characters','Time limit (sec) – 5, 10, 20, 30, 60, 90, 120, or 240 secs','Correct answer(s) - choose at least one'];
- const ws=XLSX.utils.aoa_to_sheet([H,[1,'Столица Франции?','Берлин','Париж','Мадрид','Рим',20,2],[2,'Земля плоская?','Да','Нет','','',10,2]]);
+ const ws=XLSX.utils.aoa_to_sheet([H,[1,'Столица Франции?','Берлин','Париж','Мадрид','Рим',20,2],[2,'Земля плоская?','Да','Нет','','',10,2],[3,'Какие числа простые?','2','4','7','9',20,'1,3']]);
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Quiz');XLSX.writeFile(wb,'quiz-template.xlsx');
 }
+const getSess=()=>{try{return JSON.parse(sessionStorage.getItem('qs'))}catch(e){return null}};
+function clearSess(){try{sessionStorage.removeItem('qs')}catch(e){}}
 function connect(){
  if(es)es.close();
+ try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me}))}catch(e){}
  es=new EventSource('/api/events?pin='+pin+'&id='+me);
- es.onmessage=e=>{S=JSON.parse(e.data);t0=Date.now()-S.elapsed;view='game';render()};
+ es.onmessage=e=>{S=JSON.parse(e.data);t0=Date.now()-(S.elapsed||0);view='game';if(S.state!=='question')sel=[];if(S.state==='final'&&!S.host)clearSess();render()};
+ es.onerror=()=>{if(es.readyState===2){clearSess();if(S&&['final','ended','kicked'].includes(S.state))return;S=null;view='home';msg='Игра не найдена или уже завершена';render()}};
 }
 async function start(){
  const qs=[];
  for(let i=0;i<quiz.q.length;i++){
   const q=quiz.q[i],a=q.a.map(x=>x.trim());while(a.length&&!a[a.length-1])a.pop();
-  if(!q.t.trim()||a.length<2||a.some(x=>!x)||q.c>=a.length){msg='Вопрос '+(i+1)+': заполните текст, минимум 2 варианта и отметьте правильный';return editor()}
-  qs.push({t:q.t.trim(),a,c:q.c,T:q.T});
+  const cs=q.cs.filter(c=>c<a.length);
+  if(!q.t.trim()||a.length<2||a.some(x=>!x)||!cs.length){msg='Вопрос '+(i+1)+': заполните текст, минимум 2 варианта и отметьте правильный';return editor()}
+  qs.push({t:q.t.trim(),a,cs,T:q.T});
  }
  if(!qs.length){msg='Добавьте хотя бы один вопрос';return editor()}
- const r=await api('create',{quiz:{title:quiz.title,T:quiz.T,q:qs}});
+ try{localStorage.setItem('qd',JSON.stringify(quiz))}catch(e){}
+ const r=await api('create',{quiz:{title:quiz.title,T:quiz.T,mode:quiz.mode,K:quiz.K,q:qs},pass});
  if(r.error){msg=r.error;return editor()}
  pin=r.pin;me=r.id;connect();
 }
@@ -127,42 +141,76 @@ async function join(){
 }
 async function leave(){
  if(!confirm('Выйти из игры? Ваши очки будут потеряны.'))return;
- await act('leave');if(es)es.close();location.reload();
+ await act('leave');clearSess();if(es)es.close();location.reload();
 }
 async function endGame(){
  if(!confirm('Завершить игру для всех игроков?'))return;
- await act('end');if(es)es.close();location.reload();
+ await act('end');clearSess();if(es)es.close();location.reload();
 }
+const kick=id=>act('kick',id);
+function newGame(){clearSess();location.reload()}
+function joinUrl(){const h=location.hostname;return(h==='localhost'||h==='127.0.0.1')&&INFO.urls.length?INFO.urls.join('  или  '):location.origin}
+async function report(){
+ if(typeof XLSX==='undefined')return alert('Библиотека Excel не загрузилась');
+ const r=await api('report',{pin,id:me});if(r.error)return alert(r.error);
+ const Q=r.questions,K=r.mode==='kingdoms',P=[...r.players].sort((a,b)=>b.score-a.score),pc=(n,d)=>d?Math.round(n/d*100)+'%':'';
+ const tn=p=>K&&p.team!==undefined?KN[p.team]:'';
+ const s1=XLSX.utils.aoa_to_sheet([['Место','Имя',...(K?['Королевство']:[]),'Очки','Верно','Отвечено','Всего вопросов','Точность'],...P.map((p,i)=>{const ok=p.log.filter(l=>l.ok).length;return[i+1,p.name,...(K?[tn(p)]:[]),p.score,ok,p.log.length,Q.length,pc(ok,Q.length)]})]);
+ const s2=XLSX.utils.aoa_to_sheet([['Имя',...Q.map((q,i)=>(i+1)+'. '+q.t)],...P.map(p=>[p.name,...Q.map((q,i)=>{const l=p.log.find(x=>x.qi===i);return l?(l.ok?'✓ ':'✗ ')+l.a.map(k=>q.a[k]).join(' + '):'—'})])]);
+ const s3=XLSX.utils.aoa_to_sheet([['№','Вопрос','Правильный ответ','Верно','Ответили','% верных'],...Q.map((q,i)=>{const L=P.map(p=>p.log.find(x=>x.qi===i)).filter(Boolean),ok=L.filter(l=>l.ok).length;return[i+1,q.t,q.cs.map(k=>q.a[k]).join(' + '),ok,L.length,pc(ok,L.length)]})]);
+ const wb=XLSX.utils.book_new();[['Рейтинг',s1],['Ответы',s2],['По вопросам',s3]].forEach(([n,s])=>XLSX.utils.book_append_sheet(wb,s,n));
+ if(K&&r.teams)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Королевство','Клеток','Участников','Сумма очков'],...r.teams.map(t=>[KN[t.k],t.cells,t.members,t.score])]),'Королевства');
+ XLSX.writeFile(wb,'results-'+pin+'.xlsx');
+}
+function board(S,small){
+ const cell=(o,i)=>`<div style="aspect-ratio:1;border-radius:6px;background:${o<0?'var(--bd)':'var(--c'+o+')'};display:flex;align-items:center;justify-content:center;font-size:${small?'.8rem':'1.3rem'};${S.caps.includes(i)?'outline:3px solid var(--fg);outline-offset:-3px;':''}${o<0?'opacity:.55':''}">${S.castles.includes(i)?'🏰':''}</div>`;
+ return `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:${small?3:4}px;max-width:${small?260:440}px;margin:12px auto">${S.board.map(cell).join('')}</div>`;
+}
+function teamsHtml(S){return `<div class="row" style="justify-content:center">${S.teams.map(t=>`<div class="a${t.k}" style="color:#fff;padding:8px 14px;border-radius:10px;text-align:center"><b>${SH[t.k]} ${KN[t.k]}</b><br>${t.cells} клет. · ${t.members} чел.${S.state==='results'?' · верно '+t.ok+'/'+t.members:''}</div>`).join('')}</div>`}
+const winner=S=>[...S.teams].sort((a,b)=>b.cells-a.cells||b.score-a.score)[0].k;
 function lead(list){return list.map((p,i)=>`<div class="lb"><span>${i+1}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}
+function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
+function sendSel(){if(sel.length)act('answer',sel)}
 function host(){
- const a=app(),q=S.q;
- if(S.state==='lobby')return a.innerHTML=`<div class="c"><p class="mut">Откройте этот сайт на телефоне и введите PIN:</p><div class="pin">${S.pin}</div><h2>${esc(S.title)}</h2>
- <div class="chips">${S.names.map(n=>`<span class="chip">${esc(n)}</span>`).join('')||'<span class="mut">Ждём игроков…</span>'}</div><p class="big">${S.names.length} / 100 игроков</p>
- <button ${S.names.length?'':'disabled'} onclick="act('start')">Начать</button></div>`;
- if(S.state==='question')return a.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span class="big" id="tm">${S.T}</span><span class="mut">Ответили: ${S.answered} / ${S.names.length}</span></div><div class="bar"><i id="tb"></i></div>
-  <h1 style="margin:30px 0">${esc(q.t)}</h1><div class="grid">${q.a.map((x,j)=>`<div class="ans a${j}" style="padding:14px">${SH[j]} ${esc(x)}</div>`).join('')}</div><div class="c" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить</button></div>`;
+ const a=app(),q=S.q,N=S.rows.length,KM=S.mode==='kingdoms'&&!!S.board;
+ const dl='<button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button>';
+ const tag=p=>KM?`<span style="color:var(--c${p.team})">${SH[p.team]}</span> `:'';
+ const mode=S.mode==='kingdoms'?'Color Kingdoms — королевств: '+Math.min(S.K,N||S.K):'Classic';
+ if(S.state==='lobby')return a.innerHTML=`<div class="c"><p class="mut">Студенты открывают в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и вводят PIN:</p><div class="pin">${S.pin}</div><h2>${esc(S.title)}</h2><p class="mut">Режим: ${mode}</p>
+ <div class="chips">${S.rows.map(p=>`<span class="chip">${esc(p.name)}<span style="cursor:pointer;margin-left:8px;opacity:.8" title="Исключить" onclick="kick('${p.id}')">✕</span></span>`).join('')||'<span class="mut">Ждём студентов…</span>'}</div><p class="big">${N} / 100 студентов</p>
+ <button ${N?'':'disabled'} onclick="act('start')">Начать</button></div>`;
+ if(S.state==='question')return a.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span class="big" id="tm">${S.T}</span><span class="mut">Ответили: ${S.answered} / ${N}</span></div><div class="bar"><i id="tb"></i></div>
+  <h1 style="margin:30px 0 10px">${esc(q.t)}</h1>${q.multi?'<p class="c mut">Несколько правильных ответов — выберите все</p>':''}<div class="grid">${q.a.map((x,j)=>`<div class="ans a${j}" style="padding:14px">${SH[j]} ${esc(x)}</div>`).join('')}</div>
+  ${KM?'<div style="margin-top:16px">'+teamsHtml(S)+'</div>':''}
+  <div class="chips" style="margin-top:18px">${S.rows.map(p=>`<span class="chip" style="${KM?'background:var(--c'+p.team+');':''}opacity:${p.ans?1:.35}">${p.ans?'✓ ':''}${esc(p.name)}</span>`).join('')}</div>
+  <div class="c" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить вопрос</button></div>`;
  if(S.state==='results'){
-  const mx=Math.max(1,...S.counts),last=S.qi>=S.total-1;
-  return a.innerHTML=`<h2 class="c">${esc(q.t)}</h2><div class="cnt">${S.counts.slice(0,q.a.length).map((n,j)=>`<div class="a${j}" style="height:${Math.max(16,n/mx*100)}%;${j===S.correct?'outline:4px solid var(--fg)':'opacity:.45'}">${n}<br>${SH[j]}${j===S.correct?' ✓':''}</div>`).join('')}</div>
-  <p class="c ok big">Правильный ответ: ${esc(q.a[S.correct])}</p><h2>Лидеры</h2>${lead(S.top)}
-  <div class="c" style="margin-top:14px"><button onclick="act('next')">${last?'Итоги':'Следующий вопрос'}</button></div>`;
+  const mx=Math.max(1,...S.counts),last=S.qi>=S.total-1,okN=S.rows.filter(p=>p.ok).length;
+  return a.innerHTML=`<h2 class="c">${esc(q.t)}</h2><div class="cnt">${S.counts.slice(0,q.a.length).map((n,j)=>`<div class="a${j}" style="height:${Math.max(16,n/mx*100)}%;${S.correct.includes(j)?'outline:4px solid var(--fg)':'opacity:.45'}">${n}<br>${SH[j]}${S.correct.includes(j)?' ✓':''}</div>`).join('')}</div>
+  <p class="c ok big">Правильный ответ: ${esc(S.correct.map(k=>q.a[k]).join(' + '))}</p><p class="c mut">Верно ответили: ${okN} из ${N}</p>
+  ${KM?'<h2 class="c">Карта королевств</h2>'+board(S)+teamsHtml(S):''}<h2>Студенты</h2>
+  <div style="max-height:320px;overflow:auto">${S.rows.map((p,i)=>`<div class="lb"><span>${i+1}. ${tag(p)}${esc(p.name)} <span class="${p.ok?'ok':p.ans?'bad':'mut'}">${p.ok?'✓':p.ans?'✗':'—'}${p.ok?' +'+p.pts:''}</span></span><span>${p.score}</span></div>`).join('')}</div>
+  <div class="row" style="justify-content:center;margin-top:14px"><button onclick="act('next')">${last?'Итоги':'Следующий вопрос'}</button>${dl}</div>`;
  }
- const m=['🥇','🥈','🥉'];
- a.innerHTML=`<h1>🏆 Победители</h1>${S.top.map((p,i)=>`<div class="lb big"><span>${m[i]||i+1+'.'} ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}<div class="c"><button onclick="location.reload()">Новая игра</button></div>`;
+ const m=['🥇','🥈','🥉'],w=KM?winner(S):0;
+ a.innerHTML=`<h1>🏆 Итоги</h1>${KM?`<h2 class="c" style="color:var(--c${w})">${SH[w]} Побеждают ${KN[w].toLowerCase()}!</h2>`+board(S)+teamsHtml(S)+'<h2>Лучшие студенты</h2>':''}<div style="max-height:420px;overflow:auto">${S.rows.map((p,i)=>`<div class="lb"><span>${m[i]||i+1+'.'} ${tag(p)}${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}</div><div class="row" style="justify-content:center;margin-top:14px">${dl}<button onclick="newGame()">Новая игра</button></div>`;
 }
 function player(){
- const a=app(),p=S.me||{name:'',score:0,rank:0};
- const head=`<div class="row" style="justify-content:space-between"><b>${esc(p.name)}</b><b>${p.score} очков</b><button class="sec" style="padding:4px 12px" onclick="leave()">Выйти</button></div>`;
- if(S.state==='lobby')return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Вы в игре!</h1><p class="mut">Ваше имя на экране ведущего. Ждём начала…</p></div>`;
+ const a=app(),p=S.me||{name:'',score:0,rank:0},KM=S.mode==='kingdoms'&&!!S.board;
+ const tm=KM&&p.team!==undefined?`<span class="chip" style="background:var(--c${p.team});padding:2px 10px">${SH[p.team]} ${KN[p.team]}</span>`:'';
+ const head=`<div class="row" style="justify-content:space-between"><b>${esc(p.name)}</b>${tm}<b>${p.score} очков</b><button class="sec" style="padding:4px 12px" onclick="leave()">Выйти</button></div>`;
+ if(S.state==='lobby')return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Вы в игре!</h1><p class="mut">Ваше имя на экране ведущего. Ждём начала…</p>${S.mode==='kingdoms'?'<p class="mut">Режим Color Kingdoms: королевство назначится при старте</p>':''}</div>`;
  if(S.state==='question'){
   if(p.answered)return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Ответ принят ✓</h1><p class="mut">Ждём остальных…</p></div>`;
-  return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">Вопрос ${S.qi+1}</h2><div class="grid" style="margin-top:20px">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j}" style="justify-content:center;font-size:3rem" onclick="act('answer',${j})">${SH[j]}</button>`).join('')}</div>`;
+  const mu=S.q.multi;
+  return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">Вопрос ${S.qi+1}</h2>${mu?'<p class="c mut">Выберите все правильные ответы и нажмите «Ответить»</p>':''}<div class="grid" style="margin-top:20px">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j}${mu&&sel.includes(j)?' sel':''}${mu&&sel.length&&!sel.includes(j)?' dim':''}" style="justify-content:center;font-size:3rem" onclick="${mu?'tg2('+j+')':'act(\'answer\','+j+')'}">${SH[j]}</button>`).join('')}</div>${mu?`<div class="c" style="margin-top:14px"><button ${sel.length?'':'disabled'} onclick="sendSel()">Ответить</button></div>`:''}`;
  }
  if(S.state==='results'){
-  const ans=p.lastA>=0,ok=ans&&p.lastA===S.correct;
-  return a.innerHTML=head+`<div class="c" style="margin-top:50px"><h1 class="${ok?'ok':'bad'}">${ok?'Верно! 🎉':ans?'Неверно':'Время вышло'}</h1>${ok?`<p class="big">+${p.pts}</p>`:''}<p class="mut">Вы на ${p.rank} месте</p></div>`;
+  const ans=p.answered,ok=ans&&p.ok;
+  return a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1 class="${ok?'ok':'bad'}">${ok?'Верно! 🎉':ans?'Неверно':'Время вышло'}</h1>${ok?`<p class="big">+${p.pts}</p>`:''}<p class="mut">Вы на ${p.rank} месте</p>${KM?board(S,true)+teamsHtml(S):''}</div>`;
  }
- a.innerHTML=head+`<div class="c" style="margin-top:50px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Место: ${p.rank}</p><button onclick="location.reload()">На главную</button></div>`;
+ const w=KM?winner(S):-1;
+ a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${KM?(p.team===w?'🏆 Ваше королевство победило!':'Победили '+KN[w].toLowerCase()):(p.rank===1?'🥇 Вы победили!':'Игра окончена')}</h1><p class="big">Ваше место: ${p.rank}</p>${KM?board(S,true)+teamsHtml(S):''}<button onclick="location.reload()">На главную</button></div>`;
 }
 setInterval(()=>{
  if(!S||S.state!=='question')return;
@@ -170,5 +218,10 @@ setInterval(()=>{
  if($('tm'))$('tm').textContent=Math.ceil(left);
  if($('tb'))$('tb').style.width=left/S.T*100+'%';
 },250);
-render();
+(async()=>{
+ try{const d=JSON.parse(localStorage.getItem('qd'));if(d&&Array.isArray(d.q)&&d.q.length){quiz=d;quiz.q.forEach(q=>{if(!q.cs)q.cs=[q.c||0]});quiz.mode=quiz.mode||'classic';quiz.K=quiz.K||4}}catch(e){}
+ try{INFO=await(await fetch('/api/info')).json()}catch(e){}
+ const sv=getSess();if(sv){pin=sv.pin;me=sv.id;return connect()}
+ render();
+})();
 </script></body></html>
