@@ -4,6 +4,30 @@ const MAX_PLAYERS=100;
 const PORT=process.env.PORT||3000,games=new Map();
 const rid=()=>crypto.randomBytes(6).toString('hex');
 const str=(s,n)=>String(s??'').slice(0,n);
+// ---- библиотека тестов (хранится в файле data/quizzes.json) ----
+const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,'data'),DB_FILE=path.join(DATA_DIR,'quizzes.json');
+let LIBQ=[];try{LIBQ=JSON.parse(fs.readFileSync(DB_FILE,'utf8'))}catch(e){}
+function persist(){
+  try{fs.mkdirSync(DATA_DIR,{recursive:true});const t=DB_FILE+'.tmp';fs.writeFileSync(t,JSON.stringify(LIBQ));fs.renameSync(t,DB_FILE);return true}
+  catch(e){console.error('Не удалось сохранить тесты:',e.message);return false}
+}
+function cleanQuiz(z){
+  const q=(Array.isArray(z.q)?z.q:[]).slice(0,100).map(x=>{
+    const a=(Array.isArray(x.a)?x.a:[]).slice(0,4).map(t=>str(t,150)),T=+x.T;
+    const cs=[...new Set((Array.isArray(x.cs)?x.cs:[]).map(Number))].filter(n=>Number.isInteger(n)&&n>=0&&n<4).sort((p,r)=>p-r);
+    return{t:str(x.t,300),a,cs,T:T>=5?Math.min(240,T):undefined};
+  });
+  return{title:str(z.title,80).trim()||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:z.mode==='kingdoms'?'kingdoms':'classic',K:Math.min(4,Math.max(2,+z.K||4)),q};
+}
+function isLocal(req){ // запрос с компьютера, на котором запущен сервер (не через прокси)
+  if(req.headers['x-forwarded-for']||req.headers['forwarded'])return false;
+  const ra=(req.socket.remoteAddress||'').replace(/^::ffff:/,'');
+  return ra==='127.0.0.1'||ra==='::1'||Object.values(require('os').networkInterfaces()).flat().some(i=>i.address===ra);
+}
+function libDenied(req,b){
+  if(process.env.TEACHER_PASSWORD)return b.pass===process.env.TEACHER_PASSWORD?null:'Неверный пароль преподавателя';
+  return isLocal(req)?null:'Библиотека тестов доступна только с компьютера, на котором запущен сервер. Чтобы открыть её удалённо, задайте пароль: TEACHER_PASSWORD=... node server.js';
+}
 
 const BN=7,same=(a,b)=>Array.isArray(a)&&a.length===b.length&&a.every((x,i)=>x===b[i]);
 function teams(g,R){
@@ -78,11 +102,11 @@ const json=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x');
-  const LIB={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js'};
+  const LIB={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css'};
   if(req.method==='GET'&&LIB[u.pathname]){
     const f=[path.join(__dirname,'public',LIB[u.pathname]),path.join(__dirname,LIB[u.pathname])].find(p=>fs.existsSync(p));
     if(!f){res.writeHead(404);return res.end()}
-    return fs.readFile(f,(e,b)=>{res.writeHead(200,{'Content-Type':'application/javascript'});res.end(b)});
+    return fs.readFile(f,(e,b)=>{res.writeHead(200,{'Content-Type':u.pathname.endsWith('.css')?'text/css':'application/javascript','Cache-Control':'no-cache'});res.end(b)});
   }
   if(req.method==='GET'&&u.pathname==='/'){
     const f=[path.join(__dirname,'public','index.html'),path.join(__dirname,'index.html')].find(p=>fs.existsSync(p));
@@ -99,7 +123,7 @@ http.createServer(async(req,res)=>{
   }
   if(req.method==='GET'&&u.pathname==='/api/info'){
     const urls=Object.values(require('os').networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).map(i=>'http://'+i.address+':'+PORT);
-    return json(res,{urls,needPass:!!process.env.TEACHER_PASSWORD});
+    return json(res,{urls,needPass:!!process.env.TEACHER_PASSWORD,lib:process.env.TEACHER_PASSWORD?'password':(isLocal(req)?'open':'locked')});
   }
   if(req.method!=='POST')return json(res,{},404);
   const b=await body(req);
@@ -109,6 +133,22 @@ http.createServer(async(req,res)=>{
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
     const g={pin,hostId:rid(),quiz,state:'lobby',mode:quiz.mode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
     games.set(pin,g);return json(res,{pin,id:g.hostId});
+  }
+  if(u.pathname.startsWith('/api/lib/')){
+    const deny=libDenied(req,b);if(deny)return json(res,{error:deny},403);
+    const op=u.pathname.slice(9),f=LIBQ.find(x=>x.id===b.id),werr=()=>json(res,{error:'Не удалось записать файл на сервере'},500);
+    if(op==='list')return json(res,{items:LIBQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,updated:x.updated})).sort((a,c)=>c.updated-a.updated)});
+    if(op==='get')return f?json(res,{quiz:f.quiz}):json(res,{error:'Тест не найден'},404);
+    if(op==='save'){
+      const quiz=cleanQuiz(b.quiz||{});
+      if(b.id&&!f)return json(res,{error:'Тест не найден (возможно, удалён)'},404);
+      let id;
+      if(f){f.quiz=quiz;f.updated=Date.now();id=f.id}
+      else{if(LIBQ.length>=200)return json(res,{error:'Достигнут лимит: 200 тестов'},400);id=rid();LIBQ.push({id,quiz,updated:Date.now()})}
+      return persist()?json(res,{id,title:quiz.title}):werr();
+    }
+    if(op==='delete'){if(!f)return json(res,{error:'Тест не найден'},404);LIBQ=LIBQ.filter(x=>x!==f);return persist()?json(res,{ok:1}):werr()}
+    return json(res,{error:'Неизвестная операция'},404);
   }
   const g=games.get(String(b.pin));
   if(!g)return json(res,{error:'Игра не найдена'},404);

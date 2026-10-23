@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{--c0:#e21b3c;--c1:#1368ce;--c2:#d89e00;--c3:#26890c;--fg:#0f172a;--bd:#cbd5e1;--pri:#7c3aed;--mut:#64748b;--bg:#f5f3ff;--card:#fff}
+@media(prefers-color-scheme:dark){:root{--fg:#f8fafc;--bd:#334155;--pri:#a78bfa;--mut:#94a3b8;--bg:#0b1020;--card:#1e1b4b}}
+
+@layer base{
+  body{@apply min-h-screen font-sans text-slate-900 antialiased bg-gradient-to-br from-violet-100 via-fuchsia-50 to-sky-100 dark:from-slate-950 dark:via-violet-950 dark:to-slate-900 dark:text-slate-100}
+  h1{@apply my-2 text-center text-3xl font-black tracking-tight sm:text-4xl}
+  p{@apply my-2}
+  h2{@apply my-2 text-xl font-bold tracking-tight}
+  button{@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 font-bold text-white shadow-lg shadow-violet-600/30 transition hover:brightness-110 active:scale-95 disabled:pointer-events-none disabled:opacity-50}
+  input[type=text],input[type=password],input[type=number],select{@apply my-1 w-full rounded-2xl border-0 bg-white/80 px-4 py-3 text-base text-slate-900 shadow-inner outline-none ring-1 ring-slate-300 transition focus:ring-2 focus:ring-violet-500 dark:bg-white/10 dark:text-white dark:ring-white/20}
+  input[type=file]{@apply text-sm file:mr-3 file:cursor-pointer file:rounded-xl file:border-0 file:bg-violet-100 file:px-4 file:py-2 file:font-semibold file:text-violet-700}
+  input[type=checkbox],input[type=radio]{@apply h-5 w-5 shrink-0 accent-violet-600}
+}
+
+@layer components{
+  #app{@apply mx-auto max-w-4xl px-4 pb-16 pt-6}
+  #app.enter>*{@apply animate-fade-up}
+  .hero{@apply bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-400 bg-clip-text text-5xl text-transparent sm:text-6xl}
+  .card{@apply my-3 rounded-3xl border border-white/70 bg-white/70 p-5 shadow-xl shadow-violet-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/5}
+  button.sec{@apply bg-none bg-white/70 text-slate-800 shadow-none ring-1 ring-slate-300 hover:bg-white dark:bg-white/10 dark:text-slate-100 dark:ring-white/20}
+  .row{@apply flex flex-wrap items-center gap-3}
+  .c{@apply text-center}
+  .mut{@apply text-slate-500 dark:text-slate-400}
+  .big{@apply my-3 text-2xl font-extrabold}
+  .ok{@apply text-emerald-600 dark:text-emerald-400}
+  .bad{@apply text-rose-600 dark:text-rose-400}
+  .pin{@apply bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-6xl font-black tracking-[.14em] text-transparent sm:text-7xl}
+  .grid{@apply grid-cols-1 gap-3 sm:grid-cols-2}
+  .ans{@apply min-h-[88px] w-full justify-start gap-3 rounded-2xl bg-none px-5 py-4 text-left text-lg font-bold text-white shadow-[0_6px_0_rgba(0,0,0,.28)] active:translate-y-1 active:scale-100 active:shadow-[0_2px_0_rgba(0,0,0,.28)]}
+  .ans.dim{@apply opacity-40}
+  .ans.sel{@apply ring-4 ring-white ring-offset-2 ring-offset-violet-500}
+  .a0{background-color:var(--c0)}.a1{background-color:var(--c1)}.a2{background-color:var(--c2)}.a3{background-color:var(--c3)}
+  .chips{@apply my-4 flex flex-wrap justify-center gap-2}
+  .chip{@apply inline-flex items-center rounded-full bg-violet-600 px-4 py-1.5 text-sm font-semibold text-white shadow transition}
+  .bar{@apply h-3 overflow-hidden rounded-full bg-black/10 dark:bg-white/10}
+  .bar i{@apply block h-full w-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500}
+  .lb{@apply my-1.5 flex items-center justify-between rounded-2xl bg-white/70 px-4 py-2.5 font-semibold shadow-sm ring-1 ring-black/5 dark:bg-white/10 dark:ring-white/10}
+  .cnt{@apply my-3 flex h-40 items-end gap-3}
+  .cnt>div{@apply flex min-h-[24px] flex-1 flex-col items-center justify-end rounded-t-2xl pb-1 font-bold text-white shadow-lg transition-all duration-500}
+  .qe label{@apply my-1 flex items-center gap-2}
+}

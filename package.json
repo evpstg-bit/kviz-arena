@@ -1,1 +1,15 @@
-{"name":"kviz-arena","version":"1.0.0","private":true,"scripts":{"start":"node server.js"},"engines":{"node":">=16"}}
+{
+  "name": "kviz-arena",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "build:css": "tailwindcss -i src/input.css -o public/tailwind.css --minify"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}
