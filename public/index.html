@@ -31,10 +31,11 @@ button:disabled{opacity:.5}
 @media(max-width:520px){.grid{grid-template-columns:1fr}h1{font-size:1.8rem}}
 </style></head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
+<script src="/qr.js"></script>
 <script>
 const SH=['▲','◆','●','■'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,es=null,INFO={urls:[],needPass:false},pass='';
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,es=null,INFO={urls:[],needPass:false},pass='',prePin='',preName='',showQR=false;
 let quiz={title:'Мой квиз',T:20,mode:'classic',K:4,q:[
  {t:'Столица Франции?',a:['Берлин','Париж','Мадрид','Рим'],cs:[1]},
  {t:'Сколько будет 7 × 8?',a:['54','56','48','64'],cs:[1]},
@@ -47,7 +48,7 @@ const act=(type,a)=>api('action',{pin,id:me,type,a});
 function render(){
  const a=app();
  if(view==='home')return a.innerHTML=`<h1>🎯 Квиз-арена</h1><p class="c mut">Играйте в викторины вместе — как в Kahoot</p>
- <div class="card"><h2>Присоединиться к игре</h2><input type="text" id="jp" placeholder="PIN-код игры" inputmode="numeric" maxlength="6"><input type="text" id="jn" placeholder="Ваш никнейм" maxlength="16">
+ <div class="card"><h2>Присоединиться к игре</h2><input type="text" id="jp" placeholder="PIN-код игры" inputmode="numeric" maxlength="6" value="${esc(prePin)}"><input type="text" id="jn" placeholder="Ваш никнейм" maxlength="16" value="${esc(preName)}">
  <p class="bad">${esc(msg)}</p><button onclick="join()">Играть</button></div>
  <div class="card"><h2>Провести свой квиз</h2><p class="mut">Создайте вопросы и запустите игру на большом экране.</p><button class="sec" onclick="view='edit';msg='';render()">Создать квиз</button></div>`;
  if(view==='edit')return editor();
@@ -55,7 +56,7 @@ function render(){
  if(S.state==='kicked'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}
  if(S.state==='ended'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
  S.host?host():player();
- if(S.host&&S.state!=='final')a.insertAdjacentHTML('beforeend','<div class="c" style="margin-top:24px"><button class="sec" onclick="endGame()">Завершить игру</button></div>');
+ if(S.host&&S.state!=='final')a.insertAdjacentHTML('beforeend',(S.state==='lobby'?'':`<div class="c mut" style="margin-top:20px">Можно подключиться и сейчас: ${esc(joinUrl())} · PIN ${S.pin}</div>${showQR?qrBox(260):''}`)+`<div class="row" style="justify-content:center;margin-top:16px">${S.state==='lobby'?'':`<button class="sec" onclick="showQR=!showQR;render()">📱 QR-код</button><button class="sec" onclick="act('lock')">${S.locked?'🔓 Открыть вход':'🔒 Закрыть вход'}</button>`}<button class="sec" onclick="endGame()">Завершить игру</button></div>`);
 }
 function tg(i,j,on){const c=quiz.q[i].cs;quiz.q[i].cs=on?[...new Set([...c,j])].sort((a,b)=>a-b):c.filter(x=>x!==j)}
 function editor(){
@@ -133,11 +134,13 @@ async function start(){
  pin=r.pin;me=r.id;connect();
 }
 async function join(){
- const p=$('jp').value.trim(),n=$('jn').value.trim();
+ const p=$('jp').value.trim(),n=$('jn').value.trim();prePin=p;preName=n;
  if(!/^\d{6}$/.test(p)||!n){msg='Введите 6-значный PIN и никнейм';return render()}
  const r=await api('join',{pin:p,name:n});
  if(r.error){msg=r.error;return render()}
- pin=p;me=r.id;connect();
+ pin=p;me=r.id;prePin='';msg='';
+ try{history.replaceState(null,'',location.pathname)}catch(e){}
+ connect();
 }
 async function leave(){
  if(!confirm('Выйти из игры? Ваши очки будут потеряны.'))return;
@@ -149,6 +152,9 @@ async function endGame(){
 }
 const kick=id=>act('kick',id);
 function newGame(){clearSess();location.reload()}
+function joinBase(){const h=location.hostname;return(h==='localhost'||h==='127.0.0.1')&&INFO.urls.length?INFO.urls[0]:location.origin}
+function qrSvg(t){if(typeof qrcode==='undefined')return '';const q=qrcode(0,'M');q.addData(t);q.make();return q.createSvgTag({cellSize:4,margin:0,scalable:true})}
+function qrBox(w){return `<div style="background:#fff;padding:12px;border-radius:12px;width:${w}px;max-width:100%;margin:10px auto;line-height:0">${qrSvg(joinBase()+'/?pin='+S.pin)}</div>`}
 function joinUrl(){const h=location.hostname;return(h==='localhost'||h==='127.0.0.1')&&INFO.urls.length?INFO.urls.join('  или  '):location.origin}
 async function report(){
  if(typeof XLSX==='undefined')return alert('Библиотека Excel не загрузилась');
@@ -176,7 +182,8 @@ function host(){
  const dl='<button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button>';
  const tag=p=>KM?`<span style="color:var(--c${p.team})">${SH[p.team]}</span> `:'';
  const mode=S.mode==='kingdoms'?'Color Kingdoms — королевств: '+Math.min(S.K,N||S.K):'Classic';
- if(S.state==='lobby')return a.innerHTML=`<div class="c"><p class="mut">Студенты открывают в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и вводят PIN:</p><div class="pin">${S.pin}</div><h2>${esc(S.title)}</h2><p class="mut">Режим: ${mode}</p>
+ if(S.state==='lobby')return a.innerHTML=`<div class="c"><div class="row" style="justify-content:center;align-items:center;gap:36px"><div><b>📱 Наведите камеру телефона</b>${qrBox(230)}<span class="mut">PIN подставится сам, останется ввести имя</span></div>
+ <div><p class="mut">или откройте в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и введите PIN:</p><div class="pin">${S.pin}</div></div></div><h2>${esc(S.title)}</h2><p class="mut">Режим: ${mode}</p>
  <div class="chips">${S.rows.map(p=>`<span class="chip">${esc(p.name)}<span style="cursor:pointer;margin-left:8px;opacity:.8" title="Исключить" onclick="kick('${p.id}')">✕</span></span>`).join('')||'<span class="mut">Ждём студентов…</span>'}</div><p class="big">${N} / 100 студентов</p>
  <button ${N?'':'disabled'} onclick="act('start')">Начать</button></div>`;
  if(S.state==='question')return a.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span class="big" id="tm">${S.T}</span><span class="mut">Ответили: ${S.answered} / ${N}</span></div><div class="bar"><i id="tb"></i></div>
@@ -221,7 +228,8 @@ setInterval(()=>{
 (async()=>{
  try{const d=JSON.parse(localStorage.getItem('qd'));if(d&&Array.isArray(d.q)&&d.q.length){quiz=d;quiz.q.forEach(q=>{if(!q.cs)q.cs=[q.c||0]});quiz.mode=quiz.mode||'classic';quiz.K=quiz.K||4}}catch(e){}
  try{INFO=await(await fetch('/api/info')).json()}catch(e){}
- const sv=getSess();if(sv){pin=sv.pin;me=sv.id;return connect()}
- render();
+ const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp))prePin=qp;
+ const sv=getSess();if(sv&&(!prePin||sv.pin===prePin)){pin=sv.pin;me=sv.id;return connect()}
+ render();if(prePin&&$('jn'))$('jn').focus();
 })();
 </script></body></html>

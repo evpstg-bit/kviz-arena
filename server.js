@@ -51,7 +51,7 @@ function view(g,id,R0){
     const p=g.players.get(id);
     if(p)v.me={name:p.name,score:p.score,answered:p.lastQ===g.qi,lastA:p.lastQ===g.qi?p.lastA:-1,pts:p.lastQ===g.qi?p.lastPts:0,rank:R.findIndex(x=>x.id===id)+1,team:p.team,ok:g.state==='results'&&p.lastQ===g.qi&&same(p.lastA,q.cs)};
   }
-  v.mode=g.mode;
+  v.mode=g.mode;v.locked=!!g.locked;
   if(g.board){v.K=g.K;v.board=g.board;v.castles=g.castles;v.caps=g.state==='results'?g.lastCaps.map(c=>c.i):[];v.teams=teams(g,R)}
   else if(g.mode==='kingdoms')v.K=g.quiz.K;
   return v;
@@ -78,8 +78,9 @@ const json=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x');
-  if(req.method==='GET'&&u.pathname==='/xlsx.js'){
-    const f=[path.join(__dirname,'public','xlsx.mini.min.js'),path.join(__dirname,'xlsx.mini.min.js')].find(p=>fs.existsSync(p));
+  const LIB={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js'};
+  if(req.method==='GET'&&LIB[u.pathname]){
+    const f=[path.join(__dirname,'public',LIB[u.pathname]),path.join(__dirname,LIB[u.pathname])].find(p=>fs.existsSync(p));
     if(!f){res.writeHead(404);return res.end()}
     return fs.readFile(f,(e,b)=>{res.writeHead(200,{'Content-Type':'application/javascript'});res.end(b)});
   }
@@ -114,9 +115,16 @@ http.createServer(async(req,res)=>{
   if(u.pathname==='/api/join'){
     const name=str(b.name,16).trim();
     if(g.players.size>=MAX_PLAYERS)return json(res,{error:'Игра заполнена (максимум '+MAX_PLAYERS+' игроков)'},400);
-    if(!name||g.state!=='lobby')return json(res,{error:g.state!=='lobby'?'Игра уже началась':'Введите имя'},400);
+    if(!name)return json(res,{error:'Введите имя'},400);
+    if(g.state==='final'||g.state==='ended')return json(res,{error:'Игра уже завершена'},400);
+    if(g.locked)return json(res,{error:'Ведущий закрыл вход в игру'},400);
     if([...g.players.values()].some(p=>p.name.toLowerCase()===name.toLowerCase()))return json(res,{error:'Это имя занято'},400);
-    const id=rid();g.players.set(id,{name,score:0,lastQ:-1,lastA:[],lastPts:0,log:[]});push(g);return json(res,{id});
+    const id=rid(),pl={name,score:0,lastQ:-1,lastA:[],lastPts:0,log:[]};
+    if(g.board){ // вход после старта в Color Kingdoms: в самое малочисленное королевство
+      const cnt=Array(g.K).fill(0);g.players.forEach(x=>{if(cnt[x.team]!==undefined)cnt[x.team]++});
+      const mn=Math.min(...cnt),c=cnt.map((n,k)=>n===mn?k:-1).filter(k=>k>=0);pl.team=c[Math.floor(Math.random()*c.length)];
+    }
+    g.players.set(id,pl);push(g);return json(res,{id});
   }
   if(u.pathname==='/api/report'){
     if(b.id!==g.hostId)return json(res,{error:'Нет доступа'},403);
@@ -126,6 +134,7 @@ http.createServer(async(req,res)=>{
     const host=b.id===g.hostId,p=g.players.get(b.id);
     if(host&&b.type==='start'&&g.state==='lobby'&&g.players.size){g.qi=0;initKingdoms(g);startQ(g)}
     else if(host&&b.type==='skip')toResults(g);
+    else if(host&&b.type==='lock'){g.locked=!g.locked;push(g)}
     else if(host&&b.type==='next'&&g.state==='results'){
       if(g.qi>=g.quiz.q.length-1){g.state='final';push(g)}else{g.qi++;startQ(g)}
     }else if(p&&b.type==='answer'&&g.state==='question'){
