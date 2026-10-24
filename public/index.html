@@ -3,8 +3,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7c3aed">
+<script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-</head><body><div id="app"><p class="c mut">Загрузка…</p></div>
+</head><body><button id="theme-toggle" type="button" class="sec theme-toggle" onclick="toggleTheme()" aria-label="Переключить на тёмную тему" title="Переключить на тёмную тему">🌙 Тёмная тема</button><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
 <script>
@@ -16,6 +17,16 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
 const blankQuiz=()=>({title:'Новый тест',T:20,mode:'classic',dur:5,need:3,q:[{t:'',a:['','','',''],cs:[0]}]});
 let quiz=blankQuiz();
 const $=id=>document.getElementById(id),app=()=>vApp||$('app');
+function applyTheme(theme,persist=true){
+ const dark=theme==='dark';
+ document.documentElement.classList.toggle('dark',dark);
+ document.documentElement.dataset.theme=dark?'dark':'light';
+ try{if(persist)localStorage.setItem('kviz-theme',dark?'dark':'light')}catch(e){}
+ const btn=$('theme-toggle');if(btn){btn.textContent=dark?'☀ Светлая тема':'🌙 Тёмная тема';btn.title=dark?'Переключить на светлую тему':'Переключить на тёмную тему';btn.setAttribute('aria-label',btn.title)}
+ const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#0b1020':'#7c3aed';
+}
+function toggleTheme(){applyTheme(document.documentElement.classList.contains('dark')?'light':'dark',true)}
+applyTheme(document.documentElement.classList.contains('dark')?'dark':'light',false);
 const api=(p,o)=>fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
 const act=(type,a,x)=>api('action',{pin,id:me,type,a,...(x||{})});
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};

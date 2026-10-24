@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root{--c0:#e21b3c;--c1:#1368ce;--c2:#d89e00;--c3:#26890c;--fg:#0f172a;--bd:#cbd5e1;--pri:#7c3aed;--mut:#64748b;--bg:#f5f3ff;--card:#fff}
-@media(prefers-color-scheme:dark){:root{--fg:#f8fafc;--bd:#334155;--pri:#a78bfa;--mut:#94a3b8;--bg:#0b1020;--card:#1e1b4b}}
+:root{color-scheme:light;--c0:#e21b3c;--c1:#1368ce;--c2:#d89e00;--c3:#26890c;--fg:#0f172a;--bd:#cbd5e1;--pri:#7c3aed;--mut:#64748b;--bg:#f5f3ff;--card:#fff}
+:root.dark{color-scheme:dark;--fg:#f8fafc;--bd:#334155;--pri:#a78bfa;--mut:#94a3b8;--bg:#0b1020;--card:#1e1b4b}
 
 @layer base{
   body{@apply min-h-screen font-sans text-slate-900 antialiased bg-gradient-to-br from-violet-100 via-fuchsia-50 to-sky-100 dark:from-slate-950 dark:via-violet-950 dark:to-slate-900 dark:text-slate-100}
@@ -21,7 +21,7 @@
   #app.enter>*{@apply animate-fade-up}
   .hero{@apply bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-400 bg-clip-text text-5xl text-transparent sm:text-6xl}
   .card{@apply my-3 rounded-3xl border border-white/70 bg-white/70 p-5 shadow-xl shadow-violet-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/5}
-  button.sec{@apply bg-none bg-white/70 text-slate-800 shadow-none ring-1 ring-slate-300 hover:bg-white dark:bg-white/10 dark:text-slate-100 dark:ring-white/20}
+  button.sec{@apply bg-none bg-white/70 text-slate-800 shadow-none ring-1 ring-slate-300 dark:bg-white/10 dark:text-slate-100 dark:ring-white/20}
   .row{@apply flex flex-wrap items-center gap-3}
   .c{@apply text-center}
   .mut{@apply text-slate-500 dark:text-slate-400}
@@ -43,3 +43,15 @@
   .cnt>div{@apply flex min-h-[24px] flex-1 flex-col items-center justify-end rounded-t-2xl pb-1 font-bold text-white shadow-lg transition-all duration-500}
   .qe label{@apply my-1 flex items-center gap-2}
 }
+
+
+/* Keep button text readable in both themes. In particular, never turn a dark-theme
+   secondary button white on hover while its label remains white. */
+button.sec:hover{background-color:#f1f5f9;color:#0f172a}
+.dark button.sec:hover{background-color:#334155;color:#f8fafc}
+button.ans:hover{color:#fff;filter:brightness(1.12)}
+button.ans:focus-visible,button.sec:focus-visible,button.theme-toggle:focus-visible{outline:3px solid #a78bfa;outline-offset:3px}
+button.theme-toggle{position:fixed;top:12px;right:12px;z-index:1000;padding:8px 12px;font-size:13px;line-height:1.35;border-radius:999px;white-space:nowrap;backdrop-filter:blur(14px);box-shadow:0 4px 18px rgba(15,23,42,.16);background-color:rgba(255,255,255,.94);color:#334155}
+.dark button.theme-toggle{background-color:rgba(30,41,59,.96);color:#f8fafc}
+@media(max-width:640px){#app{padding-top:4.5rem}}
+@media(max-width:420px){button.theme-toggle{top:8px;right:8px;padding:7px 10px;font-size:12px}}

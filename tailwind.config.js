@@ -1,6 +1,6 @@
 /** Сборка: npm run build:css  (готовый public/tailwind.css уже лежит в проекте) */
 module.exports={
-  darkMode:'media',
+  darkMode:'class',
   content:['./public/index.html'],
   safelist:['a0','a1','a2','a3','sel','dim','enter','ok','bad','mut'],
   theme:{extend:{
