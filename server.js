@@ -84,7 +84,7 @@ function cleanQuiz(z){
     const cs=[...new Set((Array.isArray(x.cs)?x.cs:[]).map(Number))].filter(n=>Number.isInteger(n)&&n>=0&&n<4).sort((p,r)=>p-r);
     return{t:str(x.t,300),a,cs,T:T>=5?Math.min(240,T):undefined};
   });
-  return{title:str(z.title,80).trim()||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:z.mode==='kingdoms'?'kingdoms':'classic',
+  return{title:str(z.title,80).trim()||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:z.mode==='kingdoms'?'kingdoms':z.mode==='classic'?'classic':'choose',
     dur:Math.min(10,Math.max(1,Math.round(+z.dur)||5)),need:Math.min(5,Math.max(1,Math.round(+z.need)||3)),q};
 }
 function parseQuiz(z){
@@ -200,6 +200,7 @@ async function mutateBuiltinItems(mutator,message){
 
 // ================= игры =================
 const ranked=g=>[...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score);
+const playerOnline=(g,id)=>[...g.clients].some(c=>c.id===id);
 function newPlayer(g,name){
   const p={name,score:0,lastQ:-1,lastA:[],lastPts:0,log:[]};
   if(g.mode==='kingdoms'){
@@ -225,8 +226,16 @@ function view(g,id,R0){
   if(g.state==='results')v.correct=q.cs;
   if(host){
     v.names=R.map(p=>p.name);
-    v.rows=R.map(p=>{const an=p.lastQ===g.qi,r={id:p.id,name:p.name,score:p.score,ans:an,team:p.team};if(g.state==='results'&&an){r.ok=same(p.lastA,q.cs);r.pts=p.lastPts}return r});
+    v.rows=R.map(p=>{
+      const an=p.lastQ===g.qi,answeredN=(p.log||[]).length,correctN=(p.log||[]).reduce((n,l)=>n+(l.ok?1:0),0);
+      const r={id:p.id,name:p.name,score:p.score,ans:an,team:Number.isInteger(p.team)?p.team:null,online:playerOnline(g,p.id),answeredN,correctN,accuracy:answeredN?Math.round(correctN/answeredN*100):0};
+      if(g.state==='results'&&an){r.ok=same(p.lastA,q.cs);r.pts=p.lastPts}
+      return r;
+    });
     v.answered=R.filter(p=>p.lastQ===g.qi).length;
+    v.totalAnswered=R.reduce((n,p)=>n+(p.log||[]).length,0);
+    v.totalCorrect=R.reduce((n,p)=>n+(p.log||[]).filter(l=>l.ok).length,0);
+    v.online=R.filter(p=>playerOnline(g,p.id)).length;
     if(g.state==='results'){v.counts=[0,0,0,0];R.forEach(p=>{if(p.lastQ===g.qi)p.lastA.forEach(x=>v.counts[x]++)})}
   }else{
     const p=g.players.get(id);
@@ -287,7 +296,7 @@ function answerK(g,p,b){
   const ok=same(sel,qq.cs);p.answeredN++;
   if(ok){p.correctN++;p.prog++;if(p.prog>=g.kb.need){p.prog=0;p.flags++}}
   if(p.log.length<1000)p.log.push({qi:p.cur,a:sel,ok});
-  p.fb={id:p.qn,ok,correct:qq.cs,ans:qq.cs.map(i=>qq.a[i])};p.qn++;nextQ(g,p);return true;
+  p.lastAnswerOk=ok;p.lastAnswerAt=Date.now();p.fb={id:p.qn,ok,correct:qq.cs,ans:qq.cs.map(i=>qq.a[i])};p.qn++;nextQ(g,p);return true;
 }
 function commonK(g,R){
   const kb=g.kb,now=Date.now();
@@ -299,7 +308,12 @@ function commonK(g,R){
 }
 function viewK(g,id,C){
   const host=id===g.hostId,v={...C,host};
-  if(host)v.rows=[...g.players.entries()].map(([i,p])=>({id:i,name:p.name,team:p.team,placed:p.placed,correct:p.correctN,answered:p.answeredN}));
+  if(host)v.rows=[...g.players.entries()].map(([i,p])=>({
+    id:i,name:p.name,team:p.team,placed:p.placed,flags:p.placed||0,score:p.score||0,
+    correct:p.correctN||0,correctN:p.correctN||0,answered:p.answeredN||0,answeredN:p.answeredN||0,
+    accuracy:p.answeredN?Math.round((p.correctN||0)/p.answeredN*100):0,
+    online:playerOnline(g,i),lastOk:typeof p.lastAnswerOk==='boolean'?p.lastAnswerOk:null
+  }));
   else{
     const p=g.players.get(id);
     if(p){
@@ -320,7 +334,7 @@ const sched=g=>{if(g.pend)return;g.pend=setTimeout(()=>{g.pend=0;push(g)},180)};
 // ================= HTTP =================
 function body(req){return new Promise(r=>{let d='';req.on('data',c=>{d+=c;if(d.length>2e6)req.destroy()});req.on('end',()=>{try{r(JSON.parse(d))}catch{r({})}})})}
 const json=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o))};
-const LIBFILES={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css','/ui.css':'ui.css'};
+const LIBFILES={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css','/ui.css':'ui.css','/liquid-glass.css':'liquid-glass.css'};
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x');
@@ -339,8 +353,10 @@ http.createServer(async(req,res)=>{
     if(!g||(id!==g.hostId&&!g.players.has(id))){res.writeHead(404);return res.end()}
     res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive','X-Accel-Buffering':'no'});
     const c={res,id};g.clients.add(c);const R=ranked(g);res.write('data: '+JSON.stringify(viewAny(g,id,R))+'\n\n');
+    // Broadcast connection status so the host's participant panel updates immediately.
+    push(g);
     const ka=setInterval(()=>res.write(': ka\n\n'),15000);
-    req.on('close',()=>{clearInterval(ka);g.clients.delete(c)});return;
+    req.on('close',()=>{clearInterval(ka);g.clients.delete(c);setImmediate(()=>{if(games.get(g.pin)===g)push(g)})});return;
   }
   if(req.method==='GET'&&u.pathname==='/api/info'){
     const urls=Object.values(os.networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).map(i=>'http://'+i.address+':'+PORT);
@@ -417,9 +433,12 @@ http.createServer(async(req,res)=>{
   if(u.pathname==='/api/create'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
     const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Можно запускать только тесты из библиотеки проекта.'},403);
+    const requestedMode=String(b.mode||'');
+    if(!['classic','kingdoms'].includes(requestedMode))return json(res,{error:'Выберите режим игры перед запуском теста.'},400);
     const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Тест некорректен. Проверьте библиотеку тестов.'},400);
+    quiz.mode=requestedMode;
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
-    const g={pin,hostId:rid(),owner:me.id,quiz,state:'lobby',mode:quiz.mode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
+    const g={pin,hostId:rid(),owner:me.id,quiz,state:'lobby',mode:requestedMode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
     games.set(pin,g);return json(res,{pin,id:g.hostId});
   }
 
