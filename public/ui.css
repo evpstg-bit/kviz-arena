@@ -414,6 +414,25 @@ button.theme-toggle:hover { border-color: var(--line-strong) !important; transfo
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+/* Footer brand link */
+#app .eyefront-link {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+  text-underline-offset: 3px;
+  border-radius: 3px;
+  transition: color .15s ease, text-decoration-color .15s ease;
+}
+#app .eyefront-link:hover {
+  color: var(--accent) !important;
+  text-decoration: underline;
+}
+#app .eyefront-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 /* -------------------------------------------------------------
    eyefront / moderate minimalism layer
    Quieter surfaces, solid colors, smaller radii, clear top actions.
