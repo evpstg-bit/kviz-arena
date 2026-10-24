@@ -637,3 +637,49 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
   #app .quiz-editor-page .editor-actions .row { display: grid; grid-template-columns: 1fr 1.5fr; }
 }
 .player-kick{margin-left:6px;border:0;border-radius:6px;padding:2px 7px;background:#fee2e2;color:#991b1b;cursor:pointer;font-weight:800}.language-picker{display:flex;align-items:center;gap:6px}.language-picker select{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--card);color:var(--fg);font:inherit}
+
+/* Shared language/theme controls: same location on every screen, no viewport overflow. */
+#app { padding-top: 18px !important; }
+.global-settings { display:flex; align-items:center; justify-content:flex-end; gap:8px; width:100%; min-width:0; margin:0 0 18px; }
+.global-settings .language-picker { display:flex; align-items:center; gap:6px; min-width:0; }
+.global-settings .settings-label { display:inline-flex; align-items:center; justify-content:center; width:28px; height:36px; flex:0 0 28px; color:var(--text-soft); }
+#app .global-settings select { width:auto !important; min-width:0; max-width:190px; height:39px; min-height:39px; margin:0 !important; padding:6px 28px 6px 10px; font-size:.78rem; line-height:1.2; border-radius:11px; }
+#app .global-settings button.theme-toggle { position:static !important; top:auto !important; right:auto !important; z-index:2; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; min-height:39px !important; height:39px; margin:0; padding:6px 11px !important; white-space:nowrap; font-size:.76rem !important; box-shadow:none !important; backdrop-filter:none; }
+#app .global-settings button.theme-toggle:hover { background:var(--surface-muted) !important; transform:none !important; }
+#app .global-settings select:focus-visible, #app .global-settings button:focus-visible { outline-offset:2px; }
+@media (max-width:440px) {
+  #app { padding:14px 13px 22px !important; }
+  .global-settings { gap:6px; margin-bottom:14px; }
+  .global-settings .settings-label { display:none; }
+  #app .global-settings select { max-width:155px; padding:6px 22px 6px 8px; font-size:.72rem; }
+  #app .global-settings button.theme-toggle { padding:6px 8px !important; font-size:.7rem !important; }
+}
+@media (max-width:340px) {
+  #app .global-settings select { max-width:135px; }
+  #app .global-settings button.theme-toggle { max-width:120px; white-space:normal; line-height:1.1; }
+}
+@media (max-width:380px) {
+  .global-settings { justify-content:stretch; }
+  .global-settings .language-picker { flex:1 1 auto; }
+  #app .global-settings select { width:100% !important; max-width:none; }
+  #app .global-settings button.theme-toggle { flex:0 1 auto; }
+}
+/* In-game participant controls for Color Kingdoms */
+#app .host-participant-panel { margin:18px 0; padding:14px 16px; border-radius:14px; box-shadow:none; }
+.host-participant-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.host-participant-heading h2 { font-size:1rem !important; }
+.host-participant-heading .mut { font-size:.78rem; }
+.host-participant-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:6px 10px; max-height:240px; overflow:auto; }
+.host-participant { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; padding:7px 9px; border:1px solid var(--line); border-radius:9px; background:var(--surface-soft); }
+.host-participant > span { display:flex; align-items:center; gap:8px; min-width:0; overflow-wrap:anywhere; font-size:.85rem; }
+.host-participant > span i { width:8px; height:8px; border-radius:50%; flex:0 0 8px; }
+.host-participant .player-kick { flex:0 0 auto; }
+.global-settings { position:relative; }
+.global-settings .language-picker select { color:var(--text-main) !important; background:var(--surface) !important; border-color:var(--line) !important; }
+
+/* Keyboard and focus usability for moderation controls and the shared locale bar. */
+#app .player-kick:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+#app .global-settings { flex-wrap:nowrap; }
+#app .global-settings > * { min-width:0; }
+#app .global-settings .language-picker { overflow:hidden; }
+#app .global-settings select { text-overflow:ellipsis; }

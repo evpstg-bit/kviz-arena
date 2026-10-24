@@ -416,8 +416,8 @@ http.createServer(async(req,res)=>{
   // ---------- создание игры ----------
   if(u.pathname==='/api/create'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
-    const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Запускать можно только встроенные тесты из builtin-tests.json'},403);
-    const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Встроенный тест некорректен. Проверьте builtin-tests.json'},400);
+    const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Можно запускать только тесты из библиотеки проекта.'},403);
+    const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Тест некорректен. Проверьте библиотеку тестов.'},400);
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
     const g={pin,hostId:rid(),owner:me.id,quiz,state:'lobby',mode:quiz.mode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
     games.set(pin,g);return json(res,{pin,id:g.hostId});
