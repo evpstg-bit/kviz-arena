@@ -13,7 +13,7 @@ function writeJ(f,v){
   try{fs.mkdirSync(DATA_DIR,{recursive:true});const p=path.join(DATA_DIR,f),t=p+'.tmp';fs.writeFileSync(t,JSON.stringify(v));fs.renameSync(t,p);return true}
   catch(e){console.error('Не удалось записать',f+':',e.message);return false}
 }
-let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),LIBQ=readJ('quizzes.json',[]);
+let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),LIBQ=readJ('quizzes.json',[]),BUILTINQ=[];
 const hashPw=(pw,salt)=>crypto.scryptSync(String(pw),salt,32).toString('hex');
 const checkPw=(u,pw)=>{try{return crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'))}catch(e){return false}};
 const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin});
@@ -50,6 +50,30 @@ function parseQuiz(z){
   if(!c.q.every(x=>x.t&&x.a.length>=2&&x.a.every(Boolean)&&x.cs.length>=1&&x.cs.every(i=>i<x.a.length)))return null;
   return c;
 }
+
+// Встроенные тесты читаются из файла проекта, а не из DATA_DIR.
+// Поэтому они входят в деплой и не зависят от временной файловой системы Render.
+function loadBuiltinQuizzes(){
+  const file=path.join(__dirname,'builtin-tests.json');
+  try{
+    const raw=JSON.parse(fs.readFileSync(file,'utf8'));
+    const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
+    const result=[];
+    for(let i=0;i<items.length;i++){
+      try{
+        const item=items[i],quiz=parseQuiz(item&&item.quiz?item.quiz:item);
+        if(!quiz){console.warn('Пропущен встроенный тест №'+(i+1)+': проверьте формат и заполненность вопросов в builtin-tests.json');continue}
+        result.push({id:'builtin-'+(i+1),quiz,builtin:true});
+      }catch(e){console.warn('Пропущен встроенный тест №'+(i+1)+': '+e.message)}
+    }
+    console.log('Встроенных тестов загружено: '+result.length);
+    return result;
+  }catch(e){
+    console.error('Не удалось прочитать builtin-tests.json:',e.message);
+    return [];
+  }
+}
+BUILTINQ=loadBuiltinQuizzes();
 
 // ================= игры =================
 const ranked=g=>[...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score);
@@ -234,10 +258,14 @@ http.createServer(async(req,res)=>{
   // ---------- личная библиотека тестов ----------
   if(u.pathname.startsWith('/api/lib/')){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
-    const op=u.pathname.slice(9),mine=LIBQ.filter(x=>x.owner===me.id),f=mine.find(x=>x.id===b.id);
-    if(op==='list')return json(res,{items:mine.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,updated:x.updated})).sort((a,c)=>c.updated-a.updated)});
-    if(op==='get')return f?json(res,{quiz:f.quiz}):json(res,{error:'Тест не найден'},404);
+    const op=u.pathname.slice(9),mine=LIBQ.filter(x=>x.owner===me.id),f=mine.find(x=>x.id===b.id),builtin=BUILTINQ.find(x=>x.id===b.id);
+    if(op==='list')return json(res,{items:[
+      ...BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,builtin:true})),
+      ...mine.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,updated:x.updated,builtin:false})).sort((a,c)=>c.updated-a.updated)
+    ]});
+    if(op==='get')return f?json(res,{quiz:f.quiz}):builtin?json(res,{quiz:builtin.quiz,builtin:true}):json(res,{error:'Тест не найден'},404);
     if(op==='save'){
+      if(b.id&&builtin)return json(res,{error:'Встроенный тест доступен только для чтения. Скопируйте его в личную библиотеку.'},400);
       const quiz=cleanQuiz(b.quiz||{});
       if(b.id&&!f)return json(res,{error:'Тест не найден (возможно, удалён)'},404);
       let id;
