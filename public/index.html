@@ -5,6 +5,7 @@
 <meta name="theme-color" content="#7c3aed">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
+<link rel="stylesheet" href="/ui.css">
 </head><body><button id="theme-toggle" type="button" class="sec theme-toggle" onclick="toggleTheme()" aria-label="Переключить на тёмную тему" title="Переключить на тёмную тему">🌙 Тёмная тема</button><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -13,7 +14,7 @@ const SH=['▲','◆','●','■'],KN=['Красные','Синие'],KS=['кр�
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,
- LIB=null,libMsg='',libInfo='',delId='',sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
+ LIB=null,libMsg='',libInfo='',delId='',libSearch='',libFilter='all',sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 const blankQuiz=()=>({title:'Новый тест',T:20,mode:'classic',dur:5,need:3,q:[{t:'',a:['','','',''],cs:[0]}]});
 let quiz=blankQuiz();
 const $=id=>document.getElementById(id),app=()=>vApp||$('app');
@@ -54,7 +55,7 @@ function editorView(){
  <input type="text" value="${esc(q.t)}" oninput="quiz.q[${i}].t=this.value" placeholder="Текст вопроса">`+
  q.a.map((x,j)=>`<label><input type="checkbox" ${q.cs.includes(j)?'checked':''} onchange="tg(${i},${j},this.checked)"><span style="color:var(--c${j})">${SH[j]}</span><input type="text" value="${esc(x)}" oninput="quiz.q[${i}].a[${j}]=this.value" placeholder="Вариант ${j+1}"></label>`).join('')+
  `<p class="mut" style="margin:4px 0">Отметьте галочкой правильный ответ. Если отметить несколько — студенты должны выбрать их все.</p>${K?'':`<label class="mut">Секунд: <input type="number" min="5" max="240" value="${q.T||''}" placeholder="${quiz.T}" style="width:90px" oninput="quiz.q[${i}].T=+this.value||undefined"></label>`}</div>`).join('')+
- `<div class="sticky bottom-3 z-20 mt-6 rounded-3xl border border-white/70 bg-white/80 p-3 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80"><div class="row justify-center"><button class="sec" onclick="quiz.q.push({t:'',a:['','','',''],cs:[0]});editor()">+ Вопрос</button><button class="sec" onclick="saveQ()">💾 Сохранить</button>${quiz.id?'<button class="sec" onclick="saveQ(true)" title="Сохранить как новый тест">⧉ Как копию</button>':''}<button onclick="start()">🚀 Запустить игру</button><button class="sec" onclick="openLib()">👤 Кабинет</button></div>${info?`<p class="ok c">${esc(info)}</p>`:''}${msg?`<p class="bad c">${esc(msg)}</p>`:''}</div>`;
+ `<div class="editor-actions sticky bottom-3 z-20 mt-6 rounded-3xl border border-white/70 bg-white/80 p-3 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80"><div class="row justify-center"><button class="sec" onclick="quiz.q.push({t:'',a:['','','',''],cs:[0]});editor()">+ Вопрос</button><button class="sec" onclick="saveQ()">💾 Сохранить</button>${quiz.id?'<button class="sec" onclick="saveQ(true)" title="Сохранить как новый тест">⧉ Как копию</button>':''}<button onclick="start()">🚀 Запустить игру</button><button class="sec" onclick="openLib()">👤 Кабинет</button></div>${info?`<p class="ok c">${esc(info)}</p>`:''}${msg?`<p class="bad c">${esc(msg)}</p>`:''}</div>`;
 }
 function parseRows(rows){
  const cls=v=>{v=String(v??'').trim();if(/correct|правильн/i.test(v))return'c';if(/time|врем|лимит/i.test(v))return't';
@@ -128,17 +129,20 @@ async function submitAuth(){
 async function logout(){await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;view='home';render()}
 function authView(a){
  const reg=authTab==='reg',closed=reg&&!INFO.regOpen;
- a.innerHTML=`<h1 class="hero">👤 Личный кабинет</h1><p class="c mut mb-4">Войдите, чтобы открыть встроенные и сохранённые тесты. Данные для входа администратора задаются файлом проекта.</p>
- <div class="card mx-auto max-w-md"><div class="row mb-3 flex-nowrap"><button class="${reg?'sec':''} flex-1" onclick="authTab='login';msg='';render()">Вход</button>${INFO.regOpen?`<button class="${reg?'':'sec'} flex-1" onclick="authTab='reg';msg='';render()">Регистрация</button>`:''}</div>
- ${closed?`<p class="bad">Регистрация закрыта: аккаунт администратора уже создан. Новые аккаунты можно разрешить, задав код приглашения INVITE_CODE при запуске сервера (см. инструкцию).</p>`:''}
- <input type="text" placeholder="Логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value">
- ${reg&&!closed?`<input type="text" placeholder="Имя для отображения (необязательно)" value="${esc(AF.name)}" oninput="AF.name=this.value">`:''}
- <input type="password" placeholder="Пароль" autocomplete="${reg?'new-password':'current-password'}" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()">
- ${reg&&!closed?`<input type="password" placeholder="Повторите пароль" autocomplete="new-password" value="${esc(AF.pass2)}" oninput="AF.pass2=this.value" onkeydown="if(event.key==='Enter')submitAuth()">${INFO.hasUsers?`<input type="text" placeholder="Код приглашения" value="${esc(AF.code)}" oninput="AF.code=this.value">`:''}`:''}
- <p class="bad">${esc(msg)}</p>
- ${closed?'':`<button class="mt-2 w-full" onclick="submitAuth()">${reg?'Создать аккаунт':'Войти'}</button>`}
- ${reg&&!INFO.hasUsers&&!closed?'<p class="mut mt-3 text-sm">Первый созданный аккаунт становится администратором.</p>':''}</div>
- <div class="c"><button class="sec" onclick="view='home';msg='';render()">← На главную</button></div>`;
+ a.innerHTML=`<header class="app-topbar auth-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><button class="sec auth-home-link" onclick="view='home';msg='';render()">← На главную</button></header>
+ <section class="auth-layout">
+  <div class="auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> ЛИЧНОЕ ПРОСТРАНСТВО ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Ваши тесты.<br><span>Ваши правила.</span></h1><p class="auth-promo-copy">Создавайте интерактивные викторины, запускайте командные игры и следите за результатами — в одном удобном месте.</p><div class="auth-feature-list"><div><span class="feature-check">✓</span><span><b>Одна библиотека</b><small>Встроенные и личные тесты рядом</small></span></div><div><span class="feature-check">✓</span><span><b>Быстрый запуск</b><small>От вопроса до игровой комнаты за минуты</small></span></div><div><span class="feature-check">✓</span><span><b>Результаты под рукой</b><small>Рейтинг и отчёты после игры</small></span></div></div><div class="auth-promo-stamp"><span class="stamp-stars">✦ ✦ ✦</span><span>Учиться интереснее, когда это игра.</span></div></div>
+  <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>${reg?'Создайте аккаунт':'С возвращением!'}</h2><p class="mut">${reg?'Заполните данные, чтобы начать работу.':'Войдите, чтобы продолжить работу с тестами.'}</p></div>
+   <div class="card auth-card"><div class="auth-tabs"><button type="button" class="auth-tab ${reg?'':'is-active'}" onclick="authTab='login';msg='';render()">Вход</button>${INFO.regOpen?`<button type="button" class="auth-tab ${reg?'is-active':''}" onclick="authTab='reg';msg='';render()">Регистрация</button>`:''}</div>
+   ${closed?`<div class="auth-alert">Регистрация закрыта: аккаунт администратора уже создан. Новые аккаунты можно разрешить, задав код приглашения INVITE_CODE при запуске сервера.</div>`:''}
+   <label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Введите логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value">
+   ${reg&&!closed?`<label class="field-label" for="auth-name">Имя для отображения <span>(необязательно)</span></label><input id="auth-name" type="text" placeholder="Как к вам обращаться" value="${esc(AF.name)}" oninput="AF.name=this.value">`:''}
+   <label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Введите пароль" autocomplete="${reg?'new-password':'current-password'}" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()">
+   ${reg&&!closed?`<label class="field-label" for="auth-password2">Повторите пароль</label><input id="auth-password2" type="password" placeholder="Повторите пароль" autocomplete="new-password" value="${esc(AF.pass2)}" oninput="AF.pass2=this.value" onkeydown="if(event.key==='Enter')submitAuth()">${INFO.hasUsers?`<label class="field-label" for="auth-code">Код приглашения</label><input id="auth-code" type="text" placeholder="Введите код приглашения" value="${esc(AF.code)}" oninput="AF.code=this.value">`:''}`:''}
+   <p class="bad auth-error" role="alert">${esc(msg)}</p>
+   ${closed?'':`<button class="btn-primary auth-submit" onclick="submitAuth()">${reg?'Создать аккаунт':'Войти в кабинет'} <span aria-hidden="true">→</span></button>`}
+   ${reg&&!INFO.hasUsers&&!closed?'<p class="auth-note mut">Первый созданный аккаунт становится администратором.</p>':''}</div><div class="auth-back-note">Безопасный вход · Ваша библиотека тестов</div></div>
+ </section>`;
 }
 async function start(){
  const qs=[];
@@ -199,16 +203,45 @@ async function importLib(inp){
  try{const j=JSON.parse(await f.text()),items=Array.isArray(j)?j:j.items;const r=await capi('lib/import',{items});if(r.error)libMsg=r.error;else libInfo='Импортировано тестов: '+r.imported}catch(e){libMsg='Не удалось прочитать файл — нужен JSON, сохранённый кнопкой «Экспорт»'}
  await openLib();
 }
+function setLibraryFilter(filter){libFilter=filter;render()}
+function filterLibrary(){
+ const search=($('lib-search')?.value ?? libSearch).trim().toLocaleLowerCase('ru-RU');libSearch=search;
+ let visibleCount=0;
+ document.querySelectorAll('.quiz-card').forEach(el=>{
+  const source=el.dataset.source||'personal';
+  const matchesFilter=libFilter==='all'||(libFilter==='project'&&source==='project')||(libFilter==='personal'&&source==='personal');
+  const matchesSearch=!search||(el.dataset.search||'').includes(search);
+  const show=matchesFilter&&matchesSearch;el.style.display=show?'':'none';if(show)visibleCount++;
+ });
+ document.querySelectorAll('[data-library-section]').forEach(section=>{
+  const type=section.dataset.librarySection;
+  const inFilter=libFilter==='all'||(libFilter==='project'&&type==='project')||(libFilter==='personal'&&type==='personal');
+  const cards=[...section.querySelectorAll('.quiz-card')];
+  const visible=cards.some(c=>c.style.display!=='none');
+  section.style.display=(inFilter&&(!search||visible))?'':'none';
+ });
+ const noResults=$('library-no-results');if(noResults)noResults.hidden=!(LIB&&search&&visibleCount===0);
+ const count=$('library-result-count');if(count&&LIB)count.textContent=search||libFilter!=='all'?`Найдено: ${visibleCount}`:`Всего тестов: ${LIB.length}`;
+}
 function lib(){
  const fmtD=t=>new Date(t).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'});
  const del=LIB&&LIB.find(x=>x.id===delId&&!x.builtin);
- const card=t=>`<div class="card flex flex-wrap items-center justify-between gap-3"><div class="min-w-0"><h2 class="my-0 truncate">${esc(t.title)}</h2><p class="mut my-1">${t.n} вопр. · ${t.mode==='kingdoms'?'Color Kingdoms':'Classic'}${t.builtin?(t.source==='saved'?' · сохранён в проекте':' · встроен в проект'):' · изменён '+fmtD(t.updated)}</p></div><div class="row gap-2"><button class="px-4 py-2 text-sm" onclick="runQ('${t.id}')">▶ Запустить</button>${t.builtin?`<button class="sec px-3 py-2 text-sm" title="Создать редактируемую копию в личной библиотеке" onclick="dupQ('${t.id}')">⧉ В мои тесты</button>`:`<button class="sec px-4 py-2 text-sm" onclick="editQ('${t.id}')">✎ Изменить</button><button class="sec px-3 py-2 text-sm" title="Дублировать" onclick="dupQ('${t.id}')">⧉</button><button class="sec px-3 py-2 text-sm" title="Удалить" onclick="delId='${t.id}';render()">🗑</button>`}</div></div>`;
- const builtins=LIB===null?'<p class="c mut">Загрузка…</p>':LIB.filter(t=>t.builtin).map(card).join('')||'<div class="card c"><p class="mut">Пока нет тестов, встроенных в проект. Добавьте их в <b>builtin-tests.json</b> или <b>saved-tests.json</b>, затем сохраните изменения в GitHub и выполните redeploy Render.</p></div>';
- const own=LIB===null?'<p class="c mut">Загрузка…</p>':LIB.filter(t=>!t.builtin).map(card).join('')||`<div class="card c"><div class="text-5xl">📚</div><h2>Пока нет сохранённых тестов</h2><p class="mut">Создайте тест и нажмите «Сохранить» — он появится здесь. Личные тесты хранятся отдельно от встроенных.</p><button onclick="newQ()">＋ Новый тест</button></div>`;
- app().innerHTML=`<h1>👤 Личный кабинет</h1><p class="c mut">Вы вошли как <b>${esc(USER.name)}</b>${USER.name!==USER.login?' ('+esc(USER.login)+')':''}${USER.admin?' · администратор':''}</p>
- <div class="row justify-center my-4"><button onclick="newQ()">＋ Новый тест</button><button class="sec" title="Сохранить все личные тесты в файл" onclick="exportLib()">⬇ Экспорт</button><input type="file" id="impf" accept=".json" class="hidden" onchange="importLib(this)"><button class="sec" title="Загрузить тесты в личную библиотеку" onclick="$('impf').click()">⬆ Импорт</button><button class="sec" onclick="view='home';render()">← На главную</button><button class="sec" onclick="logout()">Выйти из аккаунта</button></div>
- ${libMsg?`<div class="card bad">${esc(libMsg)}</div>`:''}${libInfo?`<div class="card ok">${esc(libInfo)}</div>`:''}<h2>📦 Встроенные и сохранённые в проекте тесты</h2><p class="mut">Тесты из <b>builtin-tests.json</b> и <b>saved-tests.json</b> входят в деплой и не теряются при перезапуске Render. Для обновления файлов сохраните изменения в GitHub и выполните деплой.</p>${builtins}<h2>📚 Мои тесты</h2>${own}`+
- (del?`<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onclick="delId='';render()"><div class="card max-w-md animate-pop bg-white dark:bg-slate-800" onclick="event.stopPropagation()"><h2>Удалить тест?</h2><p class="mut">«${esc(del.title)}» будет удалён без возможности восстановления.</p><div class="row justify-end"><button class="sec" onclick="delId='';render()">Отмена</button><button class="bg-none bg-rose-600" onclick="doDel()">🗑 Удалить</button></div></div></div>`:'');
+ const projectItems=LIB===null?[]:LIB.filter(t=>t.builtin),personalItems=LIB===null?[]:LIB.filter(t=>!t.builtin);
+ const card=t=>`<article class="quiz-card" data-source="${t.builtin?'project':'personal'}" data-search="${esc((t.title+' '+(t.mode==='kingdoms'?'Color Kingdoms':'Classic')+' '+(t.builtin?'проект встроенный':'личный')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon ${t.builtin?'project-icon':'personal-icon'}">${t.builtin?'▦':'✎'}</div><div class="quiz-card-copy"><h3 title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span>${t.mode==='kingdoms'?'Color Kingdoms':'Classic'}</span></div><div class="quiz-badges"><span class="status-badge ${t.builtin?'badge-project':'badge-personal'}">${t.builtin?(t.source==='saved'?'Сохранён в проекте':'Встроенный'):'Личный тест'}</span>${!t.builtin?`<span class="quiz-updated">Изменён ${fmtD(t.updated)}</span>`:''}</div></div></div><div class="quiz-card-actions"><button class="btn-primary btn-small" onclick="runQ('${t.id}')"><span aria-hidden="true">▶</span> Запустить</button>${t.builtin?`<button class="sec btn-small" title="Создать редактируемую копию в личной библиотеке" onclick="dupQ('${t.id}')">⧉ В мои тесты</button>`:`<button class="sec btn-small" onclick="editQ('${t.id}')"><span aria-hidden="true">✎</span> Изменить</button><button class="sec btn-icon" title="Дублировать" aria-label="Дублировать ${esc(t.title)}" onclick="dupQ('${t.id}')">⧉</button><button class="sec btn-icon danger-action" title="Удалить" aria-label="Удалить ${esc(t.title)}" onclick="delId='${t.id}';render()">⌫</button>`}</div></article>`;
+ const builtins=LIB===null?'<div class="loading-state"><span class="loading-dot"></span> Загружаем тесты…</div>':projectItems.map(card).join('')||'<div class="empty-state"><div class="empty-icon">▦</div><h3>Пока нет тестов проекта</h3><p>Добавьте тесты в <code>builtin-tests.json</code> или <code>saved-tests.json</code>, сохраните изменения в GitHub и выполните деплой.</p></div>';
+ const own=LIB===null?'<div class="loading-state"><span class="loading-dot"></span> Загружаем тесты…</div>':personalItems.map(card).join('')||`<div class="empty-state"><div class="empty-icon">✎</div><h3>Ваша библиотека пока пуста</h3><p>Создайте первый тест или импортируйте готовые вопросы из JSON.</p><button class="btn-primary" onclick="newQ()">＋ Создать первый тест</button></div>`;
+ const total=LIB===null?'—':LIB.length,projectN=LIB===null?'—':projectItems.length,personalN=LIB===null?'—':personalItems.length;
+ app().innerHTML=`<header class="app-topbar dashboard-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><div class="dashboard-user"><div class="user-avatar">${esc((USER.name||USER.login||'У').slice(0,1).toLocaleUpperCase('ru-RU'))}</div><div class="dashboard-user-copy"><b>${esc(USER.name)}</b><span>${USER.admin?'Администратор':'Преподаватель'}</span></div></div></header>
+ <section class="dashboard-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span> РАБОЧЕЕ ПРОСТРАНСТВО</div><h1 class="page-title">Библиотека тестов<span class="title-period">.</span></h1><p class="page-subtitle">Всё для следующей игры — в одном месте.</p></div><button class="btn-primary create-test-btn" onclick="newQ()"><span class="plus-symbol">＋</span> Новый тест</button></section>
+ <section class="library-stats"><div class="stat-card stat-total"><div class="stat-card-icon">▦</div><div><span class="stat-label">Всего тестов</span><strong>${total}</strong><small>В вашей библиотеке</small></div></div><div class="stat-card"><div class="stat-card-icon stat-purple">⌂</div><div><span class="stat-label">В проекте</span><strong>${projectN}</strong><small>Не пропадут при деплое</small></div></div><div class="stat-card"><div class="stat-card-icon stat-blue">✎</div><div><span class="stat-label">Личные</span><strong>${personalN}</strong><small>Редактируйте и копируйте</small></div></div></section>
+ <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="Поиск тестов" placeholder="Найти тест по названию или режиму…" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div><div class="library-filters" role="group" aria-label="Фильтр библиотеки"><button class="filter-tab ${libFilter==='all'?'is-active':''}" onclick="setLibraryFilter('all')">Все <span>${total}</span></button><button class="filter-tab ${libFilter==='project'?'is-active':''}" onclick="setLibraryFilter('project')">В проекте <span>${projectN}</span></button><button class="filter-tab ${libFilter==='personal'?'is-active':''}" onclick="setLibraryFilter('personal')">Мои <span>${personalN}</span></button></div></div>
+ <p id="library-result-count" class="library-result-count">${LIB===null?'Загрузка тестов…':'Всего тестов: '+LIB.length}</p>
+ ${libMsg?`<div class="notice notice-error">${esc(libMsg)}</div>`:''}${libInfo?`<div class="notice notice-success">${esc(libInfo)}</div>`:''}
+ <section class="library-section" data-library-section="project"><div class="library-section-head"><div><span class="section-kicker">ФАЙЛЫ ПРОЕКТА</span><h2>Встроенные тесты</h2><p>Версии, которые поставляются вместе с игрой.</p></div><span class="section-count">${projectN}</span></div>${builtins}</section>
+ <section class="library-section" data-library-section="personal"><div class="library-section-head"><div><span class="section-kicker">ВАШ КОНТЕНТ</span><h2>Мои тесты</h2><p>Личная коллекция для редактирования и повторного использования.</p></div><span class="section-count">${personalN}</span></div>${own}</section>
+ <div id="library-no-results" class="empty-state search-empty" hidden><div class="empty-icon">⌕</div><h3>Ничего не найдено</h3><p>Попробуйте изменить запрос или выбрать другой фильтр.</p><button class="sec" onclick="libSearch='';libFilter='all';render()">Сбросить поиск</button></div>
+ <footer class="dashboard-footer"><span>Квиз-арена <span class="footer-separator">·</span> Учиться интереснее, когда это игра.</span><div class="footer-actions"><button class="footer-link" onclick="exportLib()">↓ Экспорт</button><input type="file" id="impf" accept=".json" class="hidden" onchange="importLib(this)"><button class="footer-link" onclick="$('impf').click()">↑ Импорт</button><button class="footer-link" onclick="view='home';render()">На главную</button><button class="footer-link" onclick="logout()">Выйти</button></div></footer>`+
+ (del?`<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onclick="delId='';render()"><div class="card delete-dialog" onclick="event.stopPropagation()"><div class="delete-dialog-icon">!</div><h2>Удалить тест?</h2><p class="mut">«${esc(del.title)}» будет удалён без возможности восстановления.</p><div class="row justify-end"><button class="sec" onclick="delId='';render()">Отмена</button><button class="danger-button" onclick="doDel()">Удалить тест</button></div></div></div>`:'');
 }
 
 function newGame(){clearSess();location.reload()}
@@ -323,10 +356,13 @@ function player(a){
  a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Ваше место: ${p.rank}</p><button onclick="location.reload()">На главную</button></div>`;
 }
 function home(a){
- a.innerHTML=`<h1 class="hero"><span class="inline-block animate-floaty">🎯</span> Квиз-арена</h1><p class="c mut mb-6">Командные викторины для класса: вопросы, очки и рейтинг в реальном времени</p><div class="md:grid md:grid-cols-2 md:gap-4">
- <div class="card"><h2>🚀 Присоединиться к игре</h2><input type="text" id="jp" placeholder="PIN-код игры" inputmode="numeric" maxlength="6" value="${esc(prePin)}"><input type="text" id="jn" placeholder="Ваш никнейм" maxlength="16" value="${esc(preName)}">
- <p class="bad">${esc(msg)}</p><button class="mt-2 w-full" onclick="join()">Играть</button></div>
- <div class="card"><h2>🧑‍🏫 Преподавателю</h2>${USER?`<p class="mut">Вы вошли как <b>${esc(USER.name)}</b>. Ваши тесты — в личном кабинете.</p><div class="row"><button onclick="openLib()">👤 Личный кабинет</button><button class="sec" onclick="newQ()">＋ Новый тест</button></div>`:`<p class="mut">Войдите в личный кабинет, чтобы создавать тесты и проводить игры. Тесты сохраняются в аккаунте и доступны с любого компьютера.</p><button onclick="goAuth()">🔑 Войти / Регистрация</button>`}</div></div>`;
+ const teacher=USER?`<p class="entry-description">Вы вошли как <b>${esc(USER.name)}</b>. Продолжайте работу с библиотекой или сразу создайте новую викторину.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button><button class="sec" onclick="newQ()">＋ Новый тест</button></div>`:`<p class="entry-description">Создавайте викторины, проводите игры в классе и анализируйте результаты учеников.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей и ведущих</span></div>`;
+ a.innerHTML=`<header class="app-topbar home-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div></header>
+ <section class="home-hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> ОБУЧЕНИЕ В ФОРМАТЕ ИГРЫ</div><h1 class="home-title">Уроки, которые<br><span>хочется проходить.</span></h1><p class="home-lead">Превращайте знания в командную игру. Подключайте класс по PIN-коду, отвечайте в реальном времени и радуйтесь общим победам.</p><div class="hero-benefits"><span><i>✓</i> Запуск за минуту</span><span><i>✓</i> Рейтинг в реальном времени</span></div></div>
+ <div class="hero-visual" aria-hidden="true"><div class="visual-halo halo-one"></div><div class="visual-halo halo-two"></div><div class="floating-score floating-score-top"><span class="score-spark">✦</span><span><b>+320 XP</b><small>Отличная серия!</small></span></div><div class="quiz-preview"><div class="preview-top"><span class="preview-mark">K</span><span>БЫСТРЫЙ КВИЗ</span><span class="preview-step">01 / 10</span></div><div class="preview-progress"><span></span></div><h3>Готовы проверить свои знания?</h3><p>Подключайтесь и играйте вместе с классом.</p><div class="preview-options"><div class="preview-option option-violet"><span>A</span><i></i></div><div class="preview-option option-blue"><span>B</span><i></i></div><div class="preview-option option-orange"><span>C</span><i></i></div><div class="preview-option option-green"><span>D</span><i></i></div></div><div class="preview-bottom"><span class="preview-avatar-stack"><i>А</i><i>М</i><i>Д</i><i>+</i></span><span>Играйте вместе</span><span class="preview-live"><i></i> LIVE</span></div></div><div class="floating-score floating-score-bottom"><span class="trophy-icon" aria-label="Командная игра" title="Командная игра">🏆</span></div></div></section>
+ <section class="entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ УЧЕНИКОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код от преподавателя — и вы в игре.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код игры</label><input type="text" id="jp" placeholder="6 цифр от преподавателя" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Ваш никнейм</label><input type="text" id="jn" placeholder="Как к вам обращаться?" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Регистрация не требуется</div></article>
+ <article class="entry-card teacher-card"><div class="teacher-card-art"><div class="teacher-orbit orbit-a"></div><div class="teacher-orbit orbit-b"></div><div class="teacher-large-icon">✦</div><span class="teacher-mini mini-a">✓</span><span class="teacher-mini mini-b">↗</span></div><span class="section-kicker">ДЛЯ ПРЕПОДАВАТЕЛЕЙ</span><h2>Создавайте игры<br>и вдохновляйте класс.</h2>${teacher}</article></section>
+ <footer class="home-footer"><span>© Квиз-арена</span><span>Меньше рутины. Больше вовлечённости.</span></footer>`;
 }
 function draw(){
  const a=app();
@@ -359,6 +395,7 @@ function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  const real=$('app');vApp=document.createElement('div');
  try{draw()}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
+ if(view==='lib')filterLibrary();
  enter();tick();
 }
 if(typeof addEventListener==='function'){
@@ -367,7 +404,7 @@ if(typeof addEventListener==='function'){
  addEventListener('pointerup',up,true);addEventListener('pointercancel',up,true);
 }
 setInterval(tick,250);
-if(document.addEventListener)document.addEventListener('keydown',e=>{if(e.key==='Escape'&&qrFull){qrFull=false;render()}});
+if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&qrFull){qrFull=false;render()}});
 (async()=>{
  try{INFO=await(await fetch('/api/info')).json()}catch(e){}
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
