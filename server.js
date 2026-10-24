@@ -17,8 +17,54 @@ let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),LIBQ=readJ('quiz
 const hashPw=(pw,salt)=>crypto.scryptSync(String(pw),salt,32).toString('hex');
 const checkPw=(u,pw)=>{try{return crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'))}catch(e){return false}};
 const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin});
-function userOf(t){const s=t&&SESS[t];if(!s)return null;if(s.exp<Date.now()){delete SESS[t];return null}return USERS.find(u=>u.id===s.uid)||null}
+
+// Постоянный администратор берётся из файла проекта, а не из временной папки DATA_DIR.
+// Подписанная сессия этого аккаунта остаётся действительной после перезапуска Render.
+function readAdminConfig(){
+  try{
+    const c=JSON.parse(fs.readFileSync(path.join(__dirname,'admin-credentials.json'),'utf8'));
+    const login=String(c.login||'').trim(),password=String(c.password||'');
+    if(!login||!password)throw new Error('нужны непустые login и password');
+    return{login,password,name:String(c.name||login).slice(0,40)};
+  }catch(e){console.error('Не удалось загрузить admin-credentials.json:',e.message);return null}
+}
+const ADMIN_CONFIG=readAdminConfig();
+const ADMIN_ID=ADMIN_CONFIG?'config-admin-'+crypto.createHash('sha256').update(ADMIN_CONFIG.login.toLowerCase()).digest('hex').slice(0,12):null;
+const ADMIN_SECRET=ADMIN_CONFIG?crypto.createHash('sha256').update('kviz-arena-config-admin-v1\0'+ADMIN_CONFIG.login+'\0'+ADMIN_CONFIG.password).digest():null;
+let CONFIG_ADMIN=null;
+if(ADMIN_CONFIG){
+  const old=USERS.find(x=>String(x.login||'').toLowerCase()===ADMIN_CONFIG.login.toLowerCase());
+  const salt=crypto.randomBytes(16).toString('hex');
+  CONFIG_ADMIN={id:ADMIN_ID,login:ADMIN_CONFIG.login,name:ADMIN_CONFIG.name,salt,hash:hashPw(ADMIN_CONFIG.password,salt),admin:true,created:old&&old.created||Date.now(),configManaged:true};
+  if(old&&old.id!==ADMIN_ID){
+    LIBQ.forEach(x=>{if(x.owner===old.id)x.owner=ADMIN_ID});
+    Object.values(SESS).forEach(x=>{if(x.uid===old.id)x.uid=ADMIN_ID});
+  }
+  USERS=USERS.filter(x=>String(x.login||'').toLowerCase()!==ADMIN_CONFIG.login.toLowerCase());
+  USERS.push(CONFIG_ADMIN);
+  if(old&&old.id!==ADMIN_ID){writeJ('quizzes.json',LIBQ);writeJ('sessions.json',SESS)}
+}
+function configuredUserFromToken(t){
+  if(!CONFIG_ADMIN||!ADMIN_SECRET||typeof t!=='string')return null;
+  const m=/^cfg\.([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(t);if(!m)return null;
+  try{
+    const expected=crypto.createHmac('sha256',ADMIN_SECRET).update(m[1]).digest();
+    const actual=Buffer.from(m[2],'base64url');
+    if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return null;
+    const p=JSON.parse(Buffer.from(m[1],'base64url').toString('utf8'));
+    return p.uid===CONFIG_ADMIN.id&&Number(p.exp)>Date.now()?CONFIG_ADMIN:null;
+  }catch(e){return null}
+}
+function userOf(t){
+  const configured=configuredUserFromToken(t);if(configured)return configured;
+  const s=t&&SESS[t];if(!s)return null;if(s.exp<Date.now()){delete SESS[t];return null}return USERS.find(u=>u.id===s.uid)||null;
+}
 function newSession(u){
+  if(u&&u.configManaged){
+    const payload=Buffer.from(JSON.stringify({uid:u.id,exp:Date.now()+60*864e5})).toString('base64url');
+    const sig=crypto.createHmac('sha256',ADMIN_SECRET).update(payload).digest('base64url');
+    return 'cfg.'+payload+'.'+sig;
+  }
   const t=crypto.randomBytes(24).toString('hex');SESS[t]={uid:u.id,exp:Date.now()+60*864e5};
   const mine=Object.keys(SESS).filter(k=>SESS[k].uid===u.id);if(mine.length>20)mine.slice(0,mine.length-20).forEach(k=>delete SESS[k]);
   writeJ('sessions.json',SESS);return t;
@@ -29,6 +75,7 @@ const FAILS=new Map();
 if(process.argv[2]==='--users'){console.log(USERS.length?USERS.map(u=>u.login+(u.admin?' (администратор)':'')).join('\n'):'Аккаунтов пока нет.');process.exit(0)}
 if(process.argv[2]==='--reset-password'){
   const u=USERS.find(x=>x.login.toLowerCase()===String(process.argv[3]).toLowerCase()),np=process.argv[4]||'';
+  if(u&&u.configManaged){console.log('Этот аккаунт управляется файлом admin-credentials.json. Измените пароль в этом файле и повторно разверните проект.');process.exit(1)}
   if(!u||np.length<6){console.log('Использование: node server.js --reset-password ЛОГИН НОВЫЙ_ПАРОЛЬ  (пароль не короче 6 символов)\nСписок логинов: node server.js --users');process.exit(1)}
   u.salt=crypto.randomBytes(16).toString('hex');u.hash=hashPw(np,u.salt);Object.keys(SESS).forEach(k=>{if(SESS[k].uid===u.id)delete SESS[k]});
   writeJ('users.json',USERS);writeJ('sessions.json',SESS);console.log('Пароль пользователя «'+u.login+'» изменён.');process.exit(0);
@@ -51,10 +98,10 @@ function parseQuiz(z){
   return c;
 }
 
-// Встроенные тесты читаются из файла проекта, а не из DATA_DIR.
-// Поэтому они входят в деплой и не зависят от временной файловой системы Render.
-function loadBuiltinQuizzes(){
-  const file=path.join(__dirname,'builtin-tests.json');
+// Тесты проекта читаются из отслеживаемых Git-файлов, не из DATA_DIR.
+// Поэтому их можно зафиксировать commit/push и они останутся после рестарта Render.
+function loadProjectQuizFile(filename,prefix,source){
+  const file=path.join(__dirname,filename);
   try{
     const raw=JSON.parse(fs.readFileSync(file,'utf8'));
     const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
@@ -62,18 +109,24 @@ function loadBuiltinQuizzes(){
     for(let i=0;i<items.length;i++){
       try{
         const item=items[i],quiz=parseQuiz(item&&item.quiz?item.quiz:item);
-        if(!quiz){console.warn('Пропущен встроенный тест №'+(i+1)+': проверьте формат и заполненность вопросов в builtin-tests.json');continue}
-        result.push({id:'builtin-'+(i+1),quiz,builtin:true});
-      }catch(e){console.warn('Пропущен встроенный тест №'+(i+1)+': '+e.message)}
+        if(!quiz){console.warn('Пропущен тест №'+(i+1)+' в '+filename+': проверьте формат и вопросы');continue}
+        result.push({id:prefix+'-'+(i+1),quiz,builtin:true,source});
+      }catch(e){console.warn('Пропущен тест №'+(i+1)+' в '+filename+': '+e.message)}
     }
-    console.log('Встроенных тестов загружено: '+result.length);
+    console.log(filename+': загружено тестов '+result.length);
     return result;
   }catch(e){
-    console.error('Не удалось прочитать builtin-tests.json:',e.message);
+    console.error('Не удалось прочитать '+filename+':',e.message);
     return [];
   }
 }
-BUILTINQ=loadBuiltinQuizzes();
+function loadProjectQuizzes(){
+  return [
+    ...loadProjectQuizFile('builtin-tests.json','builtin','builtin'),
+    ...loadProjectQuizFile('saved-tests.json','saved','saved')
+  ];
+}
+BUILTINQ=loadProjectQuizzes();
 
 // ================= игры =================
 const ranked=g=>[...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score);
@@ -260,7 +313,7 @@ http.createServer(async(req,res)=>{
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
     const op=u.pathname.slice(9),mine=LIBQ.filter(x=>x.owner===me.id),f=mine.find(x=>x.id===b.id),builtin=BUILTINQ.find(x=>x.id===b.id);
     if(op==='list')return json(res,{items:[
-      ...BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,builtin:true})),
+      ...BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,builtin:true,source:x.source||'builtin'})),
       ...mine.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,updated:x.updated,builtin:false})).sort((a,c)=>c.updated-a.updated)
     ]});
     if(op==='get')return f?json(res,{quiz:f.quiz}):builtin?json(res,{quiz:builtin.quiz,builtin:true}):json(res,{error:'Тест не найден'},404);
