@@ -1,6 +1,7 @@
-# Пример для Render. На бесплатном тарифе файловая система временная: аккаунты и личные тесты
-# могут пропасть при перезапуске. Тесты из builtin-tests.json встроены в деплой и сохраняются.
-# Для постоянного хранения аккаунтов и личных тестов нужен тариф с диском/БД — см. INSTRUKCIYA.md.
+# Quiz data is stored in builtin-tests.json in the Git repository.
+# To make import/edit/copy/delete in the cabinet automatically commit changes,
+# set these as secret / environment values in Render Dashboard:
+# GITHUB_TOKEN, GITHUB_REPOSITORY (owner/repo), GITHUB_BRANCH (e.g. main).
 services:
   - type: web
     name: kviz-arena

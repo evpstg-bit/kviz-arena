@@ -14,9 +14,8 @@ const SH=['▲','◆','●','■'],KN=['Красные','Синие'],KS=['кр�
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,
- LIB=null,libMsg='',libInfo='',delId='',libSearch='',libFilter='all',sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
-const blankQuiz=()=>({title:'Новый тест',T:20,mode:'classic',dur:5,need:3,q:[{t:'',a:['','','',''],cs:[0]}]});
-let quiz=blankQuiz();
+ LIB=null,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
+let quiz=null;
 const $=id=>document.getElementById(id),app=()=>vApp||$('app');
 function applyTheme(theme,persist=true){
  const dark=theme==='dark';
@@ -36,61 +35,6 @@ async function capi(p,o){
  const r=await api(p,{token:TOKEN,...o});
  if(r.code===401){TOKEN='';USER=null;saveToken();view='auth';authTab='login';msg='Сессия истекла — войдите снова';render()}
  return r;
-}
-function tg(i,j,on){const c=quiz.q[i].cs;quiz.q[i].cs=on?[...new Set([...c,j])].sort((a,b)=>a-b):c.filter(x=>x!==j)}
-function editor(){view='edit';render()}
-function editorView(){
- const K=quiz.mode==='kingdoms';
- app().innerHTML=`<h1>${quiz.id?'✎ Редактирование теста':'＋ Новый тест'}</h1><div class="card"><input type="text" value="${esc(quiz.title)}" oninput="quiz.title=this.value" placeholder="Название">
- ${K?'':`<label class="mut">Секунд на вопрос по умолчанию: <input type="number" value="${quiz.T}" min="5" max="240" style="width:80px" oninput="quiz.T=Math.max(5,+this.value||20)"></label>`}</div>
- <div class="card qe"><b>🎮 Режим игры</b>
- <label><input type="radio" name="mode" ${K?'':'checked'} onchange="quiz.mode='classic';editor()"><span><b>Classic</b> — вопросы идут по очереди для всех, очки за правильность и скорость</span></label>
- <label><input type="radio" name="mode" ${K?'checked':''} onchange="quiz.mode='kingdoms';editor()"><span><b>Color Kingdoms</b> — две команды сражаются за территорию. Каждый отвечает в своём темпе; за серию верных ответов игрок ставит флаг на карту. Окружите ладью соперника — и трофей ваш</span></label>
- ${K?`<div class="mt-3 grid gap-3 sm:grid-cols-2"><label class="mut">Длительность игры, минут (1–10)<input type="number" min="1" max="10" value="${quiz.dur}" oninput="quiz.dur=Math.min(10,Math.max(1,Math.round(+this.value)||5))"></label>
- <label class="mut">Верных ответов на один флаг<select onchange="quiz.need=+this.value">${[1,2,3,4,5].map(n=>`<option ${quiz.need===n?'selected':''}>${n}</option>`).join('')}</select></label></div>
- <p class="mut text-sm">Игроки делятся на две команды случайно. Вопросы повторяются по кругу, если игрок ответил на все до конца времени.</p>`:''}</div>
- <div class="card"><b>📥 Импорт из Excel (.xlsx)</b><p class="mut" style="margin:6px 0">Загрузите .xlsx — текущие вопросы будут заменены. Если в «правильных ответах» несколько номеров (например, 1,3), студентам нужно отметить их все.</p>
- <div class="row"><input type="file" id="xf" accept=".xlsx,.xls" onchange="importX(this)"><button class="sec" onclick="tpl()">Скачать шаблон</button></div></div>`+
- quiz.q.map((q,i)=>`<div class="card qe"><b>Вопрос ${i+1}</b> <button class="sec" style="float:right;padding:4px 10px" onclick="quiz.q.splice(${i},1);editor()">✕</button>
- <input type="text" value="${esc(q.t)}" oninput="quiz.q[${i}].t=this.value" placeholder="Текст вопроса">`+
- q.a.map((x,j)=>`<label><input type="checkbox" ${q.cs.includes(j)?'checked':''} onchange="tg(${i},${j},this.checked)"><span style="color:var(--c${j})">${SH[j]}</span><input type="text" value="${esc(x)}" oninput="quiz.q[${i}].a[${j}]=this.value" placeholder="Вариант ${j+1}"></label>`).join('')+
- `<p class="mut" style="margin:4px 0">Отметьте галочкой правильный ответ. Если отметить несколько — студенты должны выбрать их все.</p>${K?'':`<label class="mut">Секунд: <input type="number" min="5" max="240" value="${q.T||''}" placeholder="${quiz.T}" style="width:90px" oninput="quiz.q[${i}].T=+this.value||undefined"></label>`}</div>`).join('')+
- `<div class="editor-actions sticky bottom-3 z-20 mt-6 rounded-3xl border border-white/70 bg-white/80 p-3 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80"><div class="row justify-center"><button class="sec" onclick="quiz.q.push({t:'',a:['','','',''],cs:[0]});editor()">+ Вопрос</button><button class="sec" onclick="saveQ()">💾 Сохранить</button>${quiz.id?'<button class="sec" onclick="saveQ(true)" title="Сохранить как новый тест">⧉ Как копию</button>':''}<button onclick="start()">🚀 Запустить игру</button><button class="sec" onclick="openLib()">👤 Кабинет</button></div>${info?`<p class="ok c">${esc(info)}</p>`:''}${msg?`<p class="bad c">${esc(msg)}</p>`:''}</div>`;
-}
-function parseRows(rows){
- const cls=v=>{v=String(v??'').trim();if(/correct|правильн/i.test(v))return'c';if(/time|врем|лимит/i.test(v))return't';
-  const m=v.match(/(?:answer|ответ)\s*([1-4])/i);if(m)return'a'+(m[1]-1);if(/question|вопрос/i.test(v))return'q';return''};
- const h=rows.findIndex(r=>{const k=r.map(cls);return k.includes('q')&&k.includes('a0')});
- if(h<0)return{q:[],errors:['Не найдена строка заголовков (Question, Answer 1 …)']};
- const col={};rows[h].forEach((v,i)=>{const k=cls(v);if(k&&!(k in col))col[k]=i});
- const q=[],errors=[];
- for(let r=h+1;r<rows.length;r++){
-  const row=rows[r],t=String(row[col.q]??'').trim();if(!t)continue;
-  const a=[0,1,2,3].map(j=>col['a'+j]===undefined?'':String(row[col['a'+j]]??'').trim());
-  while(a.length&&!a[a.length-1])a.pop();
-  const cs=[...new Set(String(row[col.c]??'').split(/[^0-9]+/).filter(Boolean).map(n=>+n-1))].filter(n=>n>=0&&n<a.length).sort((x,y)=>x-y);
-  if(a.length<2||a.some(x=>!x)){errors.push('Строка '+(r+1)+': нужно минимум 2 варианта без пропусков');continue}
-  if(!cs.length){errors.push('Строка '+(r+1)+': не указан правильный ответ');continue}
-  const T=+row[col.t];q.push({t,a,cs,T:T>0?Math.min(240,Math.max(5,T)):undefined});
- }
- return{q,errors};
-}
-async function importX(inp){
- const f=inp.files[0];if(!f)return;msg='';info='';
- if(typeof XLSX==='undefined'){msg='Библиотека чтения Excel не загрузилась';return editor()}
- try{
-  const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
-  const r=parseRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}));
-  if(r.q.length){quiz.q=r.q.slice(0,100);quiz.title=f.name.replace(/\.[^.]+$/,'');info='Загружено вопросов: '+quiz.q.length}
-  if(r.errors.length)msg=r.errors.slice(0,5).join('; ');else if(!r.q.length)msg='В файле нет вопросов';
- }catch(e){msg='Не удалось прочитать файл'}
- editor();
-}
-function tpl(){
- if(typeof XLSX==='undefined'){msg='Библиотека Excel не загрузилась';return editor()}
- const H=['','Question - max 120 characters','Answer 1 - max 75 characters','Answer 2 - max 75 characters','Answer 3 - max 75 characters','Answer 4 - max 75 characters','Time limit (sec) – 5, 10, 20, 30, 60, 90, 120, or 240 secs','Correct answer(s) - choose at least one'];
- const ws=XLSX.utils.aoa_to_sheet([H,[1,'Столица Франции?','Берлин','Париж','Мадрид','Рим',20,2],[2,'Земля плоская?','Да','Нет','','',10,2],[3,'Какие числа простые?','2','4','7','9',20,'1,3']]);
- const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Quiz');XLSX.writeFile(wb,'quiz-template.xlsx');
 }
 const getSess=()=>{try{return JSON.parse(sessionStorage.getItem('qs'))}catch(e){return null}};
 function clearSess(){try{sessionStorage.removeItem('qs')}catch(e){}}
@@ -118,9 +62,9 @@ function connect(){
   clearSess();S=null;view='home';msg='Игра не найдена или уже завершена';render();
  };
 }
-function goAuth(){view='auth';msg='';authTab=INFO.hasUsers?'login':'reg';render()}
+function goAuth(){view='auth';msg='';authTab='login';render()}
 async function submitAuth(){
- const reg=authTab==='reg';msg='';
+ const reg=false;authTab='login';msg='';
  if(reg&&AF.pass!==AF.pass2){msg='Пароли не совпадают';return render()}
  const r=await api(reg?'auth/register':'auth/login',{login:AF.login,pass:AF.pass,name:AF.name,code:AF.code});
  if(r.error){msg=r.error;return render()}
@@ -128,33 +72,21 @@ async function submitAuth(){
 }
 async function logout(){await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;view='home';render()}
 function authView(a){
- const reg=authTab==='reg',closed=reg&&!INFO.regOpen;
- a.innerHTML=`<header class="app-topbar auth-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><button class="sec auth-home-link" onclick="view='home';msg='';render()">← На главную</button></header>
- <section class="auth-layout">
-  <div class="auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> ЛИЧНОЕ ПРОСТРАНСТВО ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Ваши тесты.<br><span>Ваши правила.</span></h1><p class="auth-promo-copy">Создавайте интерактивные викторины, запускайте командные игры и следите за результатами — в одном удобном месте.</p><div class="auth-feature-list"><div><span class="feature-check">✓</span><span><b>Одна библиотека</b><small>Встроенные и личные тесты рядом</small></span></div><div><span class="feature-check">✓</span><span><b>Быстрый запуск</b><small>От вопроса до игровой комнаты за минуты</small></span></div><div><span class="feature-check">✓</span><span><b>Результаты под рукой</b><small>Рейтинг и отчёты после игры</small></span></div></div><div class="auth-promo-stamp"><span class="stamp-stars">✦ ✦ ✦</span><span>Учиться интереснее, когда это игра.</span></div></div>
-  <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>${reg?'Создайте аккаунт':'С возвращением!'}</h2><p class="mut">${reg?'Заполните данные, чтобы начать работу.':'Войдите, чтобы продолжить работу с тестами.'}</p></div>
-   <div class="card auth-card"><div class="auth-tabs"><button type="button" class="auth-tab ${reg?'':'is-active'}" onclick="authTab='login';msg='';render()">Вход</button>${INFO.regOpen?`<button type="button" class="auth-tab ${reg?'is-active':''}" onclick="authTab='reg';msg='';render()">Регистрация</button>`:''}</div>
-   ${closed?`<div class="auth-alert">Регистрация закрыта: аккаунт администратора уже создан. Новые аккаунты можно разрешить, задав код приглашения INVITE_CODE при запуске сервера.</div>`:''}
-   <label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Введите логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value">
-   ${reg&&!closed?`<label class="field-label" for="auth-name">Имя для отображения <span>(необязательно)</span></label><input id="auth-name" type="text" placeholder="Как к вам обращаться" value="${esc(AF.name)}" oninput="AF.name=this.value">`:''}
-   <label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Введите пароль" autocomplete="${reg?'new-password':'current-password'}" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()">
-   ${reg&&!closed?`<label class="field-label" for="auth-password2">Повторите пароль</label><input id="auth-password2" type="password" placeholder="Повторите пароль" autocomplete="new-password" value="${esc(AF.pass2)}" oninput="AF.pass2=this.value" onkeydown="if(event.key==='Enter')submitAuth()">${INFO.hasUsers?`<label class="field-label" for="auth-code">Код приглашения</label><input id="auth-code" type="text" placeholder="Введите код приглашения" value="${esc(AF.code)}" oninput="AF.code=this.value">`:''}`:''}
-   <p class="bad auth-error" role="alert">${esc(msg)}</p>
-   ${closed?'':`<button class="btn-primary auth-submit" onclick="submitAuth()">${reg?'Создать аккаунт':'Войти в кабинет'} <span aria-hidden="true">→</span></button>`}
-   ${reg&&!INFO.hasUsers&&!closed?'<p class="auth-note mut">Первый созданный аккаунт становится администратором.</p>':''}</div><div class="auth-back-note">Безопасный вход · Ваша библиотека тестов</div></div>
- </section>`;
+ a.innerHTML=`<header class="app-topbar auth-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><button class="top-action" onclick="view='home';msg='';render()">← На главную</button></header>
+ <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> КАБИНЕТ ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Меньше настройки.<br><span>Больше игры.</span></h1><p class="auth-promo-copy">Запускайте готовые викторины для класса. Библиотека обновляется вместе с версией проекта в GitHub.</p><div class="minimal-auth-note"><span>01</span><span>Войдите в кабинет</span></div><div class="minimal-auth-note"><span>02</span><span>Выберите встроенный тест</span></div><div class="minimal-auth-note"><span>03</span><span>Запустите игру и поделитесь PIN-кодом</span></div></div>
+ <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>Вход в кабинет</h2><p class="mut">Введите логин и пароль администратора.</p></div><div class="card auth-card"><label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(msg)}</p><button class="btn-primary auth-submit" onclick="submitAuth()">Войти <span aria-hidden="true">→</span></button></div><div class="auth-back-note">Тесты доступны только для чтения и загружаются из репозитория.</div></div></section>`;
 }
 async function start(){
  const qs=[];
  for(let i=0;i<quiz.q.length;i++){
   const q=quiz.q[i],a=q.a.map(x=>x.trim());while(a.length&&!a[a.length-1])a.pop();
   const cs=q.cs.filter(c=>c<a.length);
-  if(!q.t.trim()||a.length<2||a.some(x=>!x)||!cs.length){msg='Вопрос '+(i+1)+': заполните текст, минимум 2 варианта и отметьте правильный';view='edit';return render()}
+  if(!q.t.trim()||a.length<2||a.some(x=>!x)||!cs.length){libMsg='Встроенный тест не прошёл проверку: вопрос '+(i+1)+'. Исправьте builtin-tests.json в репозитории.';view='lib';return render()}
   qs.push({t:q.t.trim(),a,cs,T:q.T});
  }
- if(!qs.length){msg='Добавьте хотя бы один вопрос';view='edit';return render()}
- const r=await capi('create',{quiz:{title:quiz.title,T:quiz.T,mode:quiz.mode,dur:quiz.dur,need:quiz.need,q:qs}});
- if(r.error){if(view!=='auth'){msg=r.error;view='edit';render()}return}
+ if(!qs.length){libMsg='В тесте нет вопросов. Проверьте builtin-tests.json в репозитории.';view='lib';return render()}
+ const r=await capi('create',{sourceId:activeQuizId,quiz:{title:quiz.title,T:quiz.T,mode:quiz.mode,dur:quiz.dur,need:quiz.need,q:qs}});
+ if(r.error){if(view!=='auth'){libMsg=r.error;view='lib';render()}return}
  pin=r.pin;me=r.id;connect();
 }
 async function join(){
@@ -176,72 +108,170 @@ async function endGame(){
 }
 const kick=id=>act('kick',id);
 function finishNow(){if(confirm('Подвести итоги досрочно?'))act('skip')}
-function newQ(){if(!USER)return goAuth();quiz=blankQuiz();info='';msg='';view='edit';render()}
-function fixQuiz(){quiz.q.forEach(q=>{if(!Array.isArray(q.cs)||!q.cs.length)q.cs=[0];while(q.a.length<2)q.a.push('')});if(!quiz.q.length)quiz.q.push({t:'',a:['','','',''],cs:[0]});quiz.mode=quiz.mode||'classic';quiz.dur=quiz.dur||5;quiz.need=quiz.need||3}
 async function openLib(){
  if(!USER)return goAuth();
  view='lib';libMsg='';LIB=null;render();
  const r=await capi('lib/list',{});if(view!=='lib')return;
- if(r.error){libMsg=r.error;LIB=[]}else LIB=r.items;render();
+ if(r.error){libMsg=r.error;LIB=[]}else LIB=Array.isArray(r.items)?r.items:[];
+ render();
 }
-async function loadQ(id){const r=await capi('lib/get',{id});if(r.error){libMsg=r.error;render();return false}quiz=r.quiz;quiz.id=id;fixQuiz();info='';msg='';return true}
-async function editQ(id){if(await loadQ(id)){view='edit';render()}}
-async function runQ(id){if(await loadQ(id)){view='edit';await start()}}
-async function dupQ(id){if(!await loadQ(id))return;const r=await capi('lib/save',{quiz:{...quiz,title:quiz.title+' (копия)'}});if(r.error)libMsg=r.error;await openLib()}
-async function doDel(){const r=await capi('lib/delete',{id:delId});delId='';if(r.error)libMsg=r.error;await openLib()}
-async function saveQ(asCopy){
- if(!USER)return goAuth();
- msg='';info='';
- const r=await capi('lib/save',{quiz,id:asCopy?undefined:quiz.id});
- if(r.error){msg=r.error;return render()}
- quiz.id=r.id;info='Сохранено ✓ — «'+r.title+'»';render();
+async function loadQ(id){
+ const r=await capi('lib/get',{id});
+ if(r.error){libMsg=r.error;render();return false}
+ quiz=r.quiz;activeQuizId=id;return true;
 }
+async function runQ(id){if(await loadQ(id)){msg='';await start()}}
 function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
-async function exportLib(){const r=await capi('lib/export',{});if(r.error){libMsg=r.error;return render()}dl('moi-testy.json',JSON.stringify(r,null,1));libInfo='Файл с '+r.items.length+' тестами сохранён';render()}
-async function importLib(inp){
- const f=inp.files[0];if(!f)return;libMsg='';libInfo='';
- try{const j=JSON.parse(await f.text()),items=Array.isArray(j)?j:j.items;const r=await capi('lib/import',{items});if(r.error)libMsg=r.error;else libInfo='Импортировано тестов: '+r.imported}catch(e){libMsg='Не удалось прочитать файл — нужен JSON, сохранённый кнопкой «Экспорт»'}
- await openLib();
+async function exportLib(){
+ const r=await capi('lib/export',{});
+ if(r.error){libMsg=r.error;return render()}
+ dl('builtin-tests.json',JSON.stringify(r,null,2));
+ libInfo='Экспортировано встроенных тестов: '+r.items.length+'. В файл включены идентификаторы для дальнейшего редактирования.';
+ render();
+}
+function tidyQuiz(z){
+ if(!z||!Array.isArray(z.q)||!z.q.length||z.q.length>100)return null;
+ const q=z.q.map(x=>{
+  if(!x||typeof x.t!=='string'||!x.t.trim()||!Array.isArray(x.a)||x.a.length<2||x.a.length>4||!Array.isArray(x.cs))return null;
+  const a=x.a.map(v=>String(v??'').trim().slice(0,150));while(a.length&&!a[a.length-1])a.pop();
+  const cs=[...new Set(x.cs.map(Number))].filter(c=>Number.isInteger(c)&&c>=0&&c<a.length).sort((a,b)=>a-b);
+  if(a.length<2||a.length>4||a.some(v=>!v)||!cs.length)return null;
+  return{t:x.t.trim().slice(0,300),a,cs,T:+x.T>=5?Math.min(240,+x.T):Math.min(240,Math.max(5,+z.T||20))};
+ });
+ if(q.some(x=>!x))return null;
+ return{title:String(z.title||'Без названия').trim().slice(0,80)||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:z.mode==='kingdoms'?'kingdoms':'classic',dur:Math.min(10,Math.max(1,Math.round(+z.dur)||5)),need:Math.min(5,Math.max(1,Math.round(+z.need)||3)),q};
+}
+function normHead(v){return String(v??'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim()}
+function headerIndex(headers,patterns){return headers.findIndex(h=>patterns.some(p=>p.test(h)))}
+function excelCorrectIndices(value,rawAnswers,answers){
+ const text=String(value??'').trim();if(!text)return[];
+ const tokens=text.split(/[;,|]/).map(x=>x.trim()).filter(Boolean),indexes=[];
+ for(const token of tokens){
+  let rawIndex=-1;
+  if(/^[A-D]$/i.test(token))rawIndex=token.toUpperCase().charCodeAt(0)-65;
+  else if(/^\d+$/.test(token)){const n=Number(token);rawIndex=n>=1&&n<=rawAnswers.length?n-1:(n===0?0:-1)}
+  else {const found=rawAnswers.findIndex(a=>String(a??'').trim().toLocaleLowerCase('ru-RU')===token.toLocaleLowerCase('ru-RU'));rawIndex=found}
+  if(rawIndex>=0&&rawIndex<rawAnswers.length){const oldText=String(rawAnswers[rawIndex]??'').trim();const newIndex=answers.indexOf(oldText);if(newIndex>=0&&!indexes.includes(newIndex))indexes.push(newIndex)}
+ }
+ return indexes.sort((a,b)=>a-b);
+}
+async function parseXlsxFile(file){
+ if(typeof XLSX==='undefined')throw new Error('Библиотека Excel не загрузилась. Обновите страницу и попробуйте снова.');
+ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),tests=[],issues=[],base=file.name.replace(/\.(xlsx|xls)$/i,'').replace(/[_-]+/g,' ').trim()||'Импортированный тест';
+ for(const sheetName of wb.SheetNames){
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:'',raw:true});
+  let hi=-1,headers=[],qi=-1,ans=[],ti=-1,ci=-1;
+  for(let r=0;r<Math.min(rows.length,80);r++){
+   const h=(rows[r]||[]).map(normHead),question=headerIndex(h,[/\bquestion\b/,/вопрос/]);
+   const answers=h.map((x,i)=>({x,i})).filter(o=>/(answer|option|ответ|вариант)\s*[1-4]/.test(o.x));
+   const correct=headerIndex(h,[/correct answer/,/правильн/,/верн.{0,8}ответ/,/ключ ответ/]);
+   if(question>=0&&answers.length>=2&&correct>=0){hi=r;headers=h;qi=question;ans=answers.sort((a,b)=>{const na=Number((a.x.match(/[1-4]/)||[])[0]||99),nb=Number((b.x.match(/[1-4]/)||[])[0]||99);return na-nb||a.i-b.i}).map(o=>o.i);ti=headerIndex(h,[/time limit/,/^time$/, /время/,/лимит времени/]);ci=correct;break}
+  }
+  if(hi<0){issues.push('Лист «'+sheetName+'»: не найдены колонки «Question/Вопрос», варианты ответов и «Correct answer(s)/Правильные ответы».');continue}
+  const questions=[];
+  for(let ri=hi+1;ri<rows.length;ri++){
+   const row=rows[ri]||[],question=String(row[qi]??'').trim();if(!question)continue;
+   const rawAnswers=ans.map(ix=>String(row[ix]??'').trim());while(rawAnswers.length&&!rawAnswers[rawAnswers.length-1])rawAnswers.pop();
+   const answers=rawAnswers.filter(Boolean),correct=excelCorrectIndices(row[ci],rawAnswers,answers);
+   if(answers.length<2||answers.length>4||rawAnswers.some(x=>!x)||!correct.length){issues.push('Лист «'+sheetName+'», строка '+(ri+1)+': проверьте варианты ответов и правильный ответ.');continue}
+   const time=Number(row[ti]);
+   questions.push({t:question.slice(0,300),a:answers.slice(0,4),cs:correct,T:Number.isFinite(time)&&time>=5?Math.min(240,time):20});
+   if(questions.length>=100){issues.push('Лист «'+sheetName+'»: импортированы только первые 100 вопросов.');break}
+  }
+  if(!questions.length){issues.push('Лист «'+sheetName+'»: нет корректных вопросов.');continue}
+  const generic=/^(sheet|worksheet|лист|листья)\s*\d*$/i.test(sheetName);
+  let title=wb.SheetNames.length===1||generic?base:sheetName;
+  if(wb.SheetNames.length>1&&generic)title=base+' — '+sheetName;
+  tests.push({title:title.slice(0,80),T:questions[0].T||20,mode:'classic',dur:5,need:3,q:questions});
+ }
+ if(!tests.length)throw new Error(issues.slice(0,5).join(' ')||'В Excel не найдено ни одного корректного теста.');
+ return{tests,issues};
+}
+async function refreshLibrary(){
+ const r=await capi('lib/list',{});if(!r.error)LIB=Array.isArray(r.items)?r.items:[];else libMsg=r.error;
+}
+async function finishLibraryMutation(r,description){
+ if(r.error){libMsg=r.error;libInfo='';view='lib';await refreshLibrary();render();return}
+ libMsg='';
+ if(r.persistedToGitHub){libInfo=description+' Изменения автоматически записаны в builtin-tests.json репозитория GitHub.'}
+ else{
+  const backup=await capi('lib/export',{});if(!backup.error)dl('builtin-tests.json',JSON.stringify(backup,null,2));
+  libInfo=description+' Файл обновлён на сервере и скачана резервная копия builtin-tests.json. Без GitHub-синхронизации изменения необходимо сохранить в репозиторий вручную; на Render временные изменения могут пропасть при новом деплое.';
+ }
+ view='lib';editorQuiz=null;editorId='';await refreshLibrary();render();
+}
+async function importRepoTests(inp){
+ const f=inp.files&&inp.files[0];if(!f)return;
+ libMsg='';libInfo='';
+ try{
+  let tests=[],issues=[];
+  if(/\.(xlsx|xls)$/i.test(f.name)){
+   const result=await parseXlsxFile(f);tests=result.tests;issues=result.issues;
+  }else if(/\.json$/i.test(f.name)||f.type==='application/json'){
+   const raw=JSON.parse(await f.text()),source=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:null);
+   if(!source||!source.length)throw new Error('В JSON не найден массив items со списком тестов.');
+   if(source.length>200)throw new Error('За один импорт допускается не более 200 тестов.');
+   source.forEach((entry,i)=>{const item=entry&&entry.quiz?entry.quiz:entry,z=tidyQuiz(item);if(z)tests.push(z);else issues.push('Тест №'+(i+1)+': структура или ответы некорректны.')});
+  }else throw new Error('Выберите файл XLSX, XLS или JSON.');
+  if(!tests.length)throw new Error('Не найдено корректных тестов. '+issues.slice(0,5).join(' '));
+  const r=await capi('lib/import',{items:tests});
+  if(r.error)throw new Error(r.error);
+  const details='Импорт завершён: добавлено '+r.added+' тест(ов)'+(r.skipped?' (пропущено некорректных: '+r.skipped+')':'')+'.';
+  await finishLibraryMutation(r,details+(issues.length?' Замечания: '+issues.slice(0,3).join(' '):''));
+ }catch(e){libMsg=e.message||'Не удалось импортировать файл.';libInfo='';render()}
+ inp.value='';
+}
+async function editQ(id){
+ const r=await capi('lib/get',{id});if(r.error){libMsg=r.error;render();return}
+ editorId=id;editorQuiz=JSON.parse(JSON.stringify(r.quiz));editorMsg='';view='quiz-editor';render();
+}
+function cancelEdit(){editorQuiz=null;editorId='';editorMsg='';view='lib';render()}
+function editorAddQuestion(){if(!editorQuiz||editorQuiz.q.length>=100)return;editorQuiz.q.push({t:'',a:['','','',''],cs:[],T:editorQuiz.T||20});render()}
+function editorRemoveQuestion(i){if(!editorQuiz||editorQuiz.q.length<=1){editorMsg='В тесте должен остаться хотя бы один вопрос.';return render()}editorQuiz.q.splice(i,1);render()}
+function editorCorrect(i,j,checked){const q=editorQuiz&&editorQuiz.q[i];if(!q)return;const s=new Set(q.cs||[]);checked?s.add(j):s.delete(j);q.cs=[...s].sort((a,b)=>a-b)}
+async function saveEditor(){
+ if(!editorQuiz)return;
+ const out=tidyQuiz(editorQuiz);
+ if(!out){editorMsg='Проверьте тест: в каждом вопросе нужны текст, 2–4 непустых варианта и хотя бы один правильный ответ.';return render()}
+ const r=await capi('lib/update',{id:editorId,quiz:out});
+ if(r.error){editorMsg=r.error;return render()}
+ libMsg='';editorMsg='';await finishLibraryMutation(r,'Тест «'+out.title+'» обновлён.');
+}
+async function copyQ(id){const r=await capi('lib/copy',{id});await finishLibraryMutation(r,'Создана копия теста.');}
+async function deleteQ(id){const item=(LIB||[]).find(x=>x.id===id);if(!confirm('Удалить тест «'+(item?item.title:'')+'» из builtin-tests.json? Это изменение затронет весь проект.'))return;const r=await capi('lib/delete',{id});await finishLibraryMutation(r,'Тест удалён из встроенной библиотеки.');}
+function editorView(){
+ if(!editorQuiz){view='lib';return lib()}
+ const z=editorQuiz;
+ const questionCards=z.q.map((q,i)=>`<section class="edit-question-card"><div class="edit-question-head"><span class="edit-question-number">${String(i+1).padStart(2,'0')}</span><b>Вопрос ${i+1}</b><button type="button" class="btn-icon danger-action" title="Удалить вопрос" onclick="editorRemoveQuestion(${i})" aria-label="Удалить вопрос">×</button></div><label class="field-label" for="eqt-${i}">Текст вопроса</label><textarea id="eqt-${i}" rows="2" maxlength="300" oninput="editorQuiz.q[${i}].t=this.value">${esc(q.t)}</textarea><div class="edit-answer-grid">${[0,1,2,3].map(j=>`<div class="edit-answer"><label class="field-label" for="eqa-${i}-${j}">Вариант ${j+1}</label><input id="eqa-${i}-${j}" maxlength="150" value="${esc((q.a||[])[j]||'')}" oninput="editorQuiz.q[${i}].a[${j}]=this.value;editorQuiz.q[${i}].a.length=Math.max(editorQuiz.q[${i}].a.length,${j+1})"><label class="edit-correct"><input type="checkbox" ${q.cs.includes(j)?'checked':''} onchange="editorCorrect(${i},${j},this.checked)"> Правильный</label></div>`).join('')}</div><div class="edit-question-time"><label class="field-label" for="eqtime-${i}">Время на вопрос (сек.)</label><input id="eqtime-${i}" type="number" min="5" max="240" value="${q.T||z.T||20}" onchange="editorQuiz.q[${i}].T=Number(this.value)"></div></section>`).join('');
+ app().innerHTML=`<header class="app-topbar dashboard-topbar editor-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Редактор встроенного теста</span></div></div><button type="button" class="top-action" onclick="cancelEdit()">← К библиотеке</button></header><section class="quiz-editor-page"><div class="quiz-editor-intro"><span class="section-kicker">ВСТРОЕННЫЙ ТЕСТ</span><h1 class="page-title">Редактирование теста<span class="title-period">.</span></h1><p class="page-subtitle">Изменения записываются в builtin-tests.json и могут быть отправлены в GitHub.</p></div>${editorMsg?`<div class="notice notice-error">${esc(editorMsg)}</div>`:''}<section class="edit-settings-card"><div class="edit-settings-grid"><div><label class="field-label" for="edit-title">Название теста</label><input id="edit-title" maxlength="80" value="${esc(z.title)}" oninput="editorQuiz.title=this.value"></div><div><label class="field-label" for="edit-mode">Режим игры</label><select id="edit-mode" onchange="editorQuiz.mode=this.value"><option value="classic" ${z.mode==='classic'?'selected':''}>Classic</option><option value="kingdoms" ${z.mode==='kingdoms'?'selected':''}>Color Kingdoms</option></select></div><div><label class="field-label" for="edit-default-time">Время по умолчанию (сек.)</label><input id="edit-default-time" type="number" min="5" max="120" value="${z.T}" onchange="editorQuiz.T=Number(this.value)"></div><div><label class="field-label" for="edit-duration">Длительность Color Kingdoms (мин.)</label><input id="edit-duration" type="number" min="1" max="10" value="${z.dur}" onchange="editorQuiz.dur=Number(this.value)"></div><div><label class="field-label" for="edit-need">Верных ответов для флага</label><input id="edit-need" type="number" min="1" max="5" value="${z.need}" onchange="editorQuiz.need=Number(this.value)"></div></div></section><div class="edit-questions-head"><div><h2>Вопросы</h2><p>${z.q.length} из 100 · Отметьте правильные ответы</p></div><button type="button" class="sec" onclick="editorAddQuestion()" ${z.q.length>=100?'disabled':''}>＋ Добавить вопрос</button></div>${questionCards}<div class="editor-actions"><div class="row flex flex-wrap items-center justify-between gap-2"><button type="button" class="sec" onclick="cancelEdit()">Отмена</button><button type="button" class="btn-primary" onclick="saveEditor()">Сохранить изменения</button></div></div><footer class="dashboard-footer minimal-footer"><span>© eyefront</span><span>Изменения теста в репозитории проекта</span></footer></section>`;
 }
 function setLibraryFilter(filter){libFilter=filter;render()}
 function filterLibrary(){
- const search=($('lib-search')?.value ?? libSearch).trim().toLocaleLowerCase('ru-RU');libSearch=search;
+ const input=$('lib-search');const search=(input?input.value:libSearch).trim().toLocaleLowerCase('ru-RU');libSearch=search;
  let visibleCount=0;
  document.querySelectorAll('.quiz-card').forEach(el=>{
-  const source=el.dataset.source||'personal';
-  const matchesFilter=libFilter==='all'||(libFilter==='project'&&source==='project')||(libFilter==='personal'&&source==='personal');
+  const mode=el.dataset.mode||'classic';
+  const matchesFilter=libFilter==='all'||mode===libFilter;
   const matchesSearch=!search||(el.dataset.search||'').includes(search);
   const show=matchesFilter&&matchesSearch;el.style.display=show?'':'none';if(show)visibleCount++;
  });
- document.querySelectorAll('[data-library-section]').forEach(section=>{
-  const type=section.dataset.librarySection;
-  const inFilter=libFilter==='all'||(libFilter==='project'&&type==='project')||(libFilter==='personal'&&type==='personal');
-  const cards=[...section.querySelectorAll('.quiz-card')];
-  const visible=cards.some(c=>c.style.display!=='none');
-  section.style.display=(inFilter&&(!search||visible))?'':'none';
- });
- const noResults=$('library-no-results');if(noResults)noResults.hidden=!(LIB&&search&&visibleCount===0);
- const count=$('library-result-count');if(count&&LIB)count.textContent=search||libFilter!=='all'?`Найдено: ${visibleCount}`:`Всего тестов: ${LIB.length}`;
+ const section=document.querySelector('[data-library-section="project"]');
+ if(section)section.style.display='';
+ const noResults=$('library-no-results');if(noResults)noResults.hidden=!(LIB&&visibleCount===0&&(search||libFilter!=='all'));
+ const count=$('library-result-count');if(count&&LIB)count.textContent=(search||libFilter!=='all')?`Найдено: ${visibleCount}`:`Всего встроенных тестов: ${LIB.length}`;
 }
 function lib(){
- const fmtD=t=>new Date(t).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'});
- const del=LIB&&LIB.find(x=>x.id===delId&&!x.builtin);
- const projectItems=LIB===null?[]:LIB.filter(t=>t.builtin),personalItems=LIB===null?[]:LIB.filter(t=>!t.builtin);
- const card=t=>`<article class="quiz-card" data-source="${t.builtin?'project':'personal'}" data-search="${esc((t.title+' '+(t.mode==='kingdoms'?'Color Kingdoms':'Classic')+' '+(t.builtin?'проект встроенный':'личный')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon ${t.builtin?'project-icon':'personal-icon'}">${t.builtin?'▦':'✎'}</div><div class="quiz-card-copy"><h3 title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span>${t.mode==='kingdoms'?'Color Kingdoms':'Classic'}</span></div><div class="quiz-badges"><span class="status-badge ${t.builtin?'badge-project':'badge-personal'}">${t.builtin?(t.source==='saved'?'Сохранён в проекте':'Встроенный'):'Личный тест'}</span>${!t.builtin?`<span class="quiz-updated">Изменён ${fmtD(t.updated)}</span>`:''}</div></div></div><div class="quiz-card-actions"><button class="btn-primary btn-small" onclick="runQ('${t.id}')"><span aria-hidden="true">▶</span> Запустить</button>${t.builtin?`<button class="sec btn-small" title="Создать редактируемую копию в личной библиотеке" onclick="dupQ('${t.id}')">⧉ В мои тесты</button>`:`<button class="sec btn-small" onclick="editQ('${t.id}')"><span aria-hidden="true">✎</span> Изменить</button><button class="sec btn-icon" title="Дублировать" aria-label="Дублировать ${esc(t.title)}" onclick="dupQ('${t.id}')">⧉</button><button class="sec btn-icon danger-action" title="Удалить" aria-label="Удалить ${esc(t.title)}" onclick="delId='${t.id}';render()">⌫</button>`}</div></article>`;
- const builtins=LIB===null?'<div class="loading-state"><span class="loading-dot"></span> Загружаем тесты…</div>':projectItems.map(card).join('')||'<div class="empty-state"><div class="empty-icon">▦</div><h3>Пока нет тестов проекта</h3><p>Добавьте тесты в <code>builtin-tests.json</code> или <code>saved-tests.json</code>, сохраните изменения в GitHub и выполните деплой.</p></div>';
- const own=LIB===null?'<div class="loading-state"><span class="loading-dot"></span> Загружаем тесты…</div>':personalItems.map(card).join('')||`<div class="empty-state"><div class="empty-icon">✎</div><h3>Ваша библиотека пока пуста</h3><p>Создайте первый тест или импортируйте готовые вопросы из JSON.</p><button class="btn-primary" onclick="newQ()">＋ Создать первый тест</button></div>`;
- const total=LIB===null?'—':LIB.length,projectN=LIB===null?'—':projectItems.length,personalN=LIB===null?'—':personalItems.length;
- app().innerHTML=`<header class="app-topbar dashboard-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><div class="dashboard-user"><div class="user-avatar">${esc((USER.name||USER.login||'У').slice(0,1).toLocaleUpperCase('ru-RU'))}</div><div class="dashboard-user-copy"><b>${esc(USER.name)}</b><span>${USER.admin?'Администратор':'Преподаватель'}</span></div></div></header>
- <section class="dashboard-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span> РАБОЧЕЕ ПРОСТРАНСТВО</div><h1 class="page-title">Библиотека тестов<span class="title-period">.</span></h1><p class="page-subtitle">Всё для следующей игры — в одном месте.</p></div><button class="btn-primary create-test-btn" onclick="newQ()"><span class="plus-symbol">＋</span> Новый тест</button></section>
- <section class="library-stats"><div class="stat-card stat-total"><div class="stat-card-icon">▦</div><div><span class="stat-label">Всего тестов</span><strong>${total}</strong><small>В вашей библиотеке</small></div></div><div class="stat-card"><div class="stat-card-icon stat-purple">⌂</div><div><span class="stat-label">В проекте</span><strong>${projectN}</strong><small>Не пропадут при деплое</small></div></div><div class="stat-card"><div class="stat-card-icon stat-blue">✎</div><div><span class="stat-label">Личные</span><strong>${personalN}</strong><small>Редактируйте и копируйте</small></div></div></section>
- <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="Поиск тестов" placeholder="Найти тест по названию или режиму…" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div><div class="library-filters" role="group" aria-label="Фильтр библиотеки"><button class="filter-tab ${libFilter==='all'?'is-active':''}" onclick="setLibraryFilter('all')">Все <span>${total}</span></button><button class="filter-tab ${libFilter==='project'?'is-active':''}" onclick="setLibraryFilter('project')">В проекте <span>${projectN}</span></button><button class="filter-tab ${libFilter==='personal'?'is-active':''}" onclick="setLibraryFilter('personal')">Мои <span>${personalN}</span></button></div></div>
- <p id="library-result-count" class="library-result-count">${LIB===null?'Загрузка тестов…':'Всего тестов: '+LIB.length}</p>
- ${libMsg?`<div class="notice notice-error">${esc(libMsg)}</div>`:''}${libInfo?`<div class="notice notice-success">${esc(libInfo)}</div>`:''}
- <section class="library-section" data-library-section="project"><div class="library-section-head"><div><span class="section-kicker">ФАЙЛЫ ПРОЕКТА</span><h2>Встроенные тесты</h2><p>Версии, которые поставляются вместе с игрой.</p></div><span class="section-count">${projectN}</span></div>${builtins}</section>
- <section class="library-section" data-library-section="personal"><div class="library-section-head"><div><span class="section-kicker">ВАШ КОНТЕНТ</span><h2>Мои тесты</h2><p>Личная коллекция для редактирования и повторного использования.</p></div><span class="section-count">${personalN}</span></div>${own}</section>
- <div id="library-no-results" class="empty-state search-empty" hidden><div class="empty-icon">⌕</div><h3>Ничего не найдено</h3><p>Попробуйте изменить запрос или выбрать другой фильтр.</p><button class="sec" onclick="libSearch='';libFilter='all';render()">Сбросить поиск</button></div>
- <footer class="dashboard-footer"><span>Квиз-арена <span class="footer-separator">·</span> Учиться интереснее, когда это игра.</span><div class="footer-actions"><button class="footer-link" onclick="exportLib()">↓ Экспорт</button><input type="file" id="impf" accept=".json" class="hidden" onchange="importLib(this)"><button class="footer-link" onclick="$('impf').click()">↑ Импорт</button><button class="footer-link" onclick="view='home';render()">На главную</button><button class="footer-link" onclick="logout()">Выйти</button></div></footer>`+
- (del?`<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onclick="delId='';render()"><div class="card delete-dialog" onclick="event.stopPropagation()"><div class="delete-dialog-icon">!</div><h2>Удалить тест?</h2><p class="mut">«${esc(del.title)}» будет удалён без возможности восстановления.</p><div class="row justify-end"><button class="sec" onclick="delId='';render()">Отмена</button><button class="danger-button" onclick="doDel()">Удалить тест</button></div></div></div>`:'');
+ const items=LIB||[];
+ const card=t=>`<article class="quiz-card" data-mode="${t.mode==='kingdoms'?'kingdoms':'classic'}" data-search="${esc((t.title+' '+(t.mode==='kingdoms'?'Color Kingdoms kingdoms':'Classic classic')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon project-icon">▦</div><div class="quiz-card-copy"><h3 title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span>${t.mode==='kingdoms'?'Color Kingdoms':'Classic'}</span></div><div class="quiz-badges"><span class="status-badge badge-project">Встроенный</span><span class="quiz-source-note">builtin-tests.json</span></div></div></div><div class="quiz-card-actions"><button class="btn-primary btn-small" onclick="runQ('${t.id}')"><span aria-hidden="true">▶</span> Запустить</button>${USER&&USER.admin?`<button class="sec btn-small" onclick="editQ('${t.id}')" title="Редактировать тест">✎ Редактировать</button><button class="sec btn-small" onclick="copyQ('${t.id}')" title="Создать копию">▢ Копировать</button><button class="btn-icon danger-action" onclick="deleteQ('${t.id}')" title="Удалить тест" aria-label="Удалить тест">⌫</button>`:''}</div></article>`;
+ const list=LIB===null?'<div class="loading-state">Загружаем встроенные тесты…</div>':items.map(card).join('')||'<div class="empty-state"><div class="empty-icon">▦</div><h3>Пока нет встроенных тестов</h3><p>Импортируйте Excel-таблицу XLSX вверху. Вопросы добавятся в <code>builtin-tests.json</code>, а в Codespaces файл можно будет отправить в GitHub.</p></div>';
+ const total=LIB===null?'—':items.length;
+ app().innerHTML=`<header class="app-topbar dashboard-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><nav class="dashboard-toolbar-actions" aria-label="Действия кабинета"><button class="top-action" onclick="exportLib()" title="Скачать встроенные тесты">↓ Экспорт</button>${USER&&USER.admin?`<input type="file" id="impf" accept=".xlsx,.xls,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json" class="hidden" onchange="importRepoTests(this)"><button class="top-action" onclick="$('impf').click()" title="Импортировать тесты из Excel XLSX, XLS или JSON">↑ Импорт</button>`:''}<button class="top-action" onclick="view='home';render()">На главную</button><button class="top-action top-action-quiet" onclick="logout()">Выйти</button></nav></header>
+ <section class="dashboard-head minimal-dashboard-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span> КАБИНЕТ ПРЕПОДАВАТЕЛЯ</div><h1 class="page-title">Встроенные тесты<span class="title-period">.</span></h1><p class="page-subtitle">Тесты поставляются вместе с проектом и управляются через репозиторий GitHub.</p></div><div class="dashboard-user-inline"><span class="user-avatar">${esc((USER.name||USER.login||'У').slice(0,1).toLocaleUpperCase('ru-RU'))}</span><span><b>${esc(USER.login||USER.name)}</b><small>${USER.admin?'Администратор':'Преподаватель'}</small></span></div></section>
+ <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="Поиск тестов" placeholder="Поиск по названию или режиму…" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div><div class="library-filters" role="group" aria-label="Фильтр тестов"><button class="filter-tab ${libFilter==='all'?'is-active':''}" onclick="setLibraryFilter('all')">Все <span>${total}</span></button><button class="filter-tab ${libFilter==='classic'?'is-active':''}" onclick="setLibraryFilter('classic')">Classic</button><button class="filter-tab ${libFilter==='kingdoms'?'is-active':''}" onclick="setLibraryFilter('kingdoms')">Color Kingdoms</button></div></div>
+ <p id="library-result-count" class="library-result-count">${LIB===null?'Загрузка тестов…':'Всего встроенных тестов: '+LIB.length}</p>${libMsg?`<div class="notice notice-error">${esc(libMsg)}</div>`:''}${libInfo?`<div class="notice notice-success">${esc(libInfo)}</div>`:''}
+ <section class="library-section minimal-library-section" data-library-section="project"><div class="library-section-head"><div><span class="section-kicker">ИСТОЧНИК: GITHUB</span><h2>Библиотека</h2><p>Импорт XLSX добавляет тесты в <code>builtin-tests.json</code>. Можно редактировать, копировать и удалять тесты.</p></div><span class="section-count">${total}</span></div>${list}</section>
+ <div id="library-no-results" class="empty-state search-empty" hidden><div class="empty-icon">⌕</div><h3>Ничего не найдено</h3><p>Измените поисковый запрос или переключите фильтр.</p><button class="sec" onclick="libSearch='';libFilter='all';render()">Сбросить фильтры</button></div>
+ <footer class="dashboard-footer minimal-footer"><span>© eyefront</span><span>Встроенные тесты · Управление через GitHub</span></footer>`;
 }
 
 function newGame(){clearSess();location.reload()}
@@ -356,19 +386,19 @@ function player(a){
  a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Ваше место: ${p.rank}</p><button onclick="location.reload()">На главную</button></div>`;
 }
 function home(a){
- const teacher=USER?`<p class="entry-description">Вы вошли как <b>${esc(USER.name)}</b>. Продолжайте работу с библиотекой или сразу создайте новую викторину.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button><button class="sec" onclick="newQ()">＋ Новый тест</button></div>`:`<p class="entry-description">Создавайте викторины, проводите игры в классе и анализируйте результаты учеников.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей и ведущих</span></div>`;
+ const teacher=USER?`<p class="entry-description">Вы вошли как <b>${esc(USER.name||USER.login)}</b>. В кабинете находятся встроенные тесты из репозитория.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button></div>`:`<p class="entry-description">Войдите, чтобы выбрать встроенный тест и запустить викторину для класса.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей</span></div>`;
  a.innerHTML=`<header class="app-topbar home-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа игровых уроков</span></div></div><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div></header>
- <section class="home-hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> ОБУЧЕНИЕ В ФОРМАТЕ ИГРЫ</div><h1 class="home-title">Уроки, которые<br><span>хочется проходить.</span></h1><p class="home-lead">Превращайте знания в командную игру. Подключайте класс по PIN-коду, отвечайте в реальном времени и радуйтесь общим победам.</p><div class="hero-benefits"><span><i>✓</i> Запуск за минуту</span><span><i>✓</i> Рейтинг в реальном времени</span></div></div>
- <div class="hero-visual" aria-hidden="true"><div class="visual-halo halo-one"></div><div class="visual-halo halo-two"></div><div class="floating-score floating-score-top"><span class="score-spark">✦</span><span><b>+320 XP</b><small>Отличная серия!</small></span></div><div class="quiz-preview"><div class="preview-top"><span class="preview-mark">K</span><span>БЫСТРЫЙ КВИЗ</span><span class="preview-step">01 / 10</span></div><div class="preview-progress"><span></span></div><h3>Готовы проверить свои знания?</h3><p>Подключайтесь и играйте вместе с классом.</p><div class="preview-options"><div class="preview-option option-violet"><span>A</span><i></i></div><div class="preview-option option-blue"><span>B</span><i></i></div><div class="preview-option option-orange"><span>C</span><i></i></div><div class="preview-option option-green"><span>D</span><i></i></div></div><div class="preview-bottom"><span class="preview-avatar-stack"><i>А</i><i>М</i><i>Д</i><i>+</i></span><span>Играйте вместе</span><span class="preview-live"><i></i> LIVE</span></div></div><div class="floating-score floating-score-bottom"><span class="trophy-icon" aria-label="Командная игра" title="Командная игра">🏆</span></div></div></section>
- <section class="entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ УЧЕНИКОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код от преподавателя — и вы в игре.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код игры</label><input type="text" id="jp" placeholder="6 цифр от преподавателя" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Ваш никнейм</label><input type="text" id="jn" placeholder="Как к вам обращаться?" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Регистрация не требуется</div></article>
- <article class="entry-card teacher-card"><div class="teacher-card-art"><div class="teacher-orbit orbit-a"></div><div class="teacher-orbit orbit-b"></div><div class="teacher-large-icon">✦</div><span class="teacher-mini mini-a">✓</span><span class="teacher-mini mini-b">↗</span></div><span class="section-kicker">ДЛЯ ПРЕПОДАВАТЕЛЕЙ</span><h2>Создавайте игры<br>и вдохновляйте класс.</h2>${teacher}</article></section>
- <footer class="home-footer"><span>© Квиз-арена</span><span>Меньше рутины. Больше вовлечённости.</span></footer>`;
+ <section class="home-hero minimal-home-hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> ОБУЧЕНИЕ В ФОРМАТЕ ИГРЫ</div><h1 class="home-title">Знания, которые<br><span>объединяют.</span></h1><p class="home-lead">Запускайте интерактивные викторины, подключайте учеников по PIN-коду и наблюдайте за результатами в реальном времени.</p><div class="hero-benefits"><span><i>✓</i> Без регистрации для учеников</span><span><i>✓</i> Два режима игры</span></div></div><aside class="home-guide"><span class="section-kicker">КАК ЭТО РАБОТАЕТ</span><div class="guide-step"><span>1</span><div><b>Выберите тест</b><small>Готовые вопросы из проекта</small></div></div><div class="guide-step"><span>2</span><div><b>Запустите игру</b><small>Получите PIN-код комнаты</small></div></div><div class="guide-step"><span>3</span><div><b>Подключите класс</b><small>Ученики отвечают со своих устройств</small></div></div></aside></section>
+ <section class="entry-grid minimal-entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ УЧЕНИКОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код, который показал преподаватель.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код</label><input type="text" id="jp" placeholder="6 цифр" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Имя в игре</label><input type="text" id="jn" placeholder="Ваше имя" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Аккаунт не нужен</div></article>
+ <article class="entry-card teacher-card minimal-teacher-card"><span class="section-kicker">ДЛЯ ПРЕПОДАВАТЕЛЕЙ</span><h2>Встроенные тесты<br>для вашего урока.</h2>${teacher}</article></section>
+ <footer class="home-footer"><span>© eyefront</span><span>Меньше рутины. Больше вовлечённости.</span></footer>`;
 }
 function draw(){
  const a=app();
  if(view==='home')return home(a);
  if(view==='auth')return authView(a);
- if(view==='edit')return editorView();
+ if(view==='quiz-editor')return editorView();
+ if(view==='edit'){view='lib';return lib();}
  if(view==='lib')return lib();
  if(!S)return a.innerHTML='<p class="c mut">Подключение…</p>';
  if(S.state==='kicked'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}

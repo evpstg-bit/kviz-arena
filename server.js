@@ -1,4 +1,4 @@
-// Квиз-арена: сервер без зависимостей (Node.js 16+). Запуск: node server.js
+// Квиз-арена: сервер без npm-зависимостей (Node.js 18+). Запуск: node server.js
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),os=require('os');
 const PORT=process.env.PORT||3000,MAX_PLAYERS=100,games=new Map();
 const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,'data'),INVITE=process.env.INVITE_CODE||'';
@@ -13,7 +13,7 @@ function writeJ(f,v){
   try{fs.mkdirSync(DATA_DIR,{recursive:true});const p=path.join(DATA_DIR,f),t=p+'.tmp';fs.writeFileSync(t,JSON.stringify(v));fs.renameSync(t,p);return true}
   catch(e){console.error('Не удалось записать',f+':',e.message);return false}
 }
-let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),LIBQ=readJ('quizzes.json',[]),BUILTINQ=[];
+let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),BUILTINQ=[];
 const hashPw=(pw,salt)=>crypto.scryptSync(String(pw),salt,32).toString('hex');
 const checkPw=(u,pw)=>{try{return crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'))}catch(e){return false}};
 const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin});
@@ -36,13 +36,10 @@ if(ADMIN_CONFIG){
   const old=USERS.find(x=>String(x.login||'').toLowerCase()===ADMIN_CONFIG.login.toLowerCase());
   const salt=crypto.randomBytes(16).toString('hex');
   CONFIG_ADMIN={id:ADMIN_ID,login:ADMIN_CONFIG.login,name:ADMIN_CONFIG.name,salt,hash:hashPw(ADMIN_CONFIG.password,salt),admin:true,created:old&&old.created||Date.now(),configManaged:true};
-  if(old&&old.id!==ADMIN_ID){
-    LIBQ.forEach(x=>{if(x.owner===old.id)x.owner=ADMIN_ID});
-    Object.values(SESS).forEach(x=>{if(x.uid===old.id)x.uid=ADMIN_ID});
-  }
+  if(old&&old.id!==ADMIN_ID)Object.values(SESS).forEach(x=>{if(x.uid===old.id)x.uid=ADMIN_ID});
   USERS=USERS.filter(x=>String(x.login||'').toLowerCase()!==ADMIN_CONFIG.login.toLowerCase());
   USERS.push(CONFIG_ADMIN);
-  if(old&&old.id!==ADMIN_ID){writeJ('quizzes.json',LIBQ);writeJ('sessions.json',SESS)}
+  if(old&&old.id!==ADMIN_ID)writeJ('sessions.json',SESS);
 }
 function configuredUserFromToken(t){
   if(!CONFIG_ADMIN||!ADMIN_SECRET||typeof t!=='string')return null;
@@ -110,7 +107,9 @@ function loadProjectQuizFile(filename,prefix,source){
       try{
         const item=items[i],quiz=parseQuiz(item&&item.quiz?item.quiz:item);
         if(!quiz){console.warn('Пропущен тест №'+(i+1)+' в '+filename+': проверьте формат и вопросы');continue}
-        result.push({id:prefix+'-'+(i+1),quiz,builtin:true,source});
+        const rawId=String(item&&item.id||prefix+'-'+(i+1));
+        const id=/^[A-Za-z0-9_-]{1,80}$/.test(rawId)?rawId:prefix+'-'+(i+1);
+        result.push({id,quiz,builtin:true,source});
       }catch(e){console.warn('Пропущен тест №'+(i+1)+' в '+filename+': '+e.message)}
     }
     console.log(filename+': загружено тестов '+result.length);
@@ -121,12 +120,83 @@ function loadProjectQuizFile(filename,prefix,source){
   }
 }
 function loadProjectQuizzes(){
-  return [
-    ...loadProjectQuizFile('builtin-tests.json','builtin','builtin'),
-    ...loadProjectQuizFile('saved-tests.json','saved','saved')
-  ];
+  return loadProjectQuizFile('builtin-tests.json','builtin','builtin');
 }
 BUILTINQ=loadProjectQuizzes();
+
+// Нормализованная модель файла: { app, version, items: [{ id, quiz }] }.
+// Файл хранится в репозитории, а не в DATA_DIR, чтобы его можно было версионировать.
+function readBuiltinDocument(){
+  try{
+    const raw=JSON.parse(fs.readFileSync(path.join(__dirname,'builtin-tests.json'),'utf8'));
+    const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
+    return{app:'kviz-arena',version:2,items};
+  }catch(e){return{app:'kviz-arena',version:2,items:[]}}
+}
+function normalizeBuiltinItems(items){
+  const out=[],ids=new Set();
+  (Array.isArray(items)?items:[]).forEach((item,index)=>{
+    const quiz=parseQuiz(item&&item.quiz?item.quiz:item);if(!quiz)return;
+    let id=String(item&&item.id||'builtin-'+(index+1)).slice(0,80);
+    if(!/^[A-Za-z0-9_-]{1,80}$/.test(id)||ids.has(id)){id='test-'+rid();while(ids.has(id))id='test-'+rid()}
+    ids.add(id);out.push({id,quiz});
+  });
+  return out;
+}
+function builtinQuizzesFromItems(items){
+  return normalizeBuiltinItems(items).map(x=>({id:x.id,quiz:x.quiz,builtin:true,source:'builtin'}));
+}
+function writeBuiltinDocument(items){
+  const doc={app:'kviz-arena',version:2,items:normalizeBuiltinItems(items)};
+  const file=path.join(__dirname,'builtin-tests.json'),tmp=file+'.tmp';
+  fs.writeFileSync(tmp,JSON.stringify(doc,null,2)+'\n','utf8');fs.renameSync(tmp,file);
+  BUILTINQ=loadProjectQuizzes();
+  return doc;
+}
+const githubConfig=()=>{
+  const token=String(process.env.GITHUB_TOKEN||'').trim(),repo=String(process.env.GITHUB_REPOSITORY||'').trim(),branch=String(process.env.GITHUB_BRANCH||'main').trim();
+  return token&&/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)?{token,repo,branch}:null;
+};
+async function githubReadBuiltin(cfg){
+  const url='https://api.github.com/repos/'+cfg.repo+'/contents/builtin-tests.json?ref='+encodeURIComponent(cfg.branch);
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'}});
+  if(r.status===404)return{sha:null,items:normalizeBuiltinItems(readBuiltinDocument().items)};
+  if(!r.ok)throw new Error('GitHub не смог прочитать builtin-tests.json (HTTP '+r.status+'). Проверьте GITHUB_TOKEN, репозиторий, ветку и разрешение Contents: read/write.');
+  const data=await r.json();
+  if(!data.content)throw new Error('GitHub вернул пустой файл builtin-tests.json');
+  let raw;try{raw=JSON.parse(Buffer.from(String(data.content).replace(/\s/g,''),'base64').toString('utf8'))}catch(e){throw new Error('В GitHub находится некорректный builtin-tests.json')}
+  const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
+  return{sha:data.sha,items:normalizeBuiltinItems(items)};
+}
+async function githubWriteBuiltin(cfg,sha,items,message){
+  const url='https://api.github.com/repos/'+cfg.repo+'/contents/builtin-tests.json';
+  const doc={app:'kviz-arena',version:2,items:normalizeBuiltinItems(items)};
+  const body={message,content:Buffer.from(JSON.stringify(doc,null,2)+'\n','utf8').toString('base64'),branch:cfg.branch};
+  if(sha)body.sha=sha;
+  return fetch(url,{method:'PUT',headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena','Content-Type':'application/json'},body:JSON.stringify(body)});
+}
+// Применяет изменение к проектному файлу и, если заданы GITHUB_TOKEN / GITHUB_REPOSITORY,
+// автоматически создаёт коммит в GitHub. При отсутствии секрета меняется файл текущего сервера.
+async function mutateBuiltinItems(mutator,message){
+  const cfg=githubConfig();
+  if(cfg){
+    for(let attempt=0;attempt<3;attempt++){
+      const remote=await githubReadBuiltin(cfg),out=mutator(remote.items.map(x=>({id:x.id,quiz:x.quiz})));
+      if(out.noChange)return{persistedToGitHub:true,itemCount:remote.items.length,...(out.data||{})};
+      const next=normalizeBuiltinItems(out.items);
+      const wr=await githubWriteBuiltin(cfg,remote.sha,next,message);
+      if((wr.status===409||wr.status===422)&&attempt<2)continue;
+      if(!wr.ok){const detail=await wr.text().catch(()=> '');throw new Error('Не удалось сохранить тесты в GitHub (HTTP '+wr.status+'). '+detail.slice(0,220))}
+      try{writeBuiltinDocument(next)}catch(e){BUILTINQ=builtinQuizzesFromItems(next);console.warn('GitHub файл обновлён, но локальную копию не удалось записать:',e.message)}
+      return{persistedToGitHub:true,itemCount:next.length,...(out.data||{})};
+    }
+    throw new Error('Файл изменился одновременно в GitHub. Повторите операцию.');
+  }
+  const local=normalizeBuiltinItems(readBuiltinDocument().items),out=mutator(local.map(x=>({id:x.id,quiz:x.quiz})));
+  if(out.noChange)return{persistedToGitHub:false,itemCount:local.length,...(out.data||{})};
+  const doc=writeBuiltinDocument(out.items);
+  return{persistedToGitHub:false,itemCount:doc.items.length,...(out.data||{})};
+}
 
 // ================= игры =================
 const ranked=g=>[...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score);
@@ -291,7 +361,6 @@ http.createServer(async(req,res)=>{
       const salt=crypto.randomBytes(16).toString('hex'),nu={id:rid(),login,name:str(b.name,40).trim()||login,salt,hash:hashPw(pw,salt),admin:!USERS.length,created:Date.now()};
       USERS.push(nu);
       if(!writeJ('users.json',USERS)){USERS.pop();return werr()}
-      if(nu.admin&&LIBQ.some(x=>!x.owner)){LIBQ.forEach(x=>{if(!x.owner)x.owner=nu.id});writeJ('quizzes.json',LIBQ)} // тесты из прежней версии достаются первому аккаунту
       return json(res,{token:newSession(nu),user:pubUser(nu)});
     }
     if(op==='login'){
@@ -300,7 +369,6 @@ http.createServer(async(req,res)=>{
       const nu=USERS.find(x=>x.login.toLowerCase()===login.toLowerCase());
       if(!nu||!checkPw(nu,b.pass)){const n=(f?f.n:0)+1;FAILS.set(key,n>=5?{n:0,until:now+60000}:{n,until:0});return json(res,{error:'Неверный логин или пароль'},401)}
       FAILS.delete(key);
-      if(nu.admin&&LIBQ.some(x=>!x.owner)){LIBQ.forEach(x=>{if(!x.owner)x.owner=nu.id});writeJ('quizzes.json',LIBQ)}
       return json(res,{token:newSession(nu),user:pubUser(nu)});
     }
     if(op==='me'){const me=userOf(b.token);return me?json(res,{user:pubUser(me)}):json(res,{error:'Требуется вход',code:401},401)}
@@ -308,38 +376,48 @@ http.createServer(async(req,res)=>{
     return json(res,{error:'Неизвестная операция'},404);
   }
 
-  // ---------- личная библиотека тестов ----------
+  // ---------- встроенная библиотека тестов из builtin-tests.json ----------
   if(u.pathname.startsWith('/api/lib/')){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
-    const op=u.pathname.slice(9),mine=LIBQ.filter(x=>x.owner===me.id),f=mine.find(x=>x.id===b.id),builtin=BUILTINQ.find(x=>x.id===b.id);
-    if(op==='list')return json(res,{items:[
-      ...BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,builtin:true,source:x.source||'builtin'})),
-      ...mine.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,updated:x.updated,builtin:false})).sort((a,c)=>c.updated-a.updated)
-    ]});
-    if(op==='get')return f?json(res,{quiz:f.quiz}):builtin?json(res,{quiz:builtin.quiz,builtin:true}):json(res,{error:'Тест не найден'},404);
-    if(op==='save'){
-      if(b.id&&builtin)return json(res,{error:'Встроенный тест доступен только для чтения. Скопируйте его в личную библиотеку.'},400);
-      const quiz=cleanQuiz(b.quiz||{});
-      if(b.id&&!f)return json(res,{error:'Тест не найден (возможно, удалён)'},404);
-      let id;
-      if(f){f.quiz=quiz;f.updated=Date.now();id=f.id}
-      else{if(mine.length>=200)return json(res,{error:'Достигнут лимит: 200 тестов'},400);id=rid();LIBQ.push({id,owner:me.id,quiz,updated:Date.now()})}
-      return writeJ('quizzes.json',LIBQ)?json(res,{id,title:quiz.title}):werr();
-    }
-    if(op==='delete'){if(!f)return json(res,{error:'Тест не найден'},404);LIBQ=LIBQ.filter(x=>x!==f);return writeJ('quizzes.json',LIBQ)?json(res,{ok:1}):werr()}
-    if(op==='export')return json(res,{app:'kviz-arena',version:2,items:mine.map(x=>x.quiz)});
-    if(op==='import'){
-      const items=(Array.isArray(b.items)?b.items:[]).slice(0,200);let n=0;
-      for(const z of items){if(mine.length+n>=200)break;if(!z||!Array.isArray(z.q))continue;LIBQ.push({id:rid(),owner:me.id,quiz:cleanQuiz(z),updated:Date.now()});n++}
-      return writeJ('quizzes.json',LIBQ)?json(res,{imported:n}):werr();
-    }
+    const op=u.pathname.slice(9),builtin=BUILTINQ.find(x=>x.id===b.id);
+    if(op==='list')return json(res,{items:BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,builtin:true,source:'builtin'}))});
+    if(op==='get')return builtin?json(res,{quiz:builtin.quiz,builtin:true}):json(res,{error:'Тест не найден'},404);
+    if(op==='export')return json(res,{app:'kviz-arena',version:2,items:normalizeBuiltinItems(readBuiltinDocument().items)});
+    if(['import','update','copy','delete'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
+    try{
+      if(op==='import'){
+        const incoming=Array.isArray(b.items)?b.items:[];
+        if(!incoming.length)return json(res,{error:'Не получены тесты для импорта'},400);
+        if(incoming.length>200)return json(res,{error:'За один импорт допускается не более 200 тестов'},400);
+        const parsed=[];for(let i=0;i<incoming.length;i++){const item=incoming[i],quiz=parseQuiz(item&&item.quiz?item.quiz:item);if(quiz)parsed.push(quiz)}
+        if(!parsed.length)return json(res,{error:'Нет корректных тестов. Проверьте вопросы, варианты ответов и правильные ответы.'},400);
+        const addedIds=parsed.map(()=> 'test-'+rid());
+        const result=await mutateBuiltinItems(items=>({items:[...items,...parsed.map((quiz,i)=>({id:addedIds[i],quiz}))],data:{added:parsed.length,skipped:incoming.length-parsed.length}}),'Import tests into builtin-tests.json');
+        return json(res,{ok:true,...result});
+      }
+      if(op==='update'){
+        const quiz=parseQuiz(b.quiz);if(!quiz)return json(res,{error:'Тест не прошёл проверку. Убедитесь, что у каждого вопроса есть варианты и правильный ответ.'},400);
+        const result=await mutateBuiltinItems(items=>{const index=items.findIndex(item=>item.id===b.id);if(index<0)return{items,noChange:true,data:{id:b.id,updated:false}};const next=items.slice();next[index]={id:next[index].id,quiz};return{items:next,data:{id:b.id,updated:true}}},'Edit built-in quiz '+String(b.id||''));
+        return result.updated?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
+      }
+      if(op==='copy'){
+        const newId='test-'+rid();
+        const result=await mutateBuiltinItems(items=>{const source=items.find(item=>item.id===b.id);if(!source)return{items,noChange:true,data:{id:null,copied:false}};const quiz={...source.quiz,title:(String(source.quiz.title||'Тест')+' — копия').slice(0,80),q:source.quiz.q.map(q=>({...q,a:[...q.a],cs:[...q.cs]}))};return{items:[...items,{id:newId,quiz}],data:{id:newId,copied:true}}},'Copy built-in quiz '+String(b.id||''));
+        return result.copied?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
+      }
+      if(op==='delete'){
+        const result=await mutateBuiltinItems(items=>{const next=items.filter(item=>item.id!==b.id),removed=next.length!==items.length;return{items:next,noChange:!removed,data:{id:b.id,removed}}},'Delete built-in quiz '+String(b.id||''));
+        return result.removed?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
+      }
+    }catch(e){console.error('Ошибка изменения builtin-tests.json:',e.message);return json(res,{error:e.message||'Не удалось изменить библиотеку'},500)}
     return json(res,{error:'Неизвестная операция'},404);
   }
 
   // ---------- создание игры ----------
   if(u.pathname==='/api/create'){
-    const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы создать игру',code:401},401);
-    const quiz=parseQuiz(b.quiz);if(!quiz)return json(res,{error:'Некорректный квиз'},400);
+    const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
+    const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Запускать можно только встроенные тесты из builtin-tests.json'},403);
+    const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Встроенный тест некорректен. Проверьте builtin-tests.json'},400);
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
     const g={pin,hostId:rid(),owner:me.id,quiz,state:'lobby',mode:quiz.mode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
     games.set(pin,g);return json(res,{pin,id:g.hostId});
