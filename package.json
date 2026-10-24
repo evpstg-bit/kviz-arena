@@ -12,5 +12,5 @@
   "devDependencies": {
     "tailwindcss": "3.4.17"
   },
-  "description": "Квиз-арена: викторины для класса (Classic и Color Kingdoms)"
+  "description": "Квиз-арена: викторины для студентов вузов (Classic и Color Kingdoms)"
 }

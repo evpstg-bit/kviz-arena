@@ -636,3 +636,4 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
   #app .edit-questions-head { align-items: flex-start; flex-direction: column; }
   #app .quiz-editor-page .editor-actions .row { display: grid; grid-template-columns: 1fr 1.5fr; }
 }
+.player-kick{margin-left:6px;border:0;border-radius:6px;padding:2px 7px;background:#fee2e2;color:#991b1b;cursor:pointer;font-weight:800}.language-picker{display:flex;align-items:center;gap:6px}.language-picker select{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--card);color:var(--fg);font:inherit}
