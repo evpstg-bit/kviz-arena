@@ -7,9 +7,10 @@
     "build:css": "tailwindcss -i src/input.css -o public/tailwind.css --minify"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "devDependencies": {
     "tailwindcss": "3.4.17"
-  }
+  },
+  "description": "Квиз-арена: викторины для класса (Classic и Color Kingdoms)"
 }
