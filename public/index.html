@@ -6,7 +6,7 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css">
-<link rel="stylesheet" href="/liquid-glass.css?v=7">
+<link rel="stylesheet" href="/liquid-glass.css?v=8">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -15,7 +15,7 @@ const SH=['▲','◆','●','■'],KN=['Красные','Синие'],KS=['кр�
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,
- LIB=null,FOLDERS=[],selectedFolderId='*',folderDialog=null,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
+ LIB=null,FOLDERS=[],selectedFolderId='*',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportLoadError='',autoReportSeen='',autoReportPending='';
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
@@ -91,20 +91,20 @@ function authView(a){
  <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> КАБИНЕТ ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Меньше настройки.<br><span>Больше игры.</span></h1><p class="auth-promo-copy">Запускайте готовые викторины для участников.</p><div class="minimal-auth-note"><span>01</span><span>Войдите в кабинет</span></div><div class="minimal-auth-note"><span>02</span><span>Выберите тест</span></div><div class="minimal-auth-note"><span>03</span><span>Запустите игру и поделитесь PIN-кодом</span></div></div>
  <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>Вход в кабинет</h2><p class="mut">Введите логин и пароль администратора.</p></div><div class="card auth-card"><label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(msg)}</p><button class="btn-primary auth-submit" onclick="submitAuth()">Войти <span aria-hidden="true">→</span></button></div></div></section>`;
 }
-async function start(selectedMode=libraryLaunchMode){
- if(!['classic','kingdoms'].includes(selectedMode))selectedMode='classic';
- if(modeLaunchPending)return;
+async function start(selectedMode){
+ if(!['classic','kingdoms'].includes(selectedMode)||modeLaunchPending)return;
  const sourceId=activeQuizId;
- if(!sourceId||!quiz||!Array.isArray(quiz.q)){libMsg='Тест не загружен. Откройте его из библиотеки и попробуйте снова.';view='lib';render();return}
+ if(!sourceId||!quiz||!Array.isArray(quiz.q)){launchModeDialog=false;launchModeQuizId='';libMsg='Тест не загружен. Откройте его из библиотеки и попробуйте снова.';view='lib';render();return}
  const qs=[];
  for(let i=0;i<quiz.q.length;i++){
   const q=quiz.q[i],a=(q.a||[]).map(x=>String(x??'').trim());while(a.length&&!a[a.length-1])a.pop();
   const cs=(q.cs||[]).filter(c=>Number.isInteger(c)&&c<a.length);
-  if(!String(q.t||'').trim()||a.length<2||a.some(x=>!x)||!cs.length){libMsg='Тест не прошёл проверку: вопрос '+(i+1)+'. Проверьте библиотеку тестов.';view='lib';modeLaunchPending=false;render();return}
+  if(!String(q.t||'').trim()||a.length<2||a.some(x=>!x)||!cs.length){launchModeDialog=false;launchModeQuizId='';libMsg='Тест не прошёл проверку: вопрос '+(i+1)+'. Проверьте библиотеку тестов.';view='lib';modeLaunchPending=false;render();return}
   qs.push({t:q.t.trim(),a,cs,T:q.T||quiz.T||20});
  }
- if(!qs.length){libMsg='В тесте нет вопросов. Проверьте библиотеку тестов.';view='lib';modeLaunchPending=false;render();return}
- // Launch directly with the selected mode; no modal is shown.
+ if(!qs.length){launchModeDialog=false;launchModeQuizId='';libMsg='В тесте нет вопросов. Проверьте библиотеку тестов.';view='lib';modeLaunchPending=false;render();return}
+ // Keep the mode picker visible while the room is being created.
+ libraryLaunchMode=selectedMode;try{localStorage.setItem('kviz-launch-mode',libraryLaunchMode)}catch(e){}
  modeLaunchPending=true;autoReportSeen='';ACTIVE_REPORT=null;activeReportId='';render();
  let r;
  try{
@@ -112,13 +112,14 @@ async function start(selectedMode=libraryLaunchMode){
  }catch(e){r={error:'Не удалось создать игровую комнату. Проверьте соединение и повторите попытку.'}}
  modeLaunchPending=false;
  if(!r||r.error||!r.pin||!r.id){
+  launchModeDialog=false;launchModeQuizId='';
   const error=(r&&r.error)||'Сервер не вернул данные игровой комнаты.';
   if(view==='auth'){libMsg=error;render();return}
   libMsg=error;view='lib';render();return;
  }
  // Switch to the game view before opening EventSource. Otherwise the initial lobby
  // event is ignored for navigation because the SSE handler deliberately preserves 'lib'.
- pin=String(r.pin);me=String(r.id);msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
+ launchModeDialog=false;launchModeQuizId='';pin=String(r.pin);me=String(r.id);msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
 }
 async function join(){
  const p=$('jp').value.trim(),n=$('jn').value.trim();prePin=p;preName=n;
@@ -163,8 +164,19 @@ async function loadQ(id){
  quiz=r.quiz;activeQuizId=id;return true;
 }
 async function runQ(id){
- if(modeLaunchPending)return;
- if(await loadQ(id)){msg='';libMsg='';await start(libraryLaunchMode)}
+ if(modeLaunchPending||quizLoadPending||launchModeDialog)return;
+ quizLoadPending=true;libMsg='';render();
+ const ok=await loadQ(id);
+ quizLoadPending=false;
+ if(!ok){render();return}
+ msg='';libMsg='';launchModeQuizId=id;launchModeDialog=true;render();setTimeout(()=>$('mode-choice-classic')?.focus(),0);
+}
+function closeLaunchModeDialog(){if(modeLaunchPending)return;const id=launchModeQuizId;launchModeDialog=false;launchModeQuizId='';render();setTimeout(()=>$('quiz-launch-'+id)?.focus(),0)}
+function launchModeDialogHtml(){
+ if(!launchModeDialog||view!=='lib')return '';
+ const title=quiz&&activeQuizId===launchModeQuizId?quiz.title:'',count=quiz&&Array.isArray(quiz.q)?quiz.q.length:0;
+ const disabled=modeLaunchPending?'disabled':'';
+ return `<div class="mode-choice-overlay" role="presentation" onclick="if(event.target===this)closeLaunchModeDialog()"><section class="mode-choice-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="mode-choice-title"><button type="button" class="mode-choice-close" aria-label="${tr('Отмена')}" title="${tr('Отмена')}" onclick="closeLaunchModeDialog()" ${disabled}>×</button><span class="section-kicker">${tr('ПЕРЕД ЗАПУСКОМ')}</span><h2 id="mode-choice-title">${tr('Выберите режим игры')}</h2><p class="mode-choice-intro">${tr('Тест готов. Выберите правила для этой игровой сессии — вопросы и ответы останутся прежними.')}</p><div class="mode-choice-quiz-meta"><span>${tr('Тест:')} <b data-user-content="true">${esc(title)}</b></span><span>${count} ${tr('вопросов')}</span></div><div class="mode-choice-options"><button id="mode-choice-classic" type="button" class="mode-choice-card" onclick="start('classic')" ${disabled}><span class="mode-choice-symbol classic-symbol" aria-hidden="true">${actionIcon('play')}</span><span class="mode-choice-copy"><strong>Classic</strong><small>${tr('Обычная викторина с таймером, очками и рейтингом участников.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button><button type="button" class="mode-choice-card" onclick="start('kingdoms')" ${disabled}><span class="mode-choice-symbol kingdoms-symbol" aria-hidden="true">▦</span><span class="mode-choice-copy"><strong>Color Kingdoms</strong><small>${tr('Командное сражение за территорию: ответы помогают захватывать клетки и флаги.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button></div><p class="mode-choice-footnote">${tr('Режим не сохраняется в тесте и выбирается заново при каждом запуске.')}</p>${modeLaunchPending?`<div class="mode-choice-loading" role="status"><span class="mode-choice-spinner"></span>${tr('Создаём игровую комнату…')}</div>`:''}</section></div>`;
 }
 function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
 async function exportLib(){
@@ -246,26 +258,57 @@ async function finishLibraryMutation(r,description){
  view='lib';editorQuiz=null;editorId='';editorIsNew=false;editorFolderId='';await refreshLibrary();render();
 }
 async function importRepoTests(inp){
- const f=inp.files&&inp.files[0];if(!f)return;
- libMsg='';libInfo='';
+ const files=Array.from(inp.files||[]);if(!files.length)return;
+ libMsg='';libInfo='';let tests=[],issues=[],sourceFolders=[];
+ const targetFolderId=selectedFolderId!=='*'&&selectedFolderId!=='__root__'?selectedFolderId:'';
+ const usedFolderNames=new Set();
+ const uniqueFolderName=name=>{const base=String(name||'Предмет').slice(0,64);let candidate=base,n=2;while(usedFolderNames.has(candidate.toLocaleLowerCase('ru-RU'))){const suffix=' ('+(n++)+')';candidate=base.slice(0,64-suffix.length)+suffix}usedFolderNames.add(candidate.toLocaleLowerCase('ru-RU'));return candidate};
  try{
-  let tests=[],issues=[],sourceFolders=[];
-  if(/\.(xlsx|xls)$/i.test(f.name)){
-   const result=await parseXlsxFile(f);tests=result.tests;issues=result.issues;
-  }else if(/\.json$/i.test(f.name)||f.type==='application/json'){
-   const raw=JSON.parse(await f.text()),source=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:null);sourceFolders=Array.isArray(raw&&raw.folders)?raw.folders:[];
-   if(!source||!source.length)throw new Error('В JSON не найден массив items со списком тестов.');
-   if(source.length>200)throw new Error('За один импорт допускается не более 200 тестов.');
-   source.forEach((entry,i)=>{const wrapped=!!(entry&&entry.quiz),item=wrapped?entry.quiz:entry,z=tidyQuiz(item);if(z)tests.push({quiz:z,folderId:wrapped?String(entry.folderId||''):''});else issues.push('Тест №'+(i+1)+': структура или ответы некорректны.')});
-  }else throw new Error('Выберите файл XLSX, XLS или JSON.');
+  if(files.length>20)throw new Error('За один раз можно выбрать не более 20 файлов.');
+  for(let fi=0;fi<files.length;fi++){
+   const f=files[fi],fileLabel=f.name||('Файл '+(fi+1)),isXlsx=/\.(xlsx|xls)$/i.test(fileLabel),isJson=/\.json$/i.test(fileLabel)||f.type==='application/json';
+   try{
+    if(isXlsx){
+     const result=await parseXlsxFile(f);
+     result.tests.forEach(quiz=>tests.push({quiz,folderId:''}));
+     result.issues.forEach(issue=>issues.push(fileLabel+': '+issue));
+    }else if(isJson){
+     const raw=JSON.parse(await f.text()),source=Array.isArray(raw)?raw:(Array.isArray(raw&&raw.items)?raw.items:null),rawFolders=Array.isArray(raw&&raw.folders)?raw.folders:[];
+     if(!source||!source.length)throw new Error('В JSON не найден массив items со списком тестов.');
+     if(source.length>200)throw new Error('В файле больше 200 тестов.');
+     const folderMap={};
+     if(files.length>1&&!targetFolderId){
+      const fileStem=fileLabel.replace(/\.json$/i,'').replace(/[_-]+/g,' ').trim()||('Файл '+(fi+1));
+      rawFolders.forEach((folder,index)=>{
+       const oldId=String(folder&&folder.id||'folder-'+(index+1));
+       const newId=('batch'+fi+'_'+oldId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,80);
+       folderMap[oldId]=newId;
+       sourceFolders.push({...folder,id:newId,name:uniqueFolderName(fileStem+' — '+String(folder&&folder.name||'Предмет'))});
+      });
+     }else if(files.length===1&&!targetFolderId){
+      rawFolders.forEach(fold=>{sourceFolders.push(fold);folderMap[String(fold.id||'')]=String(fold.id||'')});
+     }
+     source.forEach((entry,i)=>{
+      const wrapped=!!(entry&&entry.quiz),item=wrapped?entry.quiz:entry,z=tidyQuiz(item);
+      if(z){const originalFolderId=wrapped?String(entry.folderId||''):'';tests.push({quiz:z,folderId:folderMap[originalFolderId]||originalFolderId})}
+      else issues.push(fileLabel+': тест №'+(i+1)+': структура или ответы некорректны.');
+     });
+    }else issues.push(fileLabel+': '+tr('Выберите один или несколько файлов XLSX, XLS или JSON.'));
+   }catch(fileError){issues.push(fileLabel+': '+(fileError.message||'Не удалось прочитать файл.'))}
+   if(tests.length>200)throw new Error('Общий лимит импорта — 200 тестов за один раз. Выберите меньше файлов.');
+  }
   if(!tests.length)throw new Error('Не найдено корректных тестов. '+issues.slice(0,5).join(' '));
-  const importFolderId=sourceFolders.length?'':(selectedFolderId!=='*'&&selectedFolderId!=='__root__'?selectedFolderId:'');
-  const r=await capi('lib/import',{items:tests,folders:sourceFolders,folderId:importFolderId});
+  // When importing into an open subject folder, every imported quiz goes there. Do not
+  // create duplicate source folders from imported JSON in that case.
+  const foldersForImport=targetFolderId?[]:sourceFolders;
+  const r=await capi('lib/import',{items:tests,folders:foldersForImport,folderId:targetFolderId});
   if(r.error)throw new Error(r.error);
-  const details='Импорт завершён: добавлено '+r.added+' тест(ов)'+(r.skipped?' (пропущено некорректных: '+r.skipped+')':'')+'.';
-  await finishLibraryMutation(r,details+(issues.length?' Замечания: '+issues.slice(0,3).join(' '):''));
- }catch(e){libMsg=e.message||'Не удалось импортировать файл.';libInfo='';render()}
- inp.value='';
+  const lang=currentUiLanguage();
+  const details=lang==='en'?`Imported ${r.added} quiz${r.added===1?'':'zes'} from ${files.length} file${files.length===1?'':'s'}${r.skipped?` (${r.skipped} invalid item${r.skipped===1?'':'s'} skipped)`:''}.`:lang==='zh'?`已从 ${files.length} 个文件导入 ${r.added} 个测验${r.skipped?'，跳过 '+r.skipped+' 个无效项目':''}。`:`Импорт завершён: добавлено ${r.added} тест(ов) из ${files.length} файл(ов)${r.skipped?' (пропущено некорректных: '+r.skipped+')':''}.`;
+  const issueText=issues.length?' '+(lang==='en'?'Some files could not be imported completely: ':lang==='zh'?'部分文件未能完整导入：':'Не все файлы импортированы полностью: ')+issues.slice(0,5).join(' ')+(issues.length>5?' …':''):'';
+  await finishLibraryMutation(r,details+issueText);
+ }catch(e){libMsg=e.message||'Не удалось импортировать файлы.';libInfo='';render()}
+ finally{inp.value=''}
 }
 async function editQ(id){
  const r=await capi('lib/get',{id});if(r.error){libMsg=r.error;render();return}
@@ -347,16 +390,16 @@ function lib(){
  const currentFolder=FOLDERS.find(f=>f.id===selectedFolderId);
  const folderName=currentFolder?currentFolder.name:(selectedFolderId==='__root__'?tr('Без папки'):tr('Все тесты'));
  const folderOptions=`<option value="">${tr('Без папки')}</option>${FOLDERS.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}`;
- const card=t=>`<article class="quiz-card" data-mode="choose" data-search="${esc((t.title+' Classic Color Kingdoms '+(currentFolder?currentFolder.name:'')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon project-icon">▦</div><div class="quiz-card-copy"><h3 data-user-content="true" title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span class="quiz-mode-tag">${libraryLaunchMode==='kingdoms'?'Color Kingdoms':'Classic'}</span></div></div></div><div class="quiz-card-actions"><button type="button" class="btn-icon quiz-action-icon quiz-action-launch" onclick="runQ('${t.id}')" title="${tr('Запустить тест')}" aria-label="${tr('Запустить тест')}" ${modeLaunchPending?'disabled':''}>${actionIcon('play')}</button>${USER&&USER.admin?`<button type="button" class="btn-icon quiz-action-icon" onclick="editQ('${t.id}')" title="${tr('Редактировать тест')}" aria-label="${tr('Редактировать тест')}">${actionIcon('edit')}</button><button type="button" class="btn-icon quiz-action-icon" onclick="copyQ('${t.id}')" title="${tr('Копировать тест')}" aria-label="${tr('Копировать тест')}">${actionIcon('copy')}</button><label class="quiz-move-control"><span>${tr('Папка')}</span><select data-user-content="true" aria-label="${tr('Папка назначения')}" onchange="moveQuizFolder('${t.id}',this.value)">${folderOptions.replace(`value="${esc(t.folderId||'')}"`,`value="${esc(t.folderId||'')}" selected`)}</select></label><button type="button" class="btn-icon danger-action" onclick="deleteQ('${t.id}')" title="${tr('Удалить тест')}" aria-label="${tr('Удалить тест')}">⌫</button>`:''}</div></article>`
- const list=LIB===null?`<div class="loading-state">${tr('Загружаем тесты…')}</div>`:items.map(card).join('')||`<div class="empty-state"><div class="empty-icon">▦</div><h3>${tr(selectedFolderId==='*'?'Библиотека пока пуста':'В этой папке пока нет тестов')}</h3><p>${tr('Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.')}</p></div>`;
+ const card=t=>`<article class="quiz-card" data-mode="choose" data-search="${esc((t.title+' Classic Color Kingdoms '+(currentFolder?currentFolder.name:'')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon project-icon">▦</div><div class="quiz-card-copy"><h3 data-user-content="true" title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span class="quiz-mode-tag">${tr('Режим выбирается при запуске')}</span></div></div></div><div class="quiz-card-actions"><button id="quiz-launch-${t.id}" type="button" class="btn-icon quiz-action-icon quiz-action-launch" onclick="runQ('${t.id}')" title="${tr('Запустить тест')}" aria-label="${tr('Запустить тест')}" ${(modeLaunchPending||quizLoadPending)?'disabled':''}>${actionIcon('play')}</button>${USER&&USER.admin?`<button type="button" class="btn-icon quiz-action-icon" onclick="editQ('${t.id}')" title="${tr('Редактировать тест')}" aria-label="${tr('Редактировать тест')}">${actionIcon('edit')}</button><button type="button" class="btn-icon quiz-action-icon" onclick="copyQ('${t.id}')" title="${tr('Копировать тест')}" aria-label="${tr('Копировать тест')}">${actionIcon('copy')}</button><label class="quiz-move-control"><span>${tr('Папка')}</span><select data-user-content="true" aria-label="${tr('Папка назначения')}" onchange="moveQuizFolder('${t.id}',this.value)">${folderOptions.replace(`value="${esc(t.folderId||'')}"`,`value="${esc(t.folderId||'')}" selected`)}</select></label><button type="button" class="btn-icon danger-action" onclick="deleteQ('${t.id}')" title="${tr('Удалить тест')}" aria-label="${tr('Удалить тест')}">⌫</button>`:''}</div></article>`
+ const list=LIB===null?`<div class="loading-state">${tr('Загружаем тесты…')}</div>`:items.map(card).join('')||`<div class="empty-state"><div class="empty-icon">▦</div><h3>${tr(selectedFolderId==='*'?'Библиотека пока пуста':'В этой папке пока нет тестов')}</h3><p>${tr(currentFolder?'Импортируйте одну или несколько таблиц XLSX прямо в эту папку.':'Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.')}</p></div>`;
  const total=LIB===null?'—':items.length;
  const folderNav=(id,label,count,icon)=>`<button type="button" class="folder-nav-item ${selectedFolderId===id?'is-active':''}" onclick="selectFolder('${id}')"><span class="folder-nav-icon">${icon}</span><span class="folder-nav-label">${label}</span><b>${count}</b></button>`;
  const folderRail=`<aside class="library-folder-sidebar"><div class="folder-sidebar-heading"><div><span class="section-kicker">${tr('БИБЛИОТЕКА')}</span><h2>${tr('Предметы')}</h2></div>${USER&&USER.admin?`<button type="button" class="btn-icon folder-add-button" title="${tr('Создать папку')}" aria-label="${tr('Создать папку')}" onclick="openFolderDialog('create')">＋</button>`:''}</div><div class="folder-navigation">${folderNav('*',tr('Все тесты'),sourceItems.length,'▦')}${folderNav('__root__',tr('Без папки'),sourceItems.filter(t=>!t.folderId).length,'□')}${FOLDERS.length?'<div class="folder-nav-divider"></div>':''}${FOLDERS.map(f=>folderNav(f.id,`<span data-user-content="true">${esc(f.name)}</span>`,sourceItems.filter(t=>t.folderId===f.id).length,'▰')).join('')||`<div class="folder-nav-empty">${tr('Создайте папки по учебным предметам')}</div>`}</div>${currentFolder&&USER&&USER.admin?`<div class="folder-current-actions"><button type="button" class="btn-icon" onclick="openFolderDialog('rename','${currentFolder.id}')" title="${tr('Переименовать папку')}" aria-label="${tr('Переименовать папку')}">${actionIcon('edit')}</button><button type="button" class="btn-icon danger-action" onclick="deleteCurrentFolder()" title="${tr('Удалить папку')}" aria-label="${tr('Удалить папку')}">⌫</button></div>`:''}</aside>`;
- app().innerHTML=`<header class="app-topbar dashboard-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>${tr('Кабинет преподавателя')}</span></div></div><nav class="dashboard-toolbar-actions" aria-label="${tr('Действия кабинета')}">${teacherRootNav('lib')}<button class="top-action" onclick="exportLib()" title="${tr('Скачать библиотеку тестов')}">↓ ${tr('Экспорт')}</button>${USER&&USER.admin?`<input type="file" id="impf" accept=".xlsx,.xls,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json" class="hidden" onchange="importRepoTests(this)"><button class="top-action" onclick="$('impf').click()" title="${tr('Импортировать тесты из Excel XLSX, XLS или JSON')}">↑ ${tr('Импорт')}</button>`:''}<button class="top-action" onclick="view='home';render()">${tr('На главную')}</button><button class="top-action top-action-quiet" onclick="logout()">${tr('Выйти')}</button></nav></header>
+ app().innerHTML=`<header class="app-topbar dashboard-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>${tr('Кабинет преподавателя')}</span></div></div><nav class="dashboard-toolbar-actions" aria-label="${tr('Действия кабинета')}">${teacherRootNav('lib')}<button class="top-action" onclick="exportLib()" title="${tr('Скачать библиотеку тестов')}">↓ ${tr('Экспорт')}</button>${USER&&USER.admin?`<input type="file" id="impf" multiple accept=".xlsx,.xls,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json" class="hidden" onchange="importRepoTests(this)"><button class="top-action" onclick="$('impf').click()" title="${tr('Импортировать один или несколько файлов XLSX, XLS или JSON')}">↑ ${tr('Импорт')}</button>`:''}<button class="top-action" onclick="view='home';render()">${tr('На главную')}</button><button class="top-action top-action-quiet" onclick="logout()">${tr('Выйти')}</button></nav></header>
  <section class="dashboard-head minimal-dashboard-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span>${tr('КАБИНЕТ ПРЕПОДАВАТЕЛЯ')}</div><h1 class="page-title">${tr('Библиотека тестов')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('Управляйте тестами и запускайте игры для студентов.')}</p></div><div class="dashboard-user-inline"><span class="user-avatar">${esc((USER.name||USER.login||'У').slice(0,1).toLocaleUpperCase('ru-RU'))}</span><span><b data-user-content="true">${esc(USER.login||USER.name)}</b><small>${USER.admin?tr('Администратор'):tr('Преподаватель')}</small></span></div></section>
- <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="${tr('Поиск тестов')}" placeholder="${tr('Поиск по названию теста…')}" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div><label class="library-launch-mode"><span>${tr('Режим запуска')}</span><select id="library-launch-mode" aria-label="${tr('Режим запуска')}" onchange="setLaunchMode(this.value)"><option value="classic" ${libraryLaunchMode==='classic'?'selected':''}>Classic · ${tr('Индивидуальный')}</option><option value="kingdoms" ${libraryLaunchMode==='kingdoms'?'selected':''}>Color Kingdoms · ${tr('Командный')}</option></select></label></div>
+ <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="${tr('Поиск тестов')}" placeholder="${tr('Поиск по названию теста…')}" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div></div>
  <p id="library-result-count" class="library-result-count">${LIB===null?tr('Загрузка тестов…'):tr('Всего тестов: '+total)}</p>${libMsg?`<div class="notice notice-error">${esc(libMsg)}</div>`:''}${libInfo?`<div class="notice notice-success">${esc(libInfo)}</div>`:''}
- <div class="library-workspace">${folderRail}<section class="library-content-panel"><div class="library-section-head library-current-folder-head"><div><h2 ${currentFolder?'data-user-content="true"':''}>${esc(folderName)}</h2><p>${tr('Тесты и вопросы выбранного раздела')}</p></div><div class="library-current-folder-tools">${USER&&USER.admin?`<button type="button" class="btn-primary btn-small create-test-button" onclick="newQuiz()"><span aria-hidden="true">＋</span> ${tr('Создать тест')}</button>`:''}<span class="section-count">${total}</span></div></div><div class="library-test-list">${list}<div id="library-no-results" class="empty-state search-empty-state" hidden><div class="empty-icon">⌕</div><h3>${tr('По запросу ничего не найдено')}</h3><p>${tr('Попробуйте другое название или очистите поиск.')}</p></div></div></section></div>
+ <div class="library-workspace">${folderRail}<section class="library-content-panel"><div class="library-section-head library-current-folder-head"><div><h2 ${currentFolder?'data-user-content="true"':''}>${esc(folderName)}</h2><p>${tr('Тесты и вопросы выбранного раздела')}</p></div><div class="library-current-folder-tools">${USER&&USER.admin?(currentFolder?`<button type="button" class="btn-primary btn-small create-test-button folder-import-button" onclick="$('impf')?.click()"><span aria-hidden="true">↑</span> ${tr('Импортировать тесты')}</button>`:`<button type="button" class="btn-primary btn-small create-test-button" onclick="newQuiz()"><span aria-hidden="true">＋</span> ${tr('Создать тест')}</button>`):''}<span class="section-count">${total}</span></div></div><div class="library-test-list">${list}<div id="library-no-results" class="empty-state search-empty-state" hidden><div class="empty-icon">⌕</div><h3>${tr('По запросу ничего не найдено')}</h3><p>${tr('Попробуйте другое название или очистите поиск.')}</p></div></div></section></div>
  <footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>${tr('Библиотека тестов · Управление через GitHub')}</span></footer>`;
 }
 
@@ -752,8 +795,30 @@ function tr(text){
  return out;
 }
 
-Object.assign(UI_TRANSLATIONS.en,{'Создание теста':'Create quiz','Создать тест':'Create quiz','Тест создан.':'Quiz created.','Введите название теста.':'Enter a quiz title.','Режим запуска':'Launch mode','Индивидуальный':'Individual','Командный':'Team','Режим задаётся перед запуском':'Choose the mode before launch','Выберите Classic или Color Kingdoms в библиотеке до нажатия кнопки запуска.':'Choose Classic or Color Kingdoms in the library before pressing Launch.','Тесты и вопросы выбранного раздела':'Quizzes and questions in this section','Запустить тест':'Launch quiz','Редактировать тест':'Edit quiz','Копировать тест':'Duplicate quiz','Библиотека пока пуста':'The library is empty','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'Create a quiz here or import an XLSX file.','БИБЛИОТЕКА':'LIBRARY'});
-Object.assign(UI_TRANSLATIONS.zh,{'Создание теста':'创建测验','Создать тест':'创建测验','Тест создан.':'测验已创建。','Введите название теста.':'请输入测验名称。','Режим запуска':'启动模式','Индивидуальный':'个人','Командный':'团队','Режим задаётся перед запуском':'启动前选择模式','Выберите Classic или Color Kingdoms в библиотеке до нажатия кнопки запуска.':'点击启动前，请在题库中选择 Classic 或 Color Kingdoms。','Тесты и вопросы выбранного раздела':'此分类中的测验和问题','Запустить тест':'启动测验','Редактировать тест':'编辑测验','Копировать тест':'复制测验','Библиотека пока пуста':'题库为空','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'可在此创建测验，或导入 XLSX 文件。','БИБЛИОТЕКА':'题库'});
+Object.assign(UI_TRANSLATIONS.en,{'Создание теста':'Create quiz','Создать тест':'Create quiz','Тест создан.':'Quiz created.','Введите название теста.':'Enter a quiz title.','Режим запуска':'Launch mode','Индивидуальный':'Individual','Командный':'Team','Режим задаётся перед запуском':'Choose the mode before launch','После нажатия «Запустить» выберите Classic или Color Kingdoms для этой игровой сессии.':'After pressing Launch, choose Classic or Color Kingdoms for this game session.','Тесты и вопросы выбранного раздела':'Quizzes and questions in this section','Запустить тест':'Launch quiz','Редактировать тест':'Edit quiz','Копировать тест':'Duplicate quiz','Библиотека пока пуста':'The library is empty','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'Create a quiz here or import an XLSX file.','БИБЛИОТЕКА':'LIBRARY'});
+Object.assign(UI_TRANSLATIONS.zh,{'Создание теста':'创建测验','Создать тест':'创建测验','Тест создан.':'测验已创建。','Введите название теста.':'请输入测验名称。','Режим запуска':'启动模式','Индивидуальный':'个人','Командный':'团队','Режим задаётся перед запуском':'启动前选择模式','После нажатия «Запустить» выберите Classic или Color Kingdoms для этой игровой сессии.':'点击“启动”后，为本次游戏选择 Classic 或 Color Kingdoms。','Тесты и вопросы выбранного раздела':'此分类中的测验和问题','Запустить тест':'启动测验','Редактировать тест':'编辑测验','Копировать тест':'复制测验','Библиотека пока пуста':'题库为空','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'可在此创建测验，或导入 XLSX 文件。','БИБЛИОТЕКА':'题库'});
+Object.assign(UI_TRANSLATIONS.en,{
+ 'Импортировать один или несколько файлов XLSX, XLS или JSON':'Import one or more XLSX, XLS, or JSON files',
+ 'Выберите один или несколько файлов XLSX, XLS или JSON.':'Choose one or more XLSX, XLS, or JSON files.',
+ 'Импортируйте одну или несколько таблиц XLSX прямо в эту папку.':'Import one or more XLSX spreadsheets directly into this folder.',
+ 'Не все файлы импортированы полностью: ':'Some files could not be imported completely: ',
+ 'Создаём игровую комнату…':'Creating game room…','Режим выбирается при запуске':'Mode selected at launch','Импортировать тесты':'Import quizzes'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'Импортировать один или несколько файлов XLSX, XLS или JSON':'导入一个或多个 XLSX、XLS 或 JSON 文件',
+ 'Выберите один или несколько файлов XLSX, XLS или JSON.':'请选择一个或多个 XLSX、XLS 或 JSON 文件。',
+ 'Импортируйте одну или несколько таблиц XLSX прямо в эту папку.':'将一个或多个 XLSX 表格直接导入此文件夹。',
+ 'Не все файлы импортированы полностью: ':'部分文件未能完整导入：',
+ 'Создаём игровую комнату…':'正在创建游戏房间…','Режим выбирается при запуске':'启动时选择模式','Импортировать тесты':'导入测验'
+});
+
+Object.assign(UI_TRANSLATIONS.en,{
+ 'После нажатия «Запустить» выберите Classic или Color Kingdoms для этой игровой сессии.':'After pressing Launch, choose Classic or Color Kingdoms for this game session.'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'После нажатия «Запустить» выберите Classic или Color Kingdoms для этой игровой сессии.':'点击“启动”后，为本次游戏选择 Classic 或 Color Kingdoms。'
+});
+
 function settingsHtml(){const lang=currentUiLanguage(),dark=document.documentElement.classList.contains('dark');const labels={ru:{theme:dark?'☀ Светлая тема':'🌙 Тёмная тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему',aria:'Настройки отображения'},en:{theme:dark?'☀ Light theme':'🌙 Dark theme',title:dark?'Switch to light theme':'Switch to dark theme',aria:'Display settings'},zh:{theme:dark?'☀ 浅色主题':'🌙 深色主题',title:dark?'切换到浅色主题':'切换到深色主题',aria:'显示设置'}}[lang];return `<div class="global-settings" aria-label="${labels.aria}"><label class="language-picker" aria-label="${tr('Язык интерфейса')}"><span class="settings-label">🌐</span><select id="ui-language" aria-label="${tr('Язык интерфейса')}" onchange="setUiLanguage(this.value)"><option value="ru" ${lang==='ru'?'selected':''}>🇷🇺 Русский</option><option value="en" ${lang==='en'?'selected':''}>🇬🇧 English</option><option value="zh" ${lang==='zh'?'selected':''}>🇨🇳 中文</option></select></label><button id="theme-toggle" type="button" class="sec theme-toggle" onclick="toggleTheme()" aria-label="${labels.title}" title="${labels.title}">${labels.theme}</button></div>`}
 function applyUiLanguage(){
  const lang=currentUiLanguage();document.documentElement.lang=lang==='zh'?'zh-CN':lang==='en'?'en':'ru';
@@ -781,7 +846,7 @@ window.alert=(message)=>_nativeAlert(tr(String(message)));
 function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  const real=$('app');vApp=document.createElement('div');
- try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());vApp.insertAdjacentHTML('afterbegin',settingsHtml())}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
+ try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());vApp.insertAdjacentHTML('afterbegin',settingsHtml())}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
  if(view==='lib')filterLibrary();
  applyUiLanguage();
  enter();tick();
@@ -792,7 +857,7 @@ if(typeof addEventListener==='function'){
  addEventListener('pointerup',up,true);addEventListener('pointercancel',up,true);
 }
 setInterval(tick,250);
-if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&qrFull){qrFull=false;render()}});
+if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&qrFull){qrFull=false;render()}else if(e.key==='Escape'&&launchModeDialog&&!modeLaunchPending){closeLaunchModeDialog()}});
 (async()=>{
  try{INFO=await(await fetch('/api/info')).json()}catch(e){}
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
