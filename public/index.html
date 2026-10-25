@@ -9,9 +9,9 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.11.0">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.11.1">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.11.1">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.11.1">
+<link rel="stylesheet" href="/ui.css?v=1.11.2">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.11.2">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.11.2">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -208,7 +208,7 @@ function tidyQuiz(z){
   return{t:x.t.trim().slice(0,300),a,cs,T:+x.T>=5?Math.min(240,+x.T):Math.min(240,Math.max(5,+z.T||CLIENT_SETTINGS.general.defaultQuestionTime))};
  });
  if(q.some(x=>!x))return null;
- return{title:String(z.title||'Без названия').trim().slice(0,80)||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:'choose',dur:Math.min(10,Math.max(1,Math.round(+z.dur)||5)),need:Math.min(5,Math.max(1,Math.round(+z.need)||3)),q};
+ return{title:String(z.title||'Без названия').trim().slice(0,80)||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:'choose',dur:Math.min(20,Math.max(5,Math.round(+z.dur)||5)),need:Math.min(5,Math.max(1,Math.round(+z.need)||3)),q};
 }
 function normHead(v){return String(v??'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim()}
 function headerIndex(headers,patterns){return headers.findIndex(h=>patterns.some(p=>p.test(h)))}
@@ -474,7 +474,7 @@ function settingsPage(a){
  ${settingsMsg?`<div class="notice ${settingsMsg.includes('не удалось')||settingsMsg.includes('не найдена')?'notice-error':'notice-success'}" role="status">${esc(settingsMsg)}</div>`:''}${settingsNotice?`<div class="notice notice-info" role="note">${esc(settingsNotice)}</div>`:''}
  <section class="platform-settings-section"><div class="platform-settings-section-head"><div><span class="section-kicker">01 / ${tr('ИГРА')}</span><h2>${tr('Игровые режимы')}</h2><p>${tr('Включайте нужные режимы и задавайте единые правила для всех тестов.')}</p></div></div><div class="platform-mode-settings-grid">
  <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon classic">▶</span><div><h3>Classic</h3><p>${tr('Викторина с таймером, баллами и рейтингом участников.')}</p></div></div>${toggle('settings-classic-enabled','Режим доступен при запуске',c.enabled,"changeSetting('classic','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-classic-points','Максимум баллов за правильный ответ',c.basePoints,100,3000,100,'баллов',"saveSettingsField('classicBasePoints',this.value)")}${toggle('settings-classic-speed','Бонус за скорость',c.speedBonus,"changeSetting('classic','speedBonus',this.checked,'mode')",'При включении быстрый ответ приносит больше баллов.')}</article>
- <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon kingdoms">▦</span><div><h3>Color Kingdoms</h3><p>${tr('Командный режим с захватом клеток и флагов.')}</p></div></div>${toggle('settings-kingdoms-enabled','Режим доступен при запуске',k.enabled,"changeSetting('kingdoms','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-kingdoms-duration','Длительность матча',k.durationMinutes,1,10,1,'мин.',"saveSettingsField('kingdomsDuration',this.value)")}${field('settings-kingdoms-need','Правильных ответов для получения флага',k.correctAnswersForFlag,1,5,1,'ответов',"saveSettingsField('kingdomsFlagNeed',this.value)")}</article>
+ <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon kingdoms">▦</span><div><h3>Color Kingdoms</h3><p>${tr('Командный режим с захватом клеток и флагов.')}</p></div></div>${toggle('settings-kingdoms-enabled','Режим доступен при запуске',k.enabled,"changeSetting('kingdoms','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-kingdoms-duration','Длительность матча',k.durationMinutes,5,20,1,'мин.',"saveSettingsField('kingdomsDuration',this.value)")}${field('settings-kingdoms-need','Правильных ответов для получения флага',k.correctAnswersForFlag,1,5,1,'ответов',"saveSettingsField('kingdomsFlagNeed',this.value)")}</article>
  </div></section>
  <section class="platform-settings-section"><div class="platform-settings-section-head"><div><span class="section-kicker">02 / ${tr('ПЛАТФОРМА')}</span><h2>${tr('Общие настройки')}</h2><p>${tr('Параметры по умолчанию и поведение отчётов.')}</p></div></div><div class="platform-general-settings-grid">
  ${field('settings-default-time','Время по умолчанию для новых тестов и вопросов',g.defaultQuestionTime,5,120,5,'сек.',"saveSettingsField('defaultQuestionTime',this.value)")}
@@ -657,9 +657,14 @@ function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
 function sendSel(){if(sel.length)act('answer',sel)}
 function boardK(o){
  const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[];
- const cell=(ow,i)=>{const rk=S.rooks.includes(i),v=valid.includes(i),h=hot.includes(i);
-  return `<div ${v?`onclick="placeAt(${i})"`:''} class="flex aspect-square select-none items-center justify-center rounded-lg text-white shadow-[inset_0_-3px_0_rgba(0,0,0,.2)] ${sm?'text-sm':'text-2xl'} ${v?'animate-pulse cursor-pointer':''} ${h&&!v?'z-10 ring-4 ring-white/80':''} ${ow<0?'opacity-50':''}" style="background:${ow<0?'var(--bd)':'var(--c'+ow+')'}${v?';outline:3px dashed var(--c'+((S.me&&S.me.team)||0)+');outline-offset:-3px':''}">${rk?'<span style="text-shadow:0 1px 3px rgba(0,0,0,.5)">♜</span>':(v?'<span class="text-xl">🚩</span>':'')}</div>`};
- return `<div class="kingdom-board-grid mx-auto my-3 grid rounded-3xl bg-white/50 shadow-xl backdrop-blur dark:bg-white/5 ${sm?'is-small-board':''}" style="grid-template-columns:repeat(${N},minmax(0,1fr))">${S.board.map(cell).join('')}</div>`;
+ const cell=(ow,i)=>{
+  const stronghold=S.rooks.includes(i),canPlace=valid.includes(i),isHot=hot.includes(i),team=(S.me&&Number.isInteger(S.me.team))?S.me.team:0;
+  const ownerClass=ow<0?'is-neutral':ow===0?'is-red-kingdom':'is-blue-kingdom';
+  const classes=['kingdom-tile',ownerClass,stronghold?'is-stronghold':'',canPlace?'is-target':'',isHot&&!canPlace?'is-hot':'',sm?'is-compact-tile':''].filter(Boolean).join(' ');
+  const label=stronghold?'Крепость':canPlace?'Поставить флаг':ow===0?'Территория красных':ow===1?'Территория синих':'Нейтральная клетка';
+  return `<div ${canPlace?`role="button" tabindex="0" onclick="placeAt(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();placeAt(${i})}"`:''} class="${classes}" aria-label="${label}" style="--tile-color:${ow<0?'#46505f':'var(--c'+ow+')'};--tile-team:var(--c${canPlace?team:(ow<0?team:ow)});--tile-font:${Math.max(7,Math.min(22,Math.round(225/N)))}px">${stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':(canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'')}</div>`;
+ };
+ return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N};grid-template-columns:repeat(${N},minmax(0,1fr))">${S.board.map(cell).join('')}</div></div>`;
 }
 async function placeAt(i){const r=await act('place',undefined,{tile:i});if(r.error){msg=r.error;render()}}
 function scoreChips(){return `<div class="row justify-center gap-2 text-sm font-bold">${S.stats.map(t=>`<span class="chip" style="background:var(--c${t.k})">${SH[t.k]} ${t.tiles} · 🏆${t.trophies}</span>`).join('')}</div>`}

@@ -32,7 +32,7 @@ function normalizeAppSettings(value){
     showCorrectAnswerAfterQuestion:g.showCorrectAnswerAfterQuestion!==false
   },modes:{
     classic:{enabled:c.enabled!==false,basePoints:clampInt(c.basePoints,100,3000,1000),speedBonus:c.speedBonus!==false},
-    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,1,10,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3)}
+    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3)}
   }};
 }
 function readAppSettingsFile(){try{return normalizeAppSettings(JSON.parse(fs.readFileSync(path.join(__dirname,'app-settings.json'),'utf8')))}catch(e){return normalizeAppSettings(DEFAULT_APP_SETTINGS)}}
@@ -117,7 +117,7 @@ function cleanQuiz(z){
     return{t:str(x.t,300),a,cs,T:T>=5?Math.min(240,T):undefined};
   });
   return{title:str(z.title,80).trim()||'Без названия',T:Math.min(120,Math.max(5,+z.T||20)),mode:z.mode==='kingdoms'?'kingdoms':z.mode==='classic'?'classic':'choose',
-    dur:Math.min(10,Math.max(1,Math.round(+z.dur)||5)),need:Math.min(5,Math.max(1,Math.round(+z.need)||3)),q};
+    dur:Math.min(20,Math.max(5,Math.round(+z.dur)||5)),need:Math.min(5,Math.max(1,Math.round(+z.need)||3)),q};
 }
 function parseQuiz(z){
   if(!z||!Array.isArray(z.q)||!z.q.length||z.q.length>100)return null;

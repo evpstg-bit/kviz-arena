@@ -1128,3 +1128,81 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 }
 
 #app .report-questions-head { flex-wrap:wrap; }
+
+
+/* Color Kingdoms — knightly tactical map / stone-and-heraldry board, v1.11.2 */
+#app .kingdom-board-frame {
+  position:relative;
+  isolation:isolate;
+  width:min(100%, 92vw, 84dvh, 1100px);
+  max-width:100%;
+  margin:clamp(12px,2.2vw,24px) auto clamp(16px,2.5vw,28px);
+  padding:clamp(7px,1.2vw,15px);
+  border:1px solid rgba(227,195,129,.9);
+  border-radius:clamp(13px,2vw,25px);
+  background:
+    linear-gradient(135deg,rgba(255,231,174,.22),transparent 18%,transparent 78%,rgba(255,231,174,.14)),
+    linear-gradient(145deg,#66543a 0%,#2a2d37 15%,#45404a 48%,#1b2330 80%,#655037 100%);
+  box-shadow:0 18px 44px rgba(8,12,24,.34), inset 0 1px 0 rgba(255,244,207,.38), inset 0 -3px 0 rgba(0,0,0,.45);
+}
+#app .kingdom-board-frame::before {
+  content:"";position:absolute;inset:3px;z-index:-1;pointer-events:none;
+  border:1px solid rgba(245,216,153,.26);border-radius:inherit;
+  background:linear-gradient(90deg,rgba(255,255,255,.025),transparent 15%,transparent 85%,rgba(255,255,255,.025));
+}
+#app .kingdom-board-frame::after {
+  content:"⚜";position:absolute;right:clamp(8px,1.2vw,15px);top:clamp(5px,.7vw,9px);
+  color:rgba(247,218,157,.75);font-size:clamp(11px,1.1vw,16px);line-height:1;
+  text-shadow:0 1px 2px #171b24;pointer-events:none;
+}
+#app .kingdom-board-grid {
+  display:grid;width:100%!important;max-width:none!important;aspect-ratio:1;
+  gap:clamp(1px,.28vw,4px)!important;padding:clamp(4px,.65vw,8px)!important;
+  overflow:hidden;border:1px solid rgba(214,190,139,.55);border-radius:clamp(7px,1.1vw,14px)!important;
+  background:linear-gradient(145deg,#1d2633,#30323b 48%,#151d28)!important;
+  box-shadow:inset 0 2px 9px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.035),0 2px 3px rgba(0,0,0,.22)!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+#app .kingdom-board-frame.is-small-board { width:min(100%,560px); }
+#app .kingdom-board-grid > .kingdom-tile {
+  position:relative;display:flex;min-width:0;min-height:0;aspect-ratio:1;align-items:center;justify-content:center;overflow:hidden;
+  padding:0;border:1px solid rgba(230,220,192,.2);border-radius:clamp(1px,.2vw,4px)!important;
+  color:#fff3d5;font-size:var(--tile-font,12px)!important;line-height:1!important;
+  background-color:var(--tile-color,#46505f)!important;
+  background-image:
+    repeating-linear-gradient(137deg,rgba(248,236,205,.09) 0px,rgba(248,236,205,.09) 1px,transparent 1px,transparent 6px),
+    linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.015) 38%,rgba(0,0,0,.12) 65%,rgba(0,0,0,.35))!important;
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,.19),inset -2px -3px 0 rgba(0,0,0,.28),0 1px 1px rgba(0,0,0,.28)!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.85);transition:filter .12s ease,transform .12s ease,box-shadow .12s ease;
+}
+#app .kingdom-board-grid > .kingdom-tile.is-neutral {
+  background-color:#46505f!important;
+  background-image:repeating-linear-gradient(137deg,rgba(238,229,207,.08) 0px,rgba(238,229,207,.08) 1px,transparent 1px,transparent 6px),linear-gradient(145deg,#687382,#3a4351 52%,#252d39)!important;
+  border-color:rgba(197,204,211,.19);
+}
+#app .kingdom-board-grid > .kingdom-tile.is-red-kingdom {
+  background-image:repeating-linear-gradient(137deg,rgba(255,231,207,.08) 0px,rgba(255,231,207,.08) 1px,transparent 1px,transparent 6px),linear-gradient(145deg,rgba(255,190,156,.26),rgba(107,14,31,.10) 42%,rgba(37,4,14,.43))!important;
+  border-color:rgba(255,194,158,.5);
+}
+#app .kingdom-board-grid > .kingdom-tile.is-blue-kingdom {
+  background-image:repeating-linear-gradient(137deg,rgba(218,236,255,.1) 0px,rgba(218,236,255,.1) 1px,transparent 1px,transparent 6px),linear-gradient(145deg,rgba(190,226,255,.27),rgba(16,52,106,.12) 42%,rgba(4,16,43,.43))!important;
+  border-color:rgba(174,216,255,.52);
+}
+#app .kingdom-board-grid > .kingdom-tile.is-target {
+  cursor:pointer;z-index:1;border:1px solid rgba(255,225,134,.98)!important;outline:1px dashed rgba(255,238,190,.95);outline-offset:-4px;
+  box-shadow:inset 0 0 0 1px rgba(255,209,97,.35),inset 0 0 13px rgba(255,201,83,.2),0 0 8px rgba(255,205,91,.33)!important;
+  animation:kingdom-target-glow 1.7s ease-in-out infinite;
+}
+#app .kingdom-board-grid > .kingdom-tile.is-target:hover { filter:brightness(1.28);transform:scale(1.06);z-index:3; }
+#app .kingdom-board-grid > .kingdom-tile.is-hot { z-index:2;border-color:#f5dfaa!important;box-shadow:0 0 0 2px rgba(255,239,195,.9),0 0 16px rgba(255,235,181,.65),inset 0 0 12px rgba(255,255,255,.2)!important; }
+#app .kingdom-board-grid > .kingdom-tile .kingdom-tile-fortress { display:inline-grid;place-items:center;color:#fff0c0;font-family:Georgia,serif;font-size:calc(var(--tile-font,12px)*1.22)!important;line-height:1;filter:drop-shadow(0 1px 0 #5b3213) drop-shadow(0 0 3px rgba(255,212,122,.45)); }
+#app .kingdom-board-grid > .kingdom-tile .kingdom-tile-flag { display:inline-grid;place-items:center;color:#ffe19a;font-size:calc(var(--tile-font,12px)*1.25)!important;font-weight:900;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8)); }
+@keyframes kingdom-target-glow {0%,100%{filter:brightness(1);box-shadow:inset 0 0 0 1px rgba(255,209,97,.25),inset 0 0 9px rgba(255,201,83,.16),0 0 4px rgba(255,205,91,.22)}50%{filter:brightness(1.12);box-shadow:inset 0 0 0 1px rgba(255,209,97,.58),inset 0 0 15px rgba(255,201,83,.29),0 0 10px rgba(255,205,91,.45)}}
+@media(max-width:680px){
+ #app .kingdom-board-frame { width:100%;padding:5px;border-radius:12px;margin:10px auto 16px; }
+ #app .kingdom-board-frame.is-small-board { width:min(100%,560px); }
+ #app .kingdom-board-grid { width:100%!important;gap:1px!important;padding:3px!important;border-radius:7px!important; }
+ #app .kingdom-board-grid > .kingdom-tile { border-radius:1px!important; }
+ #app .kingdom-board-grid > .kingdom-tile .kingdom-tile-fortress { font-size:calc(var(--tile-font,8px)*1.08)!important; }
+ #app .kingdom-board-grid > .kingdom-tile .kingdom-tile-flag { font-size:var(--tile-font,8px)!important; }
+}
