@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.11.2">
 <link rel="stylesheet" href="/liquid-glass.css?v=1.12.0">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.11.2">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.12.1">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -393,7 +393,7 @@ function siteHistoryButtons(){
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
 function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.11.7')}
-function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>${subtitle||tr('Платформа интеллектуальных игр')}</span></div><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></a>`}
+function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
  const section=active==='reports'?'reports':active==='settings'?'settings':active==='lib'?'lib':'';

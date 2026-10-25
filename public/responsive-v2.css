@@ -350,3 +350,50 @@ body { width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; margin:
   #app .cabinet-menu-panel .global-settings .theme-switch-track,
   #app .cabinet-menu-panel .global-settings .theme-switch-thumb { transition: none; }
 }
+
+
+/* v1.12.1 — Keep the Beta/version marker in the brand block, never in the navigation row. */
+#app .brand-home-link .brand-copy {
+  display:grid!important;
+  grid-template-columns:max-content max-content;
+  grid-template-rows:auto auto;
+  align-items:center;
+  column-gap:9px;
+  min-width:0;
+}
+#app .brand-home-link .brand-copy>strong {grid-column:1;grid-row:1}
+#app .brand-home-link .brand-copy>.brand-subtitle {grid-column:1;grid-row:2}
+#app .brand-home-link .brand-copy>.app-release-badge {
+  grid-column:2;grid-row:1 / span 2;align-self:center;margin:0!important;
+}
+@media(max-width:760px) {
+  #app .site-app-topbar {flex-wrap:nowrap!important}
+  #app .brand-home-link {flex:1 1 auto!important;min-width:0;gap:8px!important}
+  #app .brand-home-link .brand-icon {width:38px;height:38px;flex:0 0 38px}
+  #app .brand-home-link .brand-copy {
+    display:flex!important;flex:0 1 auto;flex-direction:column;align-items:flex-start;
+    gap:2px;min-width:0;
+  }
+  #app .brand-home-link .brand-copy>.brand-subtitle {display:none!important}
+  #app .brand-home-link .brand-copy>.app-release-badge {
+    align-self:flex-start;margin:0!important;padding:3px 6px;font-size:.58rem;
+    line-height:1.1;gap:4px;max-width:100%;
+  }
+  #app .site-header-controls,#app .site-header-right {
+    flex:0 0 auto;min-width:max-content;gap:4px!important;
+  }
+  #app .site-history-controls {gap:3px!important}
+  #app .site-history-button,#app .cabinet-menu-trigger {
+    width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;
+    border-radius:10px!important;
+  }
+}
+@media(max-width:380px) {
+  #app .brand-home-link {gap:6px!important}
+  #app .brand-home-link .brand-icon {width:34px;height:34px;flex-basis:34px}
+  #app .brand-home-link .brand-copy strong {font-size:.94rem}
+  #app .brand-home-link .brand-copy>.app-release-badge {font-size:.54rem;padding:2px 5px}
+  #app .site-history-button,#app .cabinet-menu-trigger {
+    width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;
+  }
+}
