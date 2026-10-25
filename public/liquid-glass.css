@@ -1508,3 +1508,130 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
  #app .lobby-mode-settings-dialog{padding:15px;border-radius:17px}
  #app .lobby-mode-settings-intro{font-size:.74rem}
 }
+
+
+/* Color Kingdoms 1.12.3 — restore a centered, translucent green arena. */
+/* The arena surface is intentionally a single green color, without gradients. */
+#app .kingdom-board-frame{
+  display:flex!important;
+  flex-direction:column;
+  align-items:center!important;
+  justify-content:center!important;
+  width:min(100%,92vw,76dvh,1100px)!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  margin:clamp(10px,1.8vw,20px) auto clamp(14px,2vw,24px)!important;
+  padding:clamp(7px,1vw,12px)!important;
+  border:1px solid rgba(221,255,207,.42)!important;
+  border-radius:clamp(14px,2vw,24px)!important;
+  background:#36763b!important;
+  background-image:none!important;
+  box-shadow:0 12px 30px rgba(16,53,20,.18),inset 0 1px 0 rgba(238,255,231,.16)!important;
+}
+#app .kingdom-board-frame::before,
+#app .kingdom-board-frame::after{
+  content:none!important;
+  display:none!important;
+}
+/* Keep the board centered and remove the asymmetric right inset introduced in 1.12.0. */
+#app .kingdom-board-grid{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:center!important;
+  flex:0 1 100%!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  margin:0 auto!important;
+  padding:0!important;
+  gap:0!important;
+  border:1px solid rgba(226,255,219,.2)!important;
+  border-radius:12px!important;
+  background:rgba(11,55,19,.13)!important;
+  box-shadow:inset 0 0 0 1px rgba(244,255,240,.035)!important;
+  -webkit-backdrop-filter:blur(2px)!important;
+  backdrop-filter:blur(2px)!important;
+}
+#app .kingdom-board-grid.is-small-board{
+  width:100%!important;
+  max-width:560px!important;
+  margin-inline:auto!important;
+}
+/* Preserve the offset-row honeycomb geometry while centering the complete field. */
+#app .kingdom-board-row{
+  display:grid!important;
+  grid-template-columns:repeat(var(--board-size),minmax(0,1fr))!important;
+  width:calc(100% - var(--hex-offset,2.5%))!important;
+  min-width:0!important;
+  min-height:0!important;
+  gap:0!important;
+  box-sizing:border-box!important;
+  margin-top:var(--row-overlap,0%)!important;
+  margin-left:0!important;
+}
+#app .kingdom-board-row:first-child{margin-top:0!important}
+#app .kingdom-board-row.is-offset{margin-left:var(--hex-offset,2.5%)!important}
+/* Translucent cells reveal the solid green arena beneath them without fading labels/icons. */
+#app .kingdom-board-row > .kingdom-tile.is-neutral{
+  --tile-color:#a6ca90;
+  background-color:color-mix(in srgb,#a6ca90 66%,transparent)!important;
+  background-image:none!important;
+  border:1px solid rgba(232,255,222,.25)!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-owned{
+  background-color:color-mix(in srgb,var(--tile-color,#586679) 76%,transparent)!important;
+  background-image:none!important;
+  border:1px solid rgba(239,255,235,.2)!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-stronghold{
+  background-color:color-mix(in srgb,#f0d37a 82%,transparent)!important;
+  background-image:none!important;
+  border:1px solid rgba(255,246,194,.6)!important;
+}
+#app .kingdom-board-row > .kingdom-tile::before{
+  inset:1px!important;
+  border:1px solid rgba(244,255,238,.22)!important;
+  background:transparent!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-stronghold::before{
+  inset:3px!important;
+  border:2px solid rgba(255,248,205,.92)!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target{
+  animation:kingdom-hex-target 1.5s ease-in-out infinite!important;
+}
+#app .kingdom-board-frame.is-small-board{
+  width:min(100%,560px)!important;
+  max-width:560px!important;
+}
+:root.dark #app .kingdom-board-frame{background:#36763b!important}
+@media(max-width:680px){
+  #app .kingdom-board-frame{
+    width:min(100%,92vw,76dvh,1100px)!important;
+    padding:4px!important;
+    margin:9px auto 14px!important;
+    border-radius:13px!important;
+  }
+  #app .kingdom-board-grid{width:100%!important;padding:0!important}
+  #app .kingdom-board-row{gap:0!important}
+  #app .kingdom-board-row.is-offset{margin-left:var(--hex-offset,2.5%)!important}
+}
+/* Keep party settings available in a compact, low-distraction modal from the lobby. */
+#app .lobby-settings-modal-backdrop{
+  background:rgba(8,24,12,.24)!important;
+  backdrop-filter:blur(3px)!important;
+  -webkit-backdrop-filter:blur(3px)!important;
+}
+#app .lobby-mode-settings-dialog{
+  width:min(440px,calc(100vw - 28px))!important;
+  max-width:440px!important;
+  padding:16px!important;
+  border-radius:18px!important;
+  box-shadow:0 16px 48px rgba(4,18,8,.22)!important;
+}
+#app .lobby-mode-settings-dialog .lobby-mode-settings-intro{margin-bottom:11px}
+#app .lobby-mode-settings-dialog .lobby-mode-setting-field,
+#app .lobby-mode-settings-dialog .lobby-mode-setting-toggle{padding:10px!important}
