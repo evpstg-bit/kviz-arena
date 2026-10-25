@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#877bff"/>
+      <stop offset="0.58" stop-color="#5b4bdc"/>
+      <stop offset="1" stop-color="#4436b7"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.48" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#21166c" stop-opacity="0.10"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#brand)"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="16.5" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.42"/>
+  <text x="31" y="44.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="900" letter-spacing="-2.5" fill="#ffffff">K</text>
+</svg>

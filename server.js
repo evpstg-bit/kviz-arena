@@ -447,14 +447,14 @@ const sched=g=>{if(g.pend)return;g.pend=setTimeout(()=>{g.pend=0;push(g)},180)};
 // ================= HTTP =================
 function body(req){return new Promise(r=>{let d='';req.on('data',c=>{d+=c;if(d.length>2e6)req.destroy()});req.on('end',()=>{try{r(JSON.parse(d))}catch{r({})}})})}
 const json=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o))};
-const LIBFILES={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css','/ui.css':'ui.css','/liquid-glass.css':'liquid-glass.css'};
+const LIBFILES={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css','/ui.css':'ui.css','/liquid-glass.css':'liquid-glass.css','/favicon.svg':'favicon.svg','/favicon.png':'favicon.png','/favicon.ico':'favicon.ico','/apple-touch-icon.png':'apple-touch-icon.png'};
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x');
   if(req.method==='GET'&&LIBFILES[u.pathname]){
     const f=[path.join(__dirname,'public',LIBFILES[u.pathname]),path.join(__dirname,LIBFILES[u.pathname])].find(p=>fs.existsSync(p));
     if(!f){res.writeHead(404);return res.end()}
-    return fs.readFile(f,(e,b)=>{res.writeHead(200,{'Content-Type':u.pathname.endsWith('.css')?'text/css':'application/javascript','Cache-Control':'no-cache'});res.end(b)});
+    return fs.readFile(f,(e,b)=>{const type=u.pathname.endsWith('.css')?'text/css':u.pathname.endsWith('.svg')?'image/svg+xml':u.pathname.endsWith('.png')?'image/png':u.pathname.endsWith('.ico')?'image/x-icon':'application/javascript';res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-cache'});res.end(b)});
   }
   if(req.method==='GET'&&u.pathname==='/'){
     const f=[path.join(__dirname,'public','index.html'),path.join(__dirname,'index.html')].find(p=>fs.existsSync(p));
