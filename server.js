@@ -123,6 +123,7 @@ function loadProjectQuizzes(){
   return loadProjectQuizFile('builtin-tests.json','builtin','builtin');
 }
 BUILTINQ=loadProjectQuizzes();
+let REPORTS=readJ('reports.json',[]);if(!Array.isArray(REPORTS))REPORTS=[];
 
 // Нормализованная модель файла: { app, version, items: [{ id, quiz }] }.
 // Файл хранится в репозитории, а не в DATA_DIR, чтобы его можно было версионировать.
@@ -211,10 +212,41 @@ function newPlayer(g,name){
 }
 function removePlayer(g,id,msg){
   const p=g.players.get(id);if(!p)return;
-  g.left.push({name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:p.log});
+  g.left.push({id,name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:Array.isArray(p.log)?p.log.map(l=>({...l,a:Array.isArray(l.a)?[...l.a]:[]})):[]});
   g.players.delete(id);
   [...g.clients].filter(c=>c.id===id).forEach(c=>{if(msg)c.res.write('data: '+JSON.stringify(msg)+'\n\n');c.res.end();g.clients.delete(c)});
   if(g.state==='question'&&g.players.size&&[...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
+}
+
+// Build an immutable teacher report from the completed game. Reports are private to the owner.
+function makeGameReport(g,{incomplete=false}={}){
+  const roster=[...g.players.entries()].map(([id,p])=>({id,...p,removed:false})).concat((g.left||[]).map(p=>({...p,removed:true,log:Array.isArray(p.log)?p.log:[]})));
+  const questions=(g.quiz.q||[]).map((q,qi)=>{
+    const attempts=[];const respondents=new Set();
+    roster.forEach(p=>(p.log||[]).forEach(l=>{if(Number(l.qi)===qi){attempts.push({name:p.name,playerId:p.id||'',ok:!!l.ok,answers:Array.isArray(l.a)?l.a:[],points:Number(l.pts)||0,ms:Number(l.ms)||0});respondents.add(p.id||p.name)}}));
+    const answerCounts=q.a.map((text,ai)=>({index:ai,text,count:attempts.reduce((n,l)=>n+(l.answers.includes(ai)?1:0),0),correct:(q.cs||[]).includes(ai)}));
+    const correctCount=attempts.filter(a=>a.ok).length,incorrectCount=attempts.length-correctCount;
+    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:attempts.length?Math.round(correctCount/attempts.length*100):0,answerCounts,attempts};
+  });
+  const participants=roster.map(p=>{
+    const logs=Array.isArray(p.log)?p.log:[],correctCount=logs.filter(l=>l.ok).length,incorrectCount=logs.length-correctCount;
+    const uniqueQuestions=new Set(logs.map(l=>Number(l.qi))).size;
+    const classicUnanswered=g.mode==='classic'?Math.max(0,questions.length-uniqueQuestions):null;
+    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,accuracy:logs.length?Math.round(correctCount/logs.length*100):0,removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
+  }).sort((a,b)=>g.mode==='kingdoms'?(b.placed-a.placed||b.correctCount-a.correctCount||a.name.localeCompare(b.name)):(b.score-a.score||b.correctCount-a.correctCount||a.name.localeCompare(b.name)));
+  participants.forEach((p,i)=>p.rank=i+1);
+  const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
+  const totalPossible=g.mode==='classic'?participants.length*questions.length:null;
+  const teamKeys=[...new Set(participants.map(p=>p.team).filter(Number.isInteger))].sort((a,b)=>a-b);
+  const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:k===0?'Красные':'Синие',members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:answers?Math.round(correctCount/answers*100):0,flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
+  const accuracies=participants.filter(p=>p.answeredCount>0).map(p=>p.accuracy);
+  return{id:'report-'+g.pin+'-'+Date.now().toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',completedAt:Date.now(),incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:totalAnswers?Math.round(totalCorrect/totalAnswers*100):0,averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds:Math.max(0,Math.round((Date.now()-(g.born||Date.now()))/1000)),winner:g.kb?g.kb.winner:null}};
+}
+function saveGameReport(g,options={}){
+  if(g.reportId)return g.reportId;
+  const report=makeGameReport(g,options);g.reportId=report.id;g.report=report;REPORTS=[report,...REPORTS].slice(0,500);
+  if(!writeJ('reports.json',REPORTS))console.warn('Отчёт сохранён только в памяти процесса: не удалось записать data/reports.json');
+  return report.id;
 }
 
 // ---- Classic ----
@@ -222,6 +254,7 @@ function view(g,id,R0){
   const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
   const v={state:g.state,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
     elapsed:Date.now()-g.qStart,host,top:R.slice(0,5).map(p=>({name:p.name,score:p.score}))};
+  if(host&&g.reportId)v.reportId=g.reportId;
   if(g.state==='question'||g.state==='results')v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1};
   if(g.state==='results')v.correct=q.cs;
   if(host){
@@ -273,7 +306,7 @@ function finishK(g){
   if(g.state!=='playing')return;clearTimeout(g.timer);const kb=g.kb,t=[0,1].map(k=>kb.board.filter(o=>o===k).length);
   if(t[0]!==t[1])kb.trophies[t[0]>t[1]?0:1]++;           // время вышло: у кого больше клеток — тот берёт трофей
   kb.winner=kb.trophies[0]!==kb.trophies[1]?(kb.trophies[0]>kb.trophies[1]?0:1):(t[0]!==t[1]?(t[0]>t[1]?0:1):-1);
-  g.state='final';push(g);
+  g.state='final';saveGameReport(g);push(g);
 }
 const validTiles=(kb,team)=>{const r=[];for(let i=0;i<kb.board.length;i++)if(kb.board[i]!==team&&!kb.rooks.includes(i)&&adjN(i,kb.N).some(j=>kb.board[j]===team))r.push(i);return r};
 function enclose(kb,team){ // клетки, полностью окружённые территорией команды (край поля не считается стеной)
@@ -301,7 +334,7 @@ function answerK(g,p,b){
 function commonK(g,R){
   const kb=g.kb,now=Date.now();
   const stats=[0,1].map(t=>{const m=R.filter(p=>p.team===t);return{k:t,tiles:kb.board.filter(o=>o===t).length,members:m.length,trophies:kb.trophies[t],correct:m.reduce((s,p)=>s+p.correctN,0),flags:m.reduce((s,p)=>s+p.placed,0)}});
-  return{state:g.state,mode:'kingdoms',pin:g.pin,title:g.quiz.title,N:kb.N,board:kb.board,rooks:kb.rooks,hot:kb.hot,round:kb.round,need:kb.need,dur:kb.dur,
+  return{state:g.state,mode:'kingdoms',pin:g.pin,title:g.quiz.title,N:kb.N,board:kb.board,rooks:kb.rooks,hot:kb.hot,round:kb.round,need:kb.need,dur:kb.dur,reportId:g.reportId||null,
     left:g.state==='playing'?Math.max(0,kb.endsAt-now):0,stats,winner:kb.winner,locked:!!g.locked,total:g.quiz.q.length,
     banner:kb.banner&&now-kb.banner.at<4500?{team:kb.banner.team,age:now-kb.banner.at,n:kb.round}:null,
     top:R.slice().sort((a,b)=>b.placed-a.placed||b.correctN-a.correctN).slice(0,8).map(p=>({name:p.name,team:p.team,placed:p.placed,correct:p.correctN}))};
@@ -429,6 +462,20 @@ http.createServer(async(req,res)=>{
     return json(res,{error:'Неизвестная операция'},404);
   }
 
+  // ---------- teacher reports history ----------
+  if(u.pathname==='/api/reports/list'){
+    const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
+    const items=REPORTS.filter(r=>me.admin||r.ownerId===me.id).map(r=>({id:r.id,pin:r.pin,title:r.title,sourceId:r.sourceId,mode:r.mode,modeName:r.modeName,completedAt:r.completedAt,incomplete:!!r.incomplete,questionCount:r.questionCount,participantCount:r.participantCount,accuracy:r.summary&&r.summary.accuracy,averageScore:r.summary&&r.summary.averageScore}));
+    return json(res,{items});
+  }
+  if(u.pathname==='/api/reports/get'){
+    const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
+    const report=REPORTS.find(r=>r.id===b.reportId);
+    if(!report)return json(res,{error:'Отчёт не найден'},404);
+    if(!me.admin&&report.ownerId!==me.id)return json(res,{error:'Нет доступа'},403);
+    return json(res,{report});
+  }
+
   // ---------- создание игры ----------
   if(u.pathname==='/api/create'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
@@ -438,7 +485,7 @@ http.createServer(async(req,res)=>{
     const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Тест некорректен. Проверьте библиотеку тестов.'},400);
     quiz.mode=requestedMode;
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
-    const g={pin,hostId:rid(),owner:me.id,quiz,state:'lobby',mode:requestedMode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
+    const g={pin,hostId:rid(),owner:me.id,sourceId:source.id,quiz,state:'lobby',mode:requestedMode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
     games.set(pin,g);return json(res,{pin,id:g.hostId});
   }
 
@@ -466,7 +513,7 @@ http.createServer(async(req,res)=>{
     else if(host&&b.type==='skip'){if(KM)finishK(g);else toResults(g)}
     else if(host&&b.type==='lock'){g.locked=!g.locked;push(g)}
     else if(host&&!KM&&b.type==='next'&&g.state==='results'){
-      if(g.qi>=g.quiz.q.length-1){g.state='final';push(g)}else{g.qi++;startQ(g)}
+      if(g.qi>=g.quiz.q.length-1){g.state='final';saveGameReport(g);push(g)}else{g.qi++;startQ(g)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='answer'){
       if(answerK(g,p,b)){pushOne(g,b.id);sched(g)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='place'){
@@ -481,7 +528,7 @@ http.createServer(async(req,res)=>{
     }else if(p&&b.type==='leave')removePlayer(g,b.id);
     else if(host&&b.type==='kick'&&g.players.has(b.a))removePlayer(g,b.a,{state:'kicked'});
     else if(host&&b.type==='end'){
-      g.state='ended';clearTimeout(g.timer);clearTimeout(g.pend);push(g);
+      saveGameReport(g,{incomplete:g.state!=='final'});g.state='ended';clearTimeout(g.timer);clearTimeout(g.pend);push(g);
       setTimeout(()=>{g.clients.forEach(c=>c.res.end());games.delete(g.pin)},1500);
     }
     return json(res,{ok:1});
