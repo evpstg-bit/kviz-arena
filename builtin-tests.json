@@ -1,6 +1,14 @@
 {
   "app": "kviz-arena",
-  "version": 2,
+  "version": 3,
+  "folders": [
+    {
+      "id": "folder-081dbcaf96d3",
+      "name": "Коррупция",
+      "createdAt": 1792917774462,
+      "updatedAt": 1792917774462
+    }
+  ],
   "items": [
     {
       "id": "test-899f28a42c60",
@@ -38,7 +46,8 @@
             "T": 5
           }
         ]
-      }
+      },
+      "folderId": ""
     }
   ]
 }
