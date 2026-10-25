@@ -378,7 +378,7 @@ function nextQ(g,p){
 }
 function startK(g){
   const ids=shuffle([...g.players.keys()]);ids.forEach((id,i)=>{const p=g.players.get(id);p.team=i%2;initQ(g,p)});
-  const n=ids.length,N=n<=10?7:n<=40?9:11;
+  const n=ids.length,N=n<=10?9:n<=20?11:n<=35?15:n<=60?17:19;
   const kb=g.kb={N,round:1,trophies:[0,0],need:g.quiz.need,dur:g.quiz.dur*60000,banner:null,winner:null};
   resetBoard(kb);kb.endsAt=Date.now()+kb.dur;g.state='playing';clearTimeout(g.timer);g.timer=setTimeout(()=>finishK(g),kb.dur+200);push(g);
 }

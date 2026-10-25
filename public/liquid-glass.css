@@ -1080,3 +1080,51 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 #app .quiz-card-actions .quiz-order-action { font-size:1.05rem; font-weight:800; line-height:1; }
 #app .quiz-card-actions .quiz-order-action:disabled { opacity:.28; cursor:not-allowed; transform:none!important; }
 @media(max-width:760px){#app .library-sort-control{width:100%;min-width:0;flex:1 1 auto}#app .library-sort-control select{max-width:100%}}
+
+
+/* Larger adaptive Color Kingdoms board and compact Classic live leaderboard. */
+#app .kingdom-board-grid {
+  width: min(100%, 92vw, 78vh, 1000px);
+  width: min(100%, 92vw, 78dvh, 1000px);
+  max-width: 1000px;
+  gap: clamp(2px, .42vw, 6px) !important;
+  padding: clamp(5px, .9vw, 12px) !important;
+  border-radius: clamp(14px, 2vw, 28px) !important;
+}
+#app .kingdom-board-grid > div { min-width:0; border-radius:clamp(3px,.45vw,9px) !important; font-size:clamp(10px,1.65vw,24px) !important; line-height:1 !important; }
+#app .kingdom-board-grid > div span { font-size:clamp(10px,1.4vw,20px) !important; line-height:1 !important; }
+#app .kingdom-board-grid.is-small-board { width:min(100%,560px); }
+#app .classic-best-panel {
+  margin: 14px 0 18px; padding: clamp(12px,1.7vw,18px);
+  border:1px solid rgba(255,255,255,.72); border-radius:20px;
+  background:linear-gradient(135deg,rgba(255,255,255,.76),rgba(237,240,255,.56));
+  box-shadow:0 12px 30px rgba(52,58,118,.07),inset 0 1px 0 rgba(255,255,255,.8);
+  -webkit-backdrop-filter:blur(18px) saturate(145%); backdrop-filter:blur(18px) saturate(145%);
+}
+#app .classic-best-heading { display:flex; align-items:center; gap:9px; margin-bottom:10px; color:var(--text-main); }
+#app .classic-best-heading > span { display:grid; place-items:center; width:34px; height:34px; border-radius:11px; background:rgba(245,190,55,.16); font-size:1.1rem; }
+#app .classic-best-heading > div { display:grid; gap:2px; }
+#app .classic-best-heading b { font-size:.96rem; }
+#app .classic-best-heading small { color:var(--text-muted); font-size:.72rem; }
+#app .classic-best-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr)); gap:7px; }
+#app .classic-best-player { display:flex; align-items:center; gap:8px; min-width:0; padding:8px 10px; border:1px solid rgba(139,144,183,.17); border-radius:12px; background:rgba(255,255,255,.48); }
+#app .classic-best-rank { display:grid; place-items:center; flex:0 0 25px; width:25px; height:25px; border-radius:8px; background:var(--surface-muted); color:var(--text-soft); font-size:.72rem; font-weight:850; }
+#app .classic-best-rank.is-first { color:#8a6500; background:rgba(255,199,55,.22); }
+#app .classic-best-rank.is-second { color:#536078; background:rgba(151,166,190,.24); }
+#app .classic-best-rank.is-third { color:#8c5734; background:rgba(197,135,91,.18); }
+#app .classic-best-team { flex:0 0 auto; font-size:.82rem; font-weight:900; line-height:1; }
+#app .classic-best-name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-main); font-size:.82rem; font-weight:700; }
+#app .classic-best-score { flex:0 0 auto; color:var(--accent-ink); font-size:.86rem; font-variant-numeric:tabular-nums; }
+:root.dark #app .classic-best-panel { background:linear-gradient(135deg,rgba(27,32,57,.90),rgba(20,25,46,.8)); border-color:rgba(210,216,255,.13); }
+:root.dark #app .classic-best-player { background:rgba(255,255,255,.035); border-color:rgba(215,220,255,.1); }
+#app .report-question-tools { display:flex; flex-direction:column; gap:4px; min-width:190px; flex:0 1 250px; }
+#app .report-question-tools label { color:var(--text-muted); font-size:.68rem; font-weight:750; }
+#app .report-question-tools select { min-height:38px; margin:0; padding:7px 30px 7px 10px; border:1px solid var(--line-strong)!important; border-radius:11px!important; background:var(--surface-soft)!important; color:var(--text-main)!important; font-size:.8rem; }
+@media(max-width:680px) {
+ #app .kingdom-board-grid { width:100%; gap:2px !important; padding:5px !important; }
+ #app .kingdom-board-grid:not(.is-small-board) > div { border-radius:3px !important; }
+ #app .report-question-tools { flex:1 1 100%; min-width:0; width:100%; margin-top:8px; }
+ #app .report-question-tools select { width:100%; }
+}
+
+#app .report-questions-head { flex-wrap:wrap; }
