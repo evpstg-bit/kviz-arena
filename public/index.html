@@ -10,8 +10,8 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.11.2">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.12.5">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.12.5">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.12.6">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.12.6">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -22,7 +22,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.5'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.6'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -713,16 +713,20 @@ function podium(rows){
 function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
 function sendSel(){if(sel.length)act('answer',sel)}
 function boardK(o){
- const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[];
+ const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[],rooks=Array.isArray(S.rooks)?S.rooks:[];
+ const font=Math.max(7,Math.min(22,Math.round(225/N)));
  const cell=(ow,i)=>{
-  const stronghold=S.rooks.includes(i),canPlace=valid.includes(i),isHot=hot.includes(i),team=(S.me&&Number.isInteger(S.me.team))?S.me.team:0;
+  const row=Math.floor(i/N),column=i%N;
+  const checker=((row+column)%2===0)?'is-checker-light':'is-checker-dark';
+  const stronghold=rooks.includes(i),canPlace=valid.includes(i),isHot=hot.includes(i);
+  const team=(S.me&&Number.isInteger(S.me.team))?S.me.team:0;
   const ownerClass=ow<0?'is-neutral':ow===0?'is-red-kingdom':'is-blue-kingdom';
-  const classes=['kingdom-tile',ownerClass,stronghold?'is-stronghold':'',canPlace?'is-target':'',isHot&&!canPlace?'is-hot':'',sm?'is-compact-tile':''].filter(Boolean).join(' ');
+  const classes=['kingdom-tile',ownerClass,checker,stronghold?'is-stronghold':'',canPlace?'is-target':'',isHot&&!canPlace?'is-hot':'',sm?'is-compact-tile':''].filter(Boolean).join(' ');
   const label=stronghold?'Крепость':canPlace?'Поставить флаг':ow===0?'Территория красных':ow===1?'Территория синих':'Нейтральная клетка';
-  return `<div ${canPlace?`role="button" tabindex="0" onclick="placeAt(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();placeAt(${i})}"`:''} class="${classes}" aria-label="${label}" style="--tile-color:${ow<0?'#46505f':'var(--c'+ow+')'};--tile-team:var(--c${canPlace?team:(ow<0?team:ow)});--tile-font:${Math.max(7,Math.min(22,Math.round(225/N)))}px">${stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':(canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'')}</div>`;
+  return `<div ${canPlace?`role="button" tabindex="0" onclick="placeAt(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();placeAt(${i})}"`:''} class="${classes}" aria-label="${label}" style="--tile-color:${ow<0?'#46505f':'var(--c'+ow+')'};--tile-team:var(--c${canPlace?team:(ow<0?team:ow)});--tile-font:${font}px">${stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':(canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'')}</div>`;
  };
- const rows=Array.from({length:N},(_,row)=>`<div class="kingdom-board-row ${row%2?'is-offset':''}" style="--board-row:${row}">${S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')}</div>`).join('');
- return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N};--hex-offset:${(50/N).toFixed(4)}%">${rows}</div></div>`;
+ const rows=Array.from({length:N},(_,row)=>`<div class="kingdom-board-row" style="--board-size:${N}">${S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')}</div>`).join('');
+ return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N}">${rows}</div></div>`;
 }
 async function placeAt(i){const r=await act('place',undefined,{tile:i});if(r.error){msg=r.error;render()}}
 function scoreChips(){return `<div class="row justify-center gap-2 text-sm font-bold">${S.stats.map(t=>`<span class="chip kingdom-score-chip" style="--team-color:var(--kingdom-color-${t.k})">${KINGDOM_MARKS[t.k]} ${tr(t.name||KN[t.k])} · ${t.tiles} · 🏆${t.trophies}</span>`).join('')}</div>`}
@@ -837,15 +841,15 @@ function lobbyModeSettingsHtml(){
  if(!S||!S.host||S.state!=='lobby'){lobbySettingsOpen=false;return '';}
  const cfg=S.lobbySettings||{},classic=cfg.classic||{basePoints:1000,speedBonus:true},kingdoms=cfg.kingdoms||{durationMinutes:S.dur||5,correctAnswersForFlag:S.need||3,kingdomCount:S.kingdomCount||2};
  const title=S.mode==='kingdoms'?'Color Kingdoms':'Classic';
- const trigger=`<button type="button" class="lobby-mode-settings-open" onclick="lobbySettingsOpen=true;render()"><span aria-hidden="true">⚙</span><span>${tr('Настройки партии')}</span></button>`;
- if(!lobbySettingsOpen)return `<div class="lobby-mode-settings-trigger">${trigger}</div>`;
+ const trigger=`<div class="lobby-mode-settings-trigger"><button type="button" class="lobby-mode-settings-open" aria-haspopup="dialog" aria-expanded="${lobbySettingsOpen?'true':'false'}" onclick="lobbySettingsOpen=true;render()"><span aria-hidden="true">⚙</span><span>${tr('Настройки партии')}</span></button></div>`;
+ if(!lobbySettingsOpen)return trigger;
  let fields='';
  if(S.mode==='kingdoms'){
   fields=`<label class="lobby-mode-setting-field" for="lobby-kingdom-duration"><span>${tr('Длительность матча')}</span><span class="lobby-mode-setting-input"><input id="lobby-kingdom-duration" type="number" min="5" max="20" step="1" value="${kingdoms.durationMinutes}" onchange="saveLobbySettings()"><small>${tr('мин.')}</small></span></label><label class="lobby-mode-setting-field" for="lobby-kingdom-need"><span>${tr('Правильных ответов для получения флага')}</span><span class="lobby-mode-setting-input"><input id="lobby-kingdom-need" type="number" min="1" max="5" step="1" value="${kingdoms.correctAnswersForFlag}" onchange="saveLobbySettings()"><small>${tr('ответов')}</small></span></label><label class="lobby-mode-setting-field" for="lobby-kingdom-count"><span>${tr('Количество королевств')}</span><select id="lobby-kingdom-count" onchange="saveLobbySettings()"><option value="2" ${Number(kingdoms.kingdomCount)===2?'selected':''}>2</option><option value="3" ${Number(kingdoms.kingdomCount)===3?'selected':''}>3</option><option value="4" ${Number(kingdoms.kingdomCount)===4?'selected':''}>4</option></select></label>`;
  }else{
   fields=`<label class="lobby-mode-setting-field" for="lobby-classic-points"><span>${tr('Максимум баллов за правильный ответ')}</span><span class="lobby-mode-setting-input"><input id="lobby-classic-points" type="number" min="100" max="3000" step="100" value="${classic.basePoints}" onchange="saveLobbySettings()"><small>${tr('баллов')}</small></span></label><label class="lobby-mode-setting-toggle" for="lobby-classic-speed"><span><b>${tr('Бонус за скорость')}</b><small>${tr('Быстрый ответ приносит больше баллов.')}</small></span><input id="lobby-classic-speed" type="checkbox" ${classic.speedBonus?'checked':''} onchange="saveLobbySettings()"></label>`;
  }
- return `<div class="lobby-settings-modal-backdrop" role="presentation" onclick="lobbySettingsOpen=false;render()"><section class="lobby-mode-settings lobby-mode-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="lobby-settings-title" onclick="event.stopPropagation()"><div class="lobby-mode-settings-dialog-head"><div><span class="section-kicker">${tr('НАСТРОЙКИ ПАРТИИ')}</span><h3 id="lobby-settings-title">${tr('Настройки игры')} · ${title}</h3></div><button type="button" class="lobby-mode-settings-close" onclick="lobbySettingsOpen=false;render()" aria-label="${tr('Закрыть настройки')}" title="${tr('Закрыть настройки')}">×</button></div><p class="lobby-mode-settings-intro">${tr('Изменения применяются только к этой игровой комнате и доступны до начала игры.')}</p><div class="lobby-mode-settings-grid">${fields}</div><p class="lobby-mode-settings-note">${tr('Настройки сохраняются автоматически при изменении поля.')}</p></section></div>`;
+ return trigger+`<div class="lobby-settings-drawer-backdrop" role="presentation" onclick="lobbySettingsOpen=false;render()"><aside class="lobby-mode-settings lobby-mode-settings-drawer" role="dialog" aria-modal="true" aria-labelledby="lobby-settings-title" onclick="event.stopPropagation()"><div class="lobby-mode-settings-drawer-head"><div><span class="section-kicker">${tr('НАСТРОЙКИ ПАРТИИ')}</span><h3 id="lobby-settings-title">${tr('Настройки игры')} · ${title}</h3></div><button type="button" class="lobby-mode-settings-close" onclick="lobbySettingsOpen=false;render()" aria-label="${tr('Закрыть настройки')}" title="${tr('Закрыть настройки')}">×</button></div><p class="lobby-mode-settings-intro">${tr('Изменения применяются только к этой игровой комнате и доступны до начала игры.')}</p><div class="lobby-mode-settings-grid">${fields}</div><p class="lobby-mode-settings-note">${tr('Настройки сохраняются автоматически при изменении поля.')}</p></aside></div>`;
 }
 async function saveLobbySettings(){
  if(!S||!S.host||S.state!=='lobby')return;
@@ -870,7 +874,7 @@ function host(a){
  const dl='<button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button>';
  const mode=KM?`Color Kingdoms — ${S.lobbySettings?.kingdoms?.kingdomCount||S.kingdomCount||2} ${tr('королевства')}, ${S.dur} ${tr('мин.')}, флаг за ${S.need} ${tr('ответов')}`:'Classic';
  if(S.state==='lobby')return a.innerHTML=`<div class="c"><div class="row justify-center gap-10"><div><b>📱 Наведите камеру телефона</b>${qrBox(230)}<span class="mut">PIN подставится сам, останется ввести имя<br>🔍 Нажмите на QR-код — он откроется на весь экран</span></div>
- <div><p class="mut">или откройте в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и введите PIN:</p><div class="pin">${S.pin}</div></div></div><h2 data-user-content="true">${esc(S.title)}</h2><div class="lobby-mode-meta"><p class="mut">Режим: ${mode}</p>${lobbyModeSettingsHtml()}</div>
+ <div><p class="mut">или откройте в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и введите PIN:</p><div class="pin">${S.pin}</div></div></div><h2 data-user-content="true">${esc(S.title)}</h2><div class="lobby-mode-meta"><p class="mut">Режим: ${mode}</p></div>${lobbyModeSettingsHtml()}
  <div class="chips">${S.rows.map(p=>`<span class="chip"><span data-user-content="true">${esc(p.name)}</span><button type="button" class="player-kick" title="Исключить участника" aria-label="${tr('Исключить')} ${esc(p.name)}" onclick="kick('${p.id}')">✕</button></span>`).join('')||'<span class="mut">Ожидаем участников…</span>'}</div><p class="big">${N} / 100 участников</p>
  ${msg?`<p class="bad" role="alert">${esc(msg)}</p>`:''}<button ${N?'':'disabled'} onclick="startHostedGame()">Начать</button></div>`;
  if(S.state==='question')return a.innerHTML=`<div class="row justify-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span id="tm" class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-3xl font-black text-white shadow-lg"></span><span class="mut">Ответили: ${S.answered} / ${N}</span></div><div class="bar"><i id="tb"></i></div>
