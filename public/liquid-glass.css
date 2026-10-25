@@ -954,22 +954,13 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 #app .site-menu-item:focus-visible { outline:3px solid rgba(117,100,237,.42) !important; outline-offset:3px !important; }
 #app .cabinet-menu-wrap { position:relative; display:inline-flex; align-items:center; flex:0 0 auto; }
 #app .cabinet-menu-trigger { position:relative; z-index:2; }
-/* Bridge the small visual gap between the hamburger and the dropdown. Because
-   it belongs to the wrapper, pointer movement onto the panel does not trigger
-   the wrapper's leave handler and hide the menu mid-flight. */
-#app .cabinet-menu-wrap::before {
-  content:"";
-  position:absolute;
-  top:100%;
-  right:0;
-  width:min(286px,calc(100vw - 28px));
-  height:14px;
-  z-index:999;
-  pointer-events:auto;
-}
+/* Keep the dropdown attached to the hamburger. Do not create a wide invisible
+   hover bridge: it made the menu open when the pointer was still away from the
+   three-line trigger. The panel touches the trigger so hover can flow directly
+   from the button into the panel without a dead zone. */
 #app .cabinet-menu-panel {
   position:absolute;
-  top:calc(100% + 9px);
+  top:100%;
   right:0;
   z-index:1000;
   display:flex;

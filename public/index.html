@@ -405,8 +405,8 @@ function cabinetMenuHover(open){
 function cabinetMenuPointerLeave(){
  if(!(window.matchMedia&&window.matchMedia('(hover: hover)').matches))return;
  if(cabinetMenuHoverTimer)clearTimeout(cabinetMenuHoverTimer);
- // Allow the pointer to travel from the trigger across the bridge and into
- // the floating panel. Only close if the pointer has truly left the wrapper.
+ // Keep the menu open while the pointer moves directly from the trigger into
+ // the attached panel; close only after the pointer truly leaves the wrapper.
  cabinetMenuHoverTimer=setTimeout(()=>{
   cabinetMenuHoverTimer=null;
   const wrap=$('cabinet-menu-wrap');
