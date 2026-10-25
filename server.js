@@ -156,6 +156,7 @@ function loadProjectQuizzes(){
 }
 BUILTINQ=loadProjectQuizzes();
 let REPORTS=readJ('reports.json',[]);if(!Array.isArray(REPORTS))REPORTS=[];
+let REPORTS_INDEX_HYDRATED=false,REPORTS_INDEX_HYDRATION=null,REPORTS_PERSIST_QUEUE=Promise.resolve(),REPORTS_REMOTE_READY=false,REPORTS_STORAGE_ERROR='';
 
 // Файл проекта хранит папки и тесты вместе, чтобы они синхронизировались одним GitHub-коммитом.
 function normalizeFolders(folders){
@@ -204,6 +205,158 @@ const githubConfig=()=>{
   const token=String(process.env.GITHUB_TOKEN||'').trim(),repo=String(process.env.GITHUB_REPOSITORY||'').trim(),branch=String(process.env.GITHUB_BRANCH||'main').trim();
   return token&&/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)?{token,repo,branch}:null;
 };
+
+const reportsStoreConfig=()=>{
+  const cfg=githubConfig();if(!cfg)return null;
+  const branch=String(process.env.REPORTS_BRANCH||'kviz-arena-reports').trim();
+  const secret=String(process.env.REPORTS_ENCRYPTION_KEY||cfg.token);
+  if(!/^[A-Za-z0-9._/-]{1,100}$/.test(branch)||branch.includes('..')||branch.startsWith('/')||branch.endsWith('/'))throw new Error('Некорректное имя REPORTS_BRANCH');
+  if(!secret)return null;
+  return{...cfg,reportsBranch:branch,secret};
+};
+const reportsApiBase=()=>String(process.env.GITHUB_API_BASE||'https://api.github.com').replace(/\/$/,'');
+async function reportsGithubFetch(cfg,endpoint,{method='GET',body,accept='application/vnd.github+json'}={}){
+  const headers={Authorization:'Bearer '+cfg.token,Accept:accept,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'};
+  const options={method,headers,signal:AbortSignal.timeout(15000)};
+  if(body!==undefined){headers['Content-Type']='application/json';options.body=JSON.stringify(body)}
+  return fetch(reportsApiBase()+'/repos/'+cfg.repo+'/'+endpoint,options);
+}
+function reportCryptoKey(cfg){return crypto.createHash('sha256').update('kviz-arena-encrypted-report-store-v1\0'+cfg.secret,'utf8').digest()}
+function encryptReportPayload(value,cfg){
+  const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',reportCryptoKey(cfg),iv);
+  const data=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);
+  return JSON.stringify({version:1,algorithm:'aes-256-gcm',iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),data:data.toString('base64')})+'\n';
+}
+function decryptReportPayload(encoded,cfg){
+  const envelope=JSON.parse(String(encoded||''));
+  if(!envelope||envelope.version!==1||envelope.algorithm!=='aes-256-gcm')throw new Error('Неизвестный формат зашифрованного хранилища отчётов');
+  const decipher=crypto.createDecipheriv('aes-256-gcm',reportCryptoKey(cfg),Buffer.from(envelope.iv,'base64'));
+  decipher.setAuthTag(Buffer.from(envelope.tag,'base64'));
+  const plain=Buffer.concat([decipher.update(Buffer.from(envelope.data,'base64')),decipher.final()]).toString('utf8');
+  return JSON.parse(plain);
+}
+function reportMeta(r){
+  return{id:String(r.id),pin:String(r.pin||''),sourceId:String(r.sourceId||''),ownerId:String(r.ownerId||''),title:String(r.title||''),mode:String(r.mode||'classic'),modeName:String(r.modeName||r.mode||'Classic'),completedAt:Number(r.completedAt)||Date.now(),incomplete:!!r.incomplete,questionCount:Number(r.questionCount)||0,participantCount:Number(r.participantCount)||0,accuracy:Number(r.summary&&r.summary.accuracy!==undefined?r.summary.accuracy:r.accuracy)||0,averageScore:Number(r.summary&&r.summary.averageScore!==undefined?r.summary.averageScore:r.averageScore)||0};
+}
+async function reportsApiJson(res,what){
+  const txt=await res.text().catch(()=> '');
+  if(!res.ok)throw new Error(what+' (HTTP '+res.status+'). '+txt.slice(0,180));
+  try{return JSON.parse(txt)}catch(e){throw new Error(what+': GitHub вернул некорректный ответ')}
+}
+async function githubEnsureReportsBranch(cfg){
+  const name=encodeURIComponent(cfg.reportsBranch);
+  let r=await reportsGithubFetch(cfg,'git/ref/heads/'+name);
+  if(r.ok)return await r.json();
+  if(r.status!==404)await reportsApiJson(r,'Не удалось проверить ветку хранилища отчётов');
+  const base=await reportsGithubFetch(cfg,'git/ref/heads/'+encodeURIComponent(cfg.branch));
+  if(!base.ok)await reportsApiJson(base,'Не удалось найти исходную ветку GitHub');
+  const baseRef=await base.json();
+  const create=await reportsGithubFetch(cfg,'git/refs',{method:'POST',body:{ref:'refs/heads/'+cfg.reportsBranch,sha:baseRef.object.sha}});
+  if(!create.ok&&create.status!==422)await reportsApiJson(create,'Не удалось создать ветку хранилища отчётов');
+  const check=await reportsGithubFetch(cfg,'git/ref/heads/'+name);
+  return reportsApiJson(check,'Не удалось открыть ветку хранилища отчётов');
+}
+async function githubReadReportsIndexAt(cfg,ref){
+  const r=await reportsGithubFetch(cfg,'contents/reports-index.enc.json?ref='+encodeURIComponent(ref));
+  if(r.status===404)return{items:[],sha:null};
+  const data=await reportsApiJson(r,'Не удалось прочитать индекс отчётов');
+  if(!data.content)throw new Error('Индекс отчётов пуст или превышает доступный размер ответа GitHub API');
+  const raw=Buffer.from(String(data.content).replace(/\s/g,''),'base64').toString('utf8');
+  const parsed=decryptReportPayload(raw,cfg);
+  if(!parsed||!Array.isArray(parsed.items))throw new Error('В зашифрованном индексе отчётов отсутствует список');
+  return{items:parsed.items,sha:data.sha};
+}
+async function githubReadReportIndex(cfg){
+  const ref=await githubEnsureReportsBranch(cfg);
+  return githubReadReportsIndexAt(cfg,ref.object.sha);
+}
+function reportPath(id){
+  const value=String(id||'');
+  if(!/^report-[A-Za-z0-9_-]{1,140}$/.test(value))throw new Error('Некорректный идентификатор отчёта');
+  return'reports/'+value+'.enc.json';
+}
+async function githubReadReport(cfg,id,ref){
+  const r=await reportsGithubFetch(cfg,'contents/'+reportPath(id)+'?ref='+encodeURIComponent(ref),{accept:'application/vnd.github.raw+json'});
+  if(r.status===404)return null;
+  if(!r.ok)await reportsApiJson(r,'Не удалось загрузить отчёт');
+  const txt=await r.text();
+  let encrypted=txt;
+  try{const wrapper=JSON.parse(txt);if(wrapper&&typeof wrapper.content==='string')encrypted=Buffer.from(wrapper.content.replace(/\s/g,''),'base64').toString('utf8')}catch(e){}
+  const report=decryptReportPayload(encrypted,cfg);
+  if(!report||report.id!==id)throw new Error('Содержимое отчёта не совпало с его идентификатором');
+  return report;
+}
+async function githubWriteReportBatch(cfg,reports){
+  if(!reports.length)return;
+  for(let attempt=0;attempt<4;attempt++){
+    const branchRef=await githubEnsureReportsBranch(cfg),parent=branchRef.object.sha;
+    const indexState=await githubReadReportsIndexAt(cfg,parent);
+    const known=new Map(indexState.items.filter(x=>x&&x.id).map(x=>[String(x.id),x]));
+    const full=new Map();
+    REPORTS.filter(x=>x&&x.id&&Array.isArray(x.questions)&&Array.isArray(x.participants)).forEach(x=>full.set(String(x.id),x));
+    reports.forEach(x=>full.set(String(x.id),x));
+    full.forEach((value,id)=>{if(!known.has(id))known.set(id,reportMeta(value))});
+    reports.forEach(x=>known.set(String(x.id),reportMeta(x)));
+    const ordered=[...known.values()].sort((a,b)=>(Number(b.completedAt)||0)-(Number(a.completedAt)||0)).slice(0,500);
+    const keep=new Set(ordered.map(x=>String(x.id)));
+    const treeEntries=[];
+    const toWrite=new Map();
+    full.forEach((r,id)=>{if(keep.has(id)&&(!indexState.items.some(x=>String(x.id)===id)||reports.some(x=>String(x.id)===id)))toWrite.set(id,r)});
+    for(const [id,r] of toWrite){
+      const b=await reportsGithubFetch(cfg,'git/blobs',{method:'POST',body:{content:encryptReportPayload(r,cfg),encoding:'utf-8'}});
+      const blob=await reportsApiJson(b,'Не удалось подготовить зашифрованный отчёт');
+      treeEntries.push({path:reportPath(id),mode:'100644',type:'blob',sha:blob.sha});
+    }
+    const indexBlobResponse=await reportsGithubFetch(cfg,'git/blobs',{method:'POST',body:{content:encryptReportPayload({version:1,items:ordered},cfg),encoding:'utf-8'}});
+    const indexBlob=await reportsApiJson(indexBlobResponse,'Не удалось подготовить индекс отчётов');
+    treeEntries.push({path:'reports-index.enc.json',mode:'100644',type:'blob',sha:indexBlob.sha});
+    const removed=indexState.items.filter(x=>x&&x.id&&!keep.has(String(x.id)));
+    removed.forEach(x=>treeEntries.push({path:reportPath(x.id),mode:'100644',type:'blob',sha:null}));
+    const commitRes=await reportsGithubFetch(cfg,'git/commits/'+parent);
+    const baseCommit=await reportsApiJson(commitRes,'Не удалось прочитать текущий коммит хранилища отчётов');
+    const treeRes=await reportsGithubFetch(cfg,'git/trees',{method:'POST',body:{base_tree:baseCommit.tree.sha,tree:treeEntries}});
+    const tree=await reportsApiJson(treeRes,'Не удалось подготовить обновление хранилища отчётов');
+    const commitCreate=await reportsGithubFetch(cfg,'git/commits',{method:'POST',body:{message:'Save encrypted quiz reports',tree:tree.sha,parents:[parent]}});
+    const newCommit=await reportsApiJson(commitCreate,'Не удалось сохранить зашифрованные отчёты');
+    const update=await reportsGithubFetch(cfg,'git/refs/heads/'+encodeURIComponent(cfg.reportsBranch),{method:'PATCH',body:{sha:newCommit.sha,force:false}});
+    if(update.ok){REPORTS_REMOTE_READY=true;REPORTS_INDEX_HYDRATED=true;REPORTS_STORAGE_ERROR='';return}
+    if((update.status===409||update.status===422)&&attempt<3)continue;
+    await reportsApiJson(update,'Не удалось обновить ветку хранилища отчётов');
+  }
+  throw new Error('Хранилище отчётов изменилось одновременно несколько раз. Повторите действие.');
+}
+function queueReportsPersistence(report){
+  const run=REPORTS_PERSIST_QUEUE.then(()=>githubWriteReportBatch(reportsStoreConfig(),[report]));
+  REPORTS_PERSIST_QUEUE=run.catch(()=>{});
+  return run;
+}
+async function hydrateReportsFromGitHub(){
+  const cfg=reportsStoreConfig();
+  if(!cfg){REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR='Постоянное хранилище не настроено: задайте GITHUB_TOKEN и GITHUB_REPOSITORY, а токену выдайте Contents: Read and write.';return}
+  if(REPORTS_INDEX_HYDRATED&&REPORTS_REMOTE_READY&&!REPORTS_STORAGE_ERROR)return;
+  if(REPORTS_INDEX_HYDRATION)return REPORTS_INDEX_HYDRATION;
+  REPORTS_INDEX_HYDRATION=(async()=>{
+    const remote=await githubReadReportIndex(cfg),known=new Map(remote.items.map(x=>[String(x.id),x]));
+    const localFull=REPORTS.filter(x=>x&&x.id&&Array.isArray(x.questions)&&Array.isArray(x.participants));
+    localFull.forEach(x=>known.set(String(x.id),x));
+    REPORTS=[...known.values()].sort((a,b)=>(Number(b.completedAt)||0)-(Number(a.completedAt)||0)).slice(0,500);
+    REPORTS_INDEX_HYDRATED=true;REPORTS_REMOTE_READY=true;REPORTS_STORAGE_ERROR='';
+    const remoteIds=new Set(remote.items.map(x=>String(x.id)));
+    const toMigrate=localFull.filter(x=>!remoteIds.has(String(x.id)));
+    if(toMigrate.length)await queueReportsPersistence(toMigrate[0]);
+  })().catch(e=>{REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=e.message||'Не удалось загрузить отчёты из постоянного хранилища';console.error('Не удалось синхронизировать хранилище отчётов:',REPORTS_STORAGE_ERROR)}).finally(()=>{REPORTS_INDEX_HYDRATION=null});
+  return REPORTS_INDEX_HYDRATION;
+}
+function reportsStorageState(){
+  const configured=!!githubConfig();
+  return{configured,persistent:configured&&REPORTS_REMOTE_READY&&!REPORTS_STORAGE_ERROR,error:REPORTS_STORAGE_ERROR||''};
+}
+async function githubLoadFullReport(id){
+  const cfg=reportsStoreConfig();if(!cfg)return null;
+  const ref=await githubEnsureReportsBranch(cfg);
+  return githubReadReport(cfg,id,ref.object.sha);
+}
+
 async function githubReadAppSettings(cfg){
   const url='https://api.github.com/repos/'+cfg.repo+'/contents/app-settings.json?ref='+encodeURIComponent(cfg.branch);
   const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'}});
@@ -322,11 +475,25 @@ function makeGameReport(g,{incomplete=false}={}){
   const accuracies=participants.filter(p=>p.answeredCount>0).map(p=>p.accuracy);
   return{id:'report-'+g.pin+'-'+Date.now().toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),completedAt:Date.now(),incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:totalAnswers?Math.round(totalCorrect/totalAnswers*100):0,averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds:Math.max(0,Math.round((Date.now()-(g.born||Date.now()))/1000)),winner:g.kb?g.kb.winner:null}};
 }
-function saveGameReport(g,options={}){
+async function saveGameReport(g,options={}){
+  if(g.reportSavePromise)return g.reportSavePromise;
   if(g.reportId)return g.reportId;
-  const report=makeGameReport(g,options);g.reportId=report.id;g.report=report;REPORTS=[report,...REPORTS].slice(0,500);
-  if(!writeJ('reports.json',REPORTS))console.warn('Отчёт сохранён только в памяти процесса: не удалось записать data/reports.json');
-  return report.id;
+  const report=makeGameReport(g,options);
+  g.reportId=report.id;g.report=report;REPORTS=[report,...REPORTS.filter(x=>x.id!==report.id)].slice(0,500);
+  if(!writeJ('reports.json',REPORTS))console.warn('Не удалось записать локальную копию отчёта reports.json');
+  g.reportSavePromise=(async()=>{
+    let cfg=null;
+    try{cfg=reportsStoreConfig()}catch(e){REPORTS_STORAGE_ERROR=e.message||'Ошибка настройки хранилища отчётов'}
+    if(!cfg){
+      if(!REPORTS_STORAGE_ERROR)REPORTS_STORAGE_ERROR='Постоянное хранилище не настроено: задайте GITHUB_TOKEN и GITHUB_REPOSITORY, а токену выдайте Contents: Read and write.';
+      console.warn('Отчёт '+report.id+' сохранён только локально: '+REPORTS_STORAGE_ERROR);
+      return report.id;
+    }
+    try{await queueReportsPersistence(report)}
+    catch(e){REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=e.message||'Не удалось сохранить отчёт в постоянное хранилище';console.error('Не удалось сохранить отчёт '+report.id+' в GitHub:',REPORTS_STORAGE_ERROR)}
+    return report.id;
+  })();
+  return g.reportSavePromise;
 }
 
 // ---- Classic ----
@@ -382,11 +549,11 @@ function startK(g){
   const kb=g.kb={N,round:1,trophies:[0,0],need:g.quiz.need,dur:g.quiz.dur*60000,banner:null,winner:null};
   resetBoard(kb);kb.endsAt=Date.now()+kb.dur;g.state='playing';clearTimeout(g.timer);g.timer=setTimeout(()=>finishK(g),kb.dur+200);push(g);
 }
-function finishK(g){
+async function finishK(g){
   if(g.state!=='playing')return;clearTimeout(g.timer);const kb=g.kb,t=[0,1].map(k=>kb.board.filter(o=>o===k).length);
   if(t[0]!==t[1])kb.trophies[t[0]>t[1]?0:1]++;           // время вышло: у кого больше клеток — тот берёт трофей
   kb.winner=kb.trophies[0]!==kb.trophies[1]?(kb.trophies[0]>kb.trophies[1]?0:1):(t[0]!==t[1]?(t[0]>t[1]?0:1):-1);
-  g.state='final';saveGameReport(g);push(g);
+  g.state='final';await saveGameReport(g);push(g);
 }
 const validTiles=(kb,team)=>{const r=[];for(let i=0;i<kb.board.length;i++)if(kb.board[i]!==team&&!kb.rooks.includes(i)&&adjN(i,kb.N).some(j=>kb.board[j]===team))r.push(i);return r};
 function enclose(kb,team){ // клетки, полностью окружённые территорией команды (край поля не считается стеной)
@@ -655,15 +822,29 @@ http.createServer(async(req,res)=>{
   // ---------- teacher reports history ----------
   if(u.pathname==='/api/reports/list'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
-    const items=REPORTS.filter(r=>me.admin||r.ownerId===me.id).map(r=>({id:r.id,pin:r.pin,title:r.title,sourceId:r.sourceId,mode:r.mode,modeName:r.modeName,completedAt:r.completedAt,incomplete:!!r.incomplete,questionCount:r.questionCount,participantCount:r.participantCount,accuracy:r.summary&&r.summary.accuracy,averageScore:r.summary&&r.summary.averageScore}));
-    return json(res,{items});
+    await hydrateReportsFromGitHub();
+    const items=REPORTS.filter(r=>me.admin||r.ownerId===me.id).map(r=>({id:r.id,pin:r.pin,title:r.title,sourceId:r.sourceId,mode:r.mode,modeName:r.modeName,completedAt:r.completedAt,incomplete:!!r.incomplete,questionCount:r.questionCount,participantCount:r.participantCount,accuracy:r.summary&&r.summary.accuracy!==undefined?r.summary.accuracy:r.accuracy,averageScore:r.summary&&r.summary.averageScore!==undefined?r.summary.averageScore:r.averageScore}));
+    return json(res,{items,storage:reportsStorageState()});
   }
   if(u.pathname==='/api/reports/get'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
-    const report=REPORTS.find(r=>r.id===b.reportId);
-    if(!report)return json(res,{error:'Отчёт не найден'},404);
+    await hydrateReportsFromGitHub();
+    let report=REPORTS.find(r=>r.id===b.reportId);
+    if(!report)return json(res,{error:'Отчёт не найден',storage:reportsStorageState()},404);
     if(!me.admin&&report.ownerId!==me.id)return json(res,{error:'Нет доступа'},403);
-    return json(res,{report});
+    if(!Array.isArray(report.questions)||!Array.isArray(report.participants)){
+      try{
+        report=await githubLoadFullReport(String(b.reportId));
+        if(!report)return json(res,{error:'Полный отчёт не найден в постоянном хранилище',storage:reportsStorageState()},404);
+        REPORTS=[report,...REPORTS.filter(x=>x.id!==report.id)].sort((a,b)=>Number(b.completedAt||0)-Number(a.completedAt||0)).slice(0,500);
+        writeJ('reports.json',REPORTS);
+      }catch(e){
+        REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=e.message||'Не удалось загрузить полный отчёт';
+        console.error('Не удалось загрузить отчёт '+String(b.reportId)+':',REPORTS_STORAGE_ERROR);
+        return json(res,{error:'Не удалось загрузить сохранённый отчёт. '+REPORTS_STORAGE_ERROR,storage:reportsStorageState()},503);
+      }
+    }
+    return json(res,{report,storage:reportsStorageState()});
   }
 
   // ---------- создание игры ----------
@@ -713,10 +894,10 @@ http.createServer(async(req,res)=>{
         return json(res,{error:'Не удалось запустить игру. Комната сохранена; попробуйте ещё раз. Подробности записаны в журнал сервера.'},500);
       }
     }
-    else if(host&&b.type==='skip'){if(KM)finishK(g);else toResults(g)}
+    else if(host&&b.type==='skip'){if(KM)await finishK(g);else toResults(g)}
     else if(host&&b.type==='lock'){g.locked=!g.locked;push(g)}
     else if(host&&!KM&&b.type==='next'&&g.state==='results'){
-      if(g.qi>=g.quiz.q.length-1){g.state='final';saveGameReport(g);push(g)}else{g.qi++;startQ(g)}
+      if(g.qi>=g.quiz.q.length-1){g.state='final';await saveGameReport(g);push(g)}else{g.qi++;startQ(g)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='answer'){
       if(answerK(g,p,b)){pushOne(g,b.id);sched(g)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='place'){
@@ -731,7 +912,7 @@ http.createServer(async(req,res)=>{
     }else if(p&&b.type==='leave')removePlayer(g,b.id);
     else if(host&&b.type==='kick'&&g.players.has(b.a))removePlayer(g,b.a,{state:'kicked'});
     else if(host&&b.type==='end'){
-      saveGameReport(g,{incomplete:g.state!=='final'});g.state='ended';clearTimeout(g.timer);clearTimeout(g.pend);push(g);
+      await saveGameReport(g,{incomplete:g.state!=='final'});g.state='ended';clearTimeout(g.timer);clearTimeout(g.pend);push(g);
       setTimeout(()=>{g.clients.forEach(c=>c.res.end());games.delete(g.pin)},1500);
     }
     return json(res,{ok:1});
