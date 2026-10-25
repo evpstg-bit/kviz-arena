@@ -683,3 +683,33 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
 #app .global-settings > * { min-width:0; }
 #app .global-settings .language-picker { overflow:hidden; }
 #app .global-settings select { text-overflow:ellipsis; }
+
+/* Mobile viewport fit: prevent the page from rendering wider than the device. */
+@media (max-width: 760px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+  #app { box-sizing: border-box !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; margin-left: auto !important; margin-right: auto !important; }
+  #app *, #app *::before, #app *::after { box-sizing: border-box; }
+  #app img, #app svg, #app video, #app canvas { max-width: 100%; }
+  #app h1, #app h2, #app h3, #app p, #app label, #app .brand-copy, #app .quiz-card-copy { overflow-wrap: anywhere; }
+  #app .app-topbar, #app .site-app-topbar, #app .home-topbar { max-width: 100%; min-width: 0; }
+  #app .site-app-topbar { flex-wrap: wrap; }
+  #app .site-header-controls, #app .site-header-right { min-width: 0; max-width: 100%; }
+  #app .entry-grid, #app .auth-layout, #app .library-workspace, #app .library-stats,
+  #app .report-metric-grid, #app .report-summary-grid, #app .platform-general-settings-grid { min-width: 0; }
+  #app input, #app select, #app textarea { max-width: 100%; min-width: 0; }
+  #app table { display: block; max-width: 100%; overflow-x: auto; }
+  #app .modal, #app .dialog, #app .folder-dialog { max-width: calc(100vw - 24px); }
+}
+@media (max-width: 440px) {
+  #app { padding: 64px 12px 20px !important; }
+  #app .global-settings { justify-content: space-between; gap: 6px; }
+  #app .global-settings .language-picker { flex: 1 1 auto; }
+  #app .global-settings select { max-width: min(42vw, 155px); }
+  #app .home-hero, #app .entry-grid, #app .auth-layout { width: 100%; }
+  #app .entry-card { padding: 16px; }
+  #app .site-app-topbar { gap: 6px !important; }
+  #app .brand-home-link { flex: 1 1 auto; min-width: 0; }
+  #app .site-history-controls { flex: 0 0 auto; }
+  #app .cabinet-menu-panel { right: 0; width: min(286px, calc(100vw - 24px)); max-width: calc(100vw - 24px); }
+  #app .library-current-folder-tools > *, #app .library-toolbar > *, #app .editor-actions button { min-width: 0; max-width: 100%; }
+}

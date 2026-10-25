@@ -1,0 +1,152 @@
+/* Kviz-arena responsive layer v2 — load after Tailwind, ui.css and Liquid Glass. */
+:root {
+  --phone-gutter: 16px;
+  --phone-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --phone-safe-top: env(safe-area-inset-top, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { width: 100%; min-width: 0; min-height: 100%; overflow-x: clip; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; margin: 0; overflow-x: clip; }
+#app { width: 100%; min-width: 0; max-width: 100%; min-height: 100vh; min-height: 100dvh; margin-inline: auto; }
+#app img, #app video, #app canvas, #app iframe, #app svg { max-width: 100%; }
+#app button, #app input, #app select, #app textarea { max-width: 100%; }
+#app input, #app select, #app textarea { min-width: 0; }
+#app :where(h1,h2,h3,h4,p,small,label,a,button,span,b,strong,li,td,th) { overflow-wrap: anywhere; }
+#app :where(.min-w-0) { min-width: 0; }
+#app :where(.grid, .flex) > * { min-width: 0; }
+#app :where(.w-screen) { width: 100%; }
+#app :where(.max-w-screen, .max-w-full) { max-width: 100%; }
+#app :where(button, [role="button"], input, select, textarea) { touch-action: manipulation; }
+#app :where(button, [role="button"]) { -webkit-tap-highlight-color: transparent; }
+
+/* Forms and controls remain usable on touch devices and when the browser zooms. */
+#app input:not([type="checkbox"]):not([type="radio"]),
+#app select, #app textarea { max-width: 100%; }
+#app textarea { resize: vertical; }
+#app button:focus-visible, #app a:focus-visible, #app input:focus-visible,
+#app select:focus-visible, #app textarea:focus-visible { outline-offset: 3px; }
+#app .quiz-card h3 { white-space: normal; text-overflow: clip; }
+#app .report-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
+#app .report-table { min-width: 560px; }
+#app table { max-width: 100%; border-collapse: collapse; }
+#app .platform-settings-page { width: min(100%, 1240px); max-width: 100%; }
+#app .reports-page, #app .quiz-editor-page, #app .library-workspace,
+#app .platform-settings-page, #app .library-content-panel { min-width: 0; }
+
+/* Overlays/dialogs: fit into the visible viewport even when the mobile keyboard is open. */
+#app .mode-choice-overlay, #app .folder-dialog-overlay {
+  max-width: 100vw; max-height: 100vh; max-height: 100dvh;
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  padding-right: max(10px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(10px, env(safe-area-inset-left, 0px));
+  overflow-y: auto; overscroll-behavior: contain;
+}
+#app .mode-choice-dialog, #app .folder-dialog, #app .delete-dialog {
+  width: min(100%, 590px); max-width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+  min-width: 0; overflow-x: clip; overflow-y: auto; overscroll-behavior: contain;
+}
+#app .mode-choice-dialog { margin: auto; }
+#app .folder-dialog-actions { flex-wrap: wrap; }
+#app .folder-dialog-actions button { flex: 0 1 auto; }
+#app .cabinet-menu-panel { max-width: calc(100vw - 20px); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+
+/* Phones and narrow browser windows. */
+@media (max-width: 600px) {
+  :root { --phone-gutter: 14px; }
+  #app {
+    padding-left: max(var(--phone-gutter), env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(var(--phone-gutter), env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #app .app-topbar, #app .site-app-topbar, #app .home-topbar, #app .dashboard-topbar {
+    width: 100%; max-width: 100%; min-width: 0; gap: 8px;
+  }
+  #app .site-app-topbar { flex-wrap: wrap; }
+  #app .brand-home-link, #app .brand, #app .brand-copy,
+  #app .site-header-controls, #app .site-header-right { min-width: 0; max-width: 100%; }
+  #app .global-settings { gap: 6px; min-width: 0; }
+  #app .entry-grid, #app .minimal-entry-grid, #app .auth-layout, #app .minimal-auth-layout,
+  #app .home-hero, #app .minimal-home-hero, #app .library-workspace,
+  #app .report-summary-grid, #app .report-metric-grid, #app .platform-general-settings-grid,
+  #app .platform-mode-settings-grid, #app .edit-settings-grid, #app .edit-answer-grid {
+    grid-template-columns: minmax(0, 1fr) !important; width: 100%; max-width: 100%;
+  }
+  #app .entry-card, #app .auth-card, #app .edit-settings-card, #app .edit-question-card,
+  #app .report-panel, #app .report-question-card, #app .platform-settings-section { min-width: 0; }
+  #app .library-toolbar { width: 100%; min-width: 0; }
+  #app .library-toolbar, #app .library-current-folder-tools { flex-wrap: wrap; }
+  #app .library-filters { display: flex; flex-wrap: wrap; width: 100%; }
+  #app .library-filters .filter-tab { flex: 1 1 88px; min-width: 0; }
+  #app .quiz-card { align-items: stretch; width: 100%; min-width: 0; }
+  #app .quiz-card-main { width: 100%; min-width: 0; }
+  #app .quiz-card-actions { display: flex; flex-wrap: wrap; width: 100%; max-width: 100%; min-width: 0; }
+  #app .quiz-card-actions > * { min-width: 40px; max-width: 100%; }
+  #app .report-main-tabs, #app .report-subtabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  #app .report-main-tabs > *, #app .report-subtabs > * { flex: 1 1 auto; min-width: 100px; }
+  #app .report-metric-grid { gap: 8px; }
+  #app .report-question-head { flex-wrap: wrap; align-items: flex-start; }
+  #app .report-question-copy { min-width: 0; flex: 1 1 180px; }
+  #app .report-question-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  #app .report-answer-row { grid-template-columns: minmax(0, 1fr) auto; }
+  #app .platform-settings-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+  #app .platform-settings-actions { display: flex; flex-wrap: wrap; }
+  #app .platform-settings-actions > * { flex: 1 1 130px; }
+  #app .edit-questions-head { gap: 10px; }
+  #app .edit-question-time { width: 100%; max-width: none; }
+  #app .edit-question-head { flex-wrap: wrap; }
+  #app .editor-actions { position: sticky; bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  #app .editor-actions .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  #app .editor-actions .row > button { width: 100%; min-width: 0; }
+  #app .host-live-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .host-live-player-list { grid-template-columns: minmax(0, 1fr); }
+  #app .host-participant-list { grid-template-columns: minmax(0, 1fr); }
+  #app .mode-choice-overlay { align-items: end; }
+  #app .mode-choice-dialog { width: 100%; max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); border-radius: 22px; }
+  #app .mode-choice-close { top: 10px; right: 10px; min-width: 40px; min-height: 40px; }
+  #app .folder-dialog { padding: 18px; }
+  #app .folder-dialog-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .folder-dialog-actions button { width: 100%; }
+  #app .ans { min-width: 0; min-height: 66px; padding: 12px; font-size: clamp(1rem, 4vw, 1.35rem); line-height: 1.25; white-space: normal; }
+  #app .pin { max-width: 100%; font-size: clamp(2rem, 10vw, 4rem); overflow-wrap: anywhere; }
+  #app .big { max-width: 100%; overflow-wrap: anywhere; }
+}
+
+/* Small phones (including 320 CSS-pixel screens). */
+@media (max-width: 360px) {
+  :root { --phone-gutter: 10px; }
+  #app { padding-left: max(10px, env(safe-area-inset-left, 0px)) !important; padding-right: max(10px, env(safe-area-inset-right, 0px)) !important; }
+  #app .entry-card, #app .auth-card, #app .edit-settings-card, #app .edit-question-card,
+  #app .report-panel, #app .report-question-card, #app .platform-settings-section { padding: 12px !important; }
+  #app .global-settings select { max-width: 42vw; }
+  #app .global-settings button.theme-toggle { max-width: 118px; white-space: normal; line-height: 1.15; }
+  #app .brand-copy span { display: none; }
+  #app .library-filters .filter-tab { flex: 1 1 72px; padding-inline: 5px; font-size: .68rem; }
+  #app .quiz-card-actions > button { flex: 1 1 72px; }
+  #app .report-question-stats { grid-template-columns: minmax(0, 1fr); }
+  #app .report-main-tabs > *, #app .report-subtabs > * { min-width: 0; flex-basis: 100%; }
+  #app .host-live-summary { grid-template-columns: minmax(0, 1fr); }
+  #app .mode-choice-dialog { padding: 20px 12px 14px; }
+  #app .mode-choice-card { gap: 8px; padding: 10px; }
+  #app .mode-choice-copy strong { font-size: .94rem; }
+  #app .mode-choice-copy small { font-size: .72rem; }
+  #app .grid:has(> .ans) { grid-template-columns: minmax(0, 1fr) !important; }
+  #app .dashboard-toolbar-actions { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Landscape phones: use the available height, while allowing all content to scroll. */
+@media (max-width: 900px) and (orientation: landscape) {
+  body, #app { min-height: 100%; }
+  #app { padding-top: max(10px, env(safe-area-inset-top, 0px)) !important; }
+  #app .mode-choice-overlay, #app .folder-dialog-overlay { align-items: flex-start; }
+  #app .mode-choice-dialog, #app .folder-dialog, #app .delete-dialog {
+    max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); margin-block: 0 auto;
+  }
+  #app .global-settings { margin-bottom: 10px; }
+  #app .home-hero, #app .minimal-home-hero { gap: 14px; }
+  #app .host-live-panel { max-height: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app *, #app *::before, #app *::after { scroll-behavior: auto !important; }
+}
