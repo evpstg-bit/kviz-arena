@@ -10,8 +10,8 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.11.2">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.12.6">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.12.6">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.12.7">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.12.7">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -22,7 +22,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.6'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.7'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -713,7 +713,7 @@ function podium(rows){
 function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
 function sendSel(){if(sel.length)act('answer',sel)}
 function boardK(o){
- const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[],rooks=Array.isArray(S.rooks)?S.rooks:[];
+ const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[],rooks=Array.isArray(S.rooks)?S.rooks:[],hexOffset=(50/(N+.5)).toFixed(5),rowOverlap=(21.6506/(N+.5)).toFixed(5);
  const font=Math.max(7,Math.min(22,Math.round(225/N)));
  const cell=(ow,i)=>{
   const row=Math.floor(i/N),column=i%N;
@@ -725,7 +725,7 @@ function boardK(o){
   const label=stronghold?'Крепость':canPlace?'Поставить флаг':ow===0?'Территория красных':ow===1?'Территория синих':'Нейтральная клетка';
   return `<div ${canPlace?`role="button" tabindex="0" onclick="placeAt(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();placeAt(${i})}"`:''} class="${classes}" aria-label="${label}" style="--tile-color:${ow<0?'#46505f':'var(--c'+ow+')'};--tile-team:var(--c${canPlace?team:(ow<0?team:ow)});--tile-font:${font}px">${stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':(canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'')}</div>`;
  };
- const rows=Array.from({length:N},(_,row)=>`<div class="kingdom-board-row" style="--board-size:${N}">${S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')}</div>`).join('');
+ const rows=Array.from({length:N},(_,row)=>'<div class="kingdom-board-row '+(row%2?'is-offset':'')+'" style="--board-size:'+N+';--hex-offset:'+hexOffset+'%;--row-overlap:'+rowOverlap+'%">'+S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')+'</div>').join('');
  return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N}">${rows}</div></div>`;
 }
 async function placeAt(i){const r=await act('place',undefined,{tile:i});if(r.error){msg=r.error;render()}}
