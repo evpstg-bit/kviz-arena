@@ -1058,3 +1058,17 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 @media (prefers-reduced-motion: reduce) {
   #app .cabinet-menu-panel, #app .site-history-button, #app .cabinet-menu-trigger { transition:none !important; }
 }
+
+
+/* Keep host controls ahead of live participant statistics, so they remain in immediate reach. */
+.host-controls-block { position: relative; z-index: 2; margin: 14px 0 18px; }
+.host-controls-block > .row { flex-wrap: wrap; gap: 8px; }
+.host-controls-block > .c { margin-top: 0 !important; }
+.host-results-controls { flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.host-question-controls { margin-bottom: 14px; }
+.host-results-controls button, .host-question-controls button, .host-controls-block button { min-height: 42px; }
+@media (max-width: 600px) {
+  .host-controls-block { margin: 12px 0 16px; }
+  .host-controls-block > .row { display: flex; justify-content: center; }
+  .host-results-controls { display: flex; }
+}

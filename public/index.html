@@ -10,7 +10,7 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.10.6">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.10.6">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.10.7">
 <link rel="stylesheet" href="/responsive-v2.css?v=1.10.6">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
@@ -741,13 +741,14 @@ function host(a){
  <button ${N?'':'disabled'} onclick="act('start')">Начать</button></div>`;
  if(S.state==='question')return a.innerHTML=`<div class="row justify-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span id="tm" class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-3xl font-black text-white shadow-lg"></span><span class="mut">Ответили: ${S.answered} / ${N}</span></div><div class="bar"><i id="tb"></i></div>
   <h1 data-user-content="true" class="my-8 text-4xl sm:text-5xl">${esc(q.t)}</h1>${q.multi?'<p class="c mut">Несколько правильных ответов — выберите все</p>':''}<div class="grid">${q.a.map((x,j)=>`<div data-user-content="true" class="ans a${j} text-xl sm:text-2xl">${SH[j]} ${esc(x)}</div>`).join('')}</div>
-  ${liveParticipantsPanel()}
-  <div class="c" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить вопрос</button></div>`;
+  <div class="c host-question-controls" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить вопрос</button></div>
+  ${liveParticipantsPanel()}`;
  if(S.state==='results'){
   const mx=Math.max(1,...S.counts),last=S.qi>=S.total-1,okN=S.rows.filter(p=>p.ok).length;
   return a.innerHTML=`<h2 data-user-content="true" class="c">${esc(q.t)}</h2><div class="cnt">${S.counts.slice(0,q.a.length).map((n,j)=>`<div class="a${j}" style="height:${Math.max(16,n/mx*100)}%;${S.correct.includes(j)?'outline:4px solid var(--fg)':'opacity:.45'}">${n}<br>${SH[j]}${S.correct.includes(j)?' ✓':''}</div>`).join('')}</div>
-  <p class="c ok big">Правильный ответ: <b data-user-content="true">${esc(S.correct.map(k=>q.a[k]).join(' + '))}</b></p><p class="c mut">Верно ответили: ${okN} из ${N}</p>${liveParticipantsPanel()}
-  <div class="row" style="justify-content:center;margin-top:14px"><button onclick="act('next')">${last?'Итоги':'Следующий вопрос'}</button>${dl}</div>`;
+  <p class="c ok big">Правильный ответ: <b data-user-content="true">${esc(S.correct.map(k=>q.a[k]).join(' + '))}</b></p><p class="c mut">Верно ответили: ${okN} из ${N}</p>
+  <div class="row host-results-controls" style="justify-content:center;margin-top:14px"><button onclick="act('next')">${last?'Итоги':'Следующий вопрос'}</button>${dl}</div>
+  ${liveParticipantsPanel()}`;
  }
  a.innerHTML=`<h1>🏆 Итоги</h1>${podium(S.rows)}<div class="max-h-96 overflow-auto">${S.rows.slice(3).map((p,i)=>`<div class="lb"><span>${i+4}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}</div><div class="row" style="justify-content:center;margin-top:14px">${dl}<button onclick="newGame()">Новая игра</button></div>`;
 }
@@ -789,7 +790,14 @@ function draw(){
  if(S.state==='ended'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
  if(S.mode==='kingdoms'&&S.state!=='lobby')S.host?hostK(a):playerK(a);else S.host?host(a):player(a);
  if(S.host&&qrFull)a.insertAdjacentHTML('beforeend',qrOverlay());
- if(S.host&&S.state!=='final')a.insertAdjacentHTML('beforeend',hostBar());
+ if(S.host&&S.state!=='final'){
+  const controls=document.createElement('div');
+  controls.className='host-controls-block';
+  controls.innerHTML=hostBar();
+  a.appendChild(controls);
+  const participants=a.querySelector('.host-participant-panel');
+  if(participants)participants.before(controls);
+ }
  if(S.mode==='kingdoms'&&S.banner&&Date.now()<banUntil)a.insertAdjacentHTML('beforeend',bannerHtml());
 }
 function tick(){
