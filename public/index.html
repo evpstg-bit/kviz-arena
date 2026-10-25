@@ -6,7 +6,7 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css">
-<link rel="stylesheet" href="/liquid-glass.css?v=5">
+<link rel="stylesheet" href="/liquid-glass.css?v=7">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -15,8 +15,10 @@ const SH=['▲','◆','●','■'],KN=['Красные','Синие'],KS=['кр�
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,
- LIB=null,FOLDERS=[],selectedFolderId='*',folderDialog=null,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',pendingModeQuizId='',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
-let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportLoadError='',autoReportSeen='';
+ LIB=null,FOLDERS=[],selectedFolderId='*',folderDialog=null,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
+let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportLoadError='',autoReportSeen='',autoReportPending='';
+// Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
+let cabinetNavSeq=0;
 let quiz=null;
 const $=id=>document.getElementById(id),app=()=>vApp||$('app');
 function applyTheme(theme,persist=true){
@@ -29,13 +31,16 @@ function applyTheme(theme,persist=true){
 }
 function toggleTheme(){const next=document.documentElement.classList.contains('dark')?'light':'dark';applyTheme(next,true);const b=$('theme-toggle');let l='ru';try{l=localStorage.getItem('kviz_ui_lang')||'ru'}catch(e){}if(b){const label=l==='en'?(next==='dark'?'☀ Light theme':'🌙 Dark theme'):l==='zh'?(next==='dark'?'☀ 浅色主题':'🌙 深色主题'):(next==='dark'?'☀ Светлая тема':'🌙 Тёмная тема');const title=l==='en'?(next==='dark'?'Switch to light theme':'Switch to dark theme'):l==='zh'?(next==='dark'?'切换到浅色主题':'切换到深色主题'):(next==='dark'?'Переключить на светлую тему':'Переключить на тёмную тему');b.textContent=label;b.title=title;b.setAttribute('aria-label',title)}}
 applyTheme(document.documentElement.classList.contains('dark')?'dark':'light',false);try{document.documentElement.lang=localStorage.getItem('kviz_ui_lang')==='zh'?'zh-CN':localStorage.getItem('kviz_ui_lang')==='en'?'en':'ru'}catch(e){}
+try{libraryLaunchMode=localStorage.getItem('kviz-launch-mode')==='kingdoms'?'kingdoms':'classic'}catch(e){}
+function setLaunchMode(mode){libraryLaunchMode=mode==='kingdoms'?'kingdoms':'classic';try{localStorage.setItem('kviz-launch-mode',libraryLaunchMode)}catch(e){}render()}
+function actionIcon(name){const paths={play:'<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L9 17l-4 1 1-4Z"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'};return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`}
 const api=(p,o)=>fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
 const act=(type,a,x)=>api('action',{pin,id:me,type,a,...(x||{})});
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function saveToken(){try{TOKEN?localStorage.setItem('qtoken',TOKEN):localStorage.removeItem('qtoken')}catch(e){}}
 async function capi(p,o){
  const r=await api(p,{token:TOKEN,...o});
- if(r.code===401){TOKEN='';USER=null;saveToken();view='auth';authTab='login';msg='Сессия истекла — войдите снова';render()}
+ if(r.code===401){cabinetNavSeq++;TOKEN='';USER=null;saveToken();view='auth';authTab='login';msg='Сессия истекла — войдите снова';render()}
  return r;
 }
 const getSess=()=>{try{return JSON.parse(sessionStorage.getItem('qs'))}catch(e){return null}};
@@ -48,7 +53,10 @@ function connect(){
   S=JSON.parse(e.data);t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
   if(S.host&&['final','ended'].includes(S.state)&&S.reportId){
-   if(autoReportSeen!==S.reportId){autoReportSeen=S.reportId;openReportDetail(S.reportId,true)}
+   if(autoReportSeen!==S.reportId){
+    const reportId=S.reportId;autoReportSeen=reportId;autoReportPending=reportId;
+    openReportDetail(reportId,true).finally(()=>{if(autoReportPending===reportId)autoReportPending=''});
+   }
   }else if(!['reports','report-detail','lib','quiz-editor'].includes(view)){view='game'}
   if(S.state==='final'&&!S.host)clearSess();
   if(S.mode==='kingdoms'){
@@ -56,7 +64,9 @@ function connect(){
    if(fbSeen===-2)fbSeen=fb?fb.id:-1;else if(fb&&fb.id!==fbSeen){fbSeen=fb.id;fbUntil=Date.now()+(fb.ok?1100:2200);setTimeout(render,fbUntil-Date.now()+40);sel=[]}
    if(S.banner&&S.banner.n!==bnSeen){bnSeen=S.banner.n;const ms=Math.max(0,4500-S.banner.age);banUntil=Date.now()+ms;setTimeout(render,ms+40)}
   }
-  render();
+  // While the final report is loading, keep the current DOM intact instead of first
+  // painting the end-game screen and immediately replacing it with the report.
+  if(!(autoReportPending&&view==='game'))render();
  };
  es.onerror=async()=>{
   // Браузер обрывает поток и при обновлении страницы — поэтому игру «забываем» только если сервер подтвердил, что её нет.
@@ -67,7 +77,7 @@ function connect(){
   clearSess();S=null;view='home';msg='Игра не найдена или уже завершена';render();
  };
 }
-function goAuth(){view='auth';msg='';authTab='login';render()}
+function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';render()}
 async function submitAuth(){
  const reg=false;authTab='login';msg='';
  if(reg&&AF.pass!==AF.pass2){msg='Пароли не совпадают';return render()}
@@ -75,29 +85,26 @@ async function submitAuth(){
  if(r.error){msg=r.error;return render()}
  TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};INFO.hasUsers=true;openLib();
 }
-async function logout(){await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;view='home';render()}
+async function logout(){cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;view='home';render()}
 function authView(a){
  a.innerHTML=`<header class="app-topbar auth-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Платформа интеллектуальных игр</span></div></div><button class="top-action" onclick="view='home';msg='';render()">← На главную</button></header>
  <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> КАБИНЕТ ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Меньше настройки.<br><span>Больше игры.</span></h1><p class="auth-promo-copy">Запускайте готовые викторины для участников.</p><div class="minimal-auth-note"><span>01</span><span>Войдите в кабинет</span></div><div class="minimal-auth-note"><span>02</span><span>Выберите тест</span></div><div class="minimal-auth-note"><span>03</span><span>Запустите игру и поделитесь PIN-кодом</span></div></div>
  <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>Вход в кабинет</h2><p class="mut">Введите логин и пароль администратора.</p></div><div class="card auth-card"><label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(msg)}</p><button class="btn-primary auth-submit" onclick="submitAuth()">Войти <span aria-hidden="true">→</span></button></div></div></section>`;
 }
-async function start(selectedMode){
- if(!['classic','kingdoms'].includes(selectedMode)){pendingModeQuizId=activeQuizId||'';return render()}
+async function start(selectedMode=libraryLaunchMode){
+ if(!['classic','kingdoms'].includes(selectedMode))selectedMode='classic';
  if(modeLaunchPending)return;
- const sourceId=activeQuizId||pendingModeQuizId;
- if(!sourceId||!quiz||!Array.isArray(quiz.q)){libMsg='Тест не загружен. Откройте его из библиотеки и попробуйте снова.';pendingModeQuizId='';view='lib';render();return}
+ const sourceId=activeQuizId;
+ if(!sourceId||!quiz||!Array.isArray(quiz.q)){libMsg='Тест не загружен. Откройте его из библиотеки и попробуйте снова.';view='lib';render();return}
  const qs=[];
  for(let i=0;i<quiz.q.length;i++){
   const q=quiz.q[i],a=(q.a||[]).map(x=>String(x??'').trim());while(a.length&&!a[a.length-1])a.pop();
   const cs=(q.cs||[]).filter(c=>Number.isInteger(c)&&c<a.length);
-  if(!String(q.t||'').trim()||a.length<2||a.some(x=>!x)||!cs.length){libMsg='Тест не прошёл проверку: вопрос '+(i+1)+'. Проверьте библиотеку тестов.';view='lib';pendingModeQuizId='';modeLaunchPending=false;render();return}
+  if(!String(q.t||'').trim()||a.length<2||a.some(x=>!x)||!cs.length){libMsg='Тест не прошёл проверку: вопрос '+(i+1)+'. Проверьте библиотеку тестов.';view='lib';modeLaunchPending=false;render();return}
   qs.push({t:q.t.trim(),a,cs,T:q.T||quiz.T||20});
  }
- if(!qs.length){libMsg='В тесте нет вопросов. Проверьте библиотеку тестов.';view='lib';pendingModeQuizId='';modeLaunchPending=false;render();return}
- // Keep the picker mounted while the request is in flight. The previous code cleared
- // pendingModeQuizId before rendering, which dismissed the modal but left view='lib'.
- // The SSE handler intentionally preserves library/report views, so after room creation
- // the host stayed in the library until a manual page reload.
+ if(!qs.length){libMsg='В тесте нет вопросов. Проверьте библиотеку тестов.';view='lib';modeLaunchPending=false;render();return}
+ // Launch directly with the selected mode; no modal is shown.
  modeLaunchPending=true;autoReportSeen='';ACTIVE_REPORT=null;activeReportId='';render();
  let r;
  try{
@@ -106,12 +113,12 @@ async function start(selectedMode){
  modeLaunchPending=false;
  if(!r||r.error||!r.pin||!r.id){
   const error=(r&&r.error)||'Сервер не вернул данные игровой комнаты.';
-  if(view==='auth'){pendingModeQuizId='';libMsg=error;render();return}
-  libMsg=error;pendingModeQuizId='';view='lib';render();return;
+  if(view==='auth'){libMsg=error;render();return}
+  libMsg=error;view='lib';render();return;
  }
  // Switch to the game view before opening EventSource. Otherwise the initial lobby
  // event is ignored for navigation because the SSE handler deliberately preserves 'lib'.
- pin=String(r.pin);me=String(r.id);pendingModeQuizId='';msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
+ pin=String(r.pin);me=String(r.id);msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
 }
 async function join(){
  const p=$('jp').value.trim(),n=$('jn').value.trim();prePin=p;preName=n;
@@ -141,9 +148,13 @@ async function kick(id){
 function finishNow(){if(confirm('Подвести итоги досрочно?'))act('skip')}
 async function openLib(){
  if(!USER)return goAuth();
- view='lib';libMsg='';LIB=null;render();
- const r=await capi('lib/list',{});if(view!=='lib')return;
- if(r.error){libMsg=r.error;LIB=[];FOLDERS=[]}else{LIB=Array.isArray(r.items)?r.items:[];FOLDERS=Array.isArray(r.folders)?r.folders:[];if(selectedFolderId!=='*'&&selectedFolderId!=='__root__'&&!FOLDERS.some(f=>f.id===selectedFolderId))selectedFolderId='*'}
+ const nav=++cabinetNavSeq;
+ // Load the destination first, then switch views once. This avoids a loading-screen render
+ // followed by a second full-screen replacement on every navigation.
+ const r=await capi('lib/list',{});
+ if(nav!==cabinetNavSeq||!USER)return;
+ if(r.error){libMsg=r.error;LIB=[];FOLDERS=[]}else{libMsg='';LIB=Array.isArray(r.items)?r.items:[];FOLDERS=Array.isArray(r.folders)?r.folders:[];if(selectedFolderId!=='*'&&selectedFolderId!=='__root__'&&!FOLDERS.some(f=>f.id===selectedFolderId))selectedFolderId='*'}
+ view='lib';
  render();
 }
 async function loadQ(id){
@@ -151,15 +162,9 @@ async function loadQ(id){
  if(r.error){libMsg=r.error;render();return false}
  quiz=r.quiz;activeQuizId=id;return true;
 }
-async function runQ(id){if(await loadQ(id)){msg='';libMsg='';pendingModeQuizId=id;modeLaunchPending=false;render()}}
-function cancelModeChoice(){if(modeLaunchPending)return;pendingModeQuizId='';render()}
-function modePickerHtml(){
- const title=quiz&&quiz.title?quiz.title:'Без названия';
- const count=quiz&&Array.isArray(quiz.q)?quiz.q.length:0;
- const countLabel=count+' '+(count===1?'вопрос':count>=2&&count<=4?'вопроса':'вопросов');
- const description=modeLaunchPending?'Создаём игровую комнату…':'Тест готов. Выберите правила для этой игровой сессии — вопросы и ответы останутся прежними.';
- const footer=modeLaunchPending?'Подготавливаем экран ведущего и подключение участников…':'Режим не сохраняется в тесте и выбирается заново при каждом запуске.';
- return `<div class="mode-picker-overlay" role="presentation" onclick="if(event.target===this)cancelModeChoice()"><section class="mode-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="mode-picker-title" aria-describedby="mode-picker-description"><button id="mode-picker-close" type="button" class="mode-picker-close" aria-label="Закрыть" onclick="cancelModeChoice()" ${modeLaunchPending?'disabled':''}>×</button><span class="mode-picker-kicker">ПЕРЕД ЗАПУСКОМ</span><h2 id="mode-picker-title">Выберите режим игры</h2><p id="mode-picker-description" class="mode-picker-description" role="status">${description}</p><div class="mode-picker-options"><button type="button" class="mode-choice-card mode-choice-classic" onclick="start('classic')" ${modeLaunchPending?'disabled':''}><span class="mode-choice-symbol" aria-hidden="true">◆</span><span class="mode-choice-copy"><strong>Classic</strong><small>Обычная викторина с таймером, очками и рейтингом участников.</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button><button type="button" class="mode-choice-card mode-choice-kingdoms" onclick="start('kingdoms')" ${modeLaunchPending?'disabled':''}><span class="mode-choice-symbol" aria-hidden="true">⚑</span><span class="mode-choice-copy"><strong>Color Kingdoms</strong><small>Командное сражение за территорию: ответы помогают захватывать клетки и флаги.</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button></div><div class="mode-picker-meta"><span class="mode-picker-quiz">Тест: <b data-user-content="true">${esc(title)}</b></span><span>${countLabel}</span></div><div class="mode-picker-footer"><span>${footer}</span><button type="button" class="sec" onclick="cancelModeChoice()" ${modeLaunchPending?'disabled':''}>Отмена</button></div></section></div>`;
+async function runQ(id){
+ if(modeLaunchPending)return;
+ if(await loadQ(id)){msg='';libMsg='';await start(libraryLaunchMode)}
 }
 function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
 async function exportLib(){
@@ -238,7 +243,7 @@ async function finishLibraryMutation(r,description){
   const backup=await capi('lib/export',{});if(!backup.error)dl('builtin-tests.json',JSON.stringify(backup,null,2));
   libInfo=description+' Файл обновлён на сервере и скачана резервная копия. Без GitHub-синхронизации изменения необходимо сохранить в репозиторий вручную; на Render временные изменения могут пропасть при новом деплое.';
  }
- view='lib';editorQuiz=null;editorId='';await refreshLibrary();render();
+ view='lib';editorQuiz=null;editorId='';editorIsNew=false;editorFolderId='';await refreshLibrary();render();
 }
 async function importRepoTests(inp){
  const f=inp.files&&inp.files[0];if(!f)return;
@@ -264,19 +269,22 @@ async function importRepoTests(inp){
 }
 async function editQ(id){
  const r=await capi('lib/get',{id});if(r.error){libMsg=r.error;render();return}
- editorId=id;editorQuiz=JSON.parse(JSON.stringify(r.quiz));editorMsg='';view='quiz-editor';render();
+ editorId=id;editorQuiz=JSON.parse(JSON.stringify(r.quiz));editorIsNew=false;editorFolderId=String(r.folderId||'');editorMsg='';view='quiz-editor';render();
 }
-function cancelEdit(){editorQuiz=null;editorId='';editorMsg='';view='lib';render()}
+function cancelEdit(){editorQuiz=null;editorId='';editorIsNew=false;editorFolderId='';editorMsg='';view='lib';render()}
+function newQuiz(){if(!USER||!USER.admin)return;editorId='';editorIsNew=true;editorFolderId=selectedFolderId!=='*'&&selectedFolderId!=='__root__'?selectedFolderId:'';editorQuiz={title:'',T:20,mode:'choose',dur:5,need:3,q:[{t:'',a:['','','',''],cs:[],T:20}]};editorMsg='';view='quiz-editor';render();setTimeout(()=>$('edit-title')?.focus(),0)}
 function editorAddQuestion(){if(!editorQuiz||editorQuiz.q.length>=100)return;editorQuiz.q.push({t:'',a:['','','',''],cs:[],T:editorQuiz.T||20});render()}
 function editorRemoveQuestion(i){if(!editorQuiz||editorQuiz.q.length<=1){editorMsg='В тесте должен остаться хотя бы один вопрос.';return render()}editorQuiz.q.splice(i,1);render()}
 function editorCorrect(i,j,checked){const q=editorQuiz&&editorQuiz.q[i];if(!q)return;const s=new Set(q.cs||[]);checked?s.add(j):s.delete(j);q.cs=[...s].sort((a,b)=>a-b)}
 async function saveEditor(){
  if(!editorQuiz)return;
+ if(!String(editorQuiz.title||'').trim()){editorMsg='Введите название теста.';render();$('edit-title')?.focus();return}
  const out=tidyQuiz(editorQuiz);
  if(!out){editorMsg='Проверьте тест: в каждом вопросе нужны текст, 2–4 непустых варианта и хотя бы один правильный ответ.';return render()}
- const r=await capi('lib/update',{id:editorId,quiz:out});
+ const payload=editorIsNew?{quiz:out,folderId:editorFolderId}:{id:editorId,quiz:out};
+ const r=await capi(editorIsNew?'lib/create':'lib/update',payload);
  if(r.error){editorMsg=r.error;return render()}
- libMsg='';editorMsg='';await finishLibraryMutation(r,'Тест «'+out.title+'» обновлён.');
+ const wasNew=editorIsNew;libMsg='';editorMsg='';await finishLibraryMutation(r,wasNew?'Тест создан.':'Тест «'+out.title+'» обновлён.');
 }
 async function copyQ(id){const r=await capi('lib/copy',{id});await finishLibraryMutation(r,'Создана копия теста.');}
 async function deleteQ(id){const item=(LIB||[]).find(x=>x.id===id);if(!confirm('Удалить тест «'+(item?item.title:'')+'» из библиотеки проекта? Это изменение затронет весь проект.'))return;const r=await capi('lib/delete',{id});await finishLibraryMutation(r,'Тест удалён из библиотеки.');}
@@ -319,7 +327,7 @@ function editorView(){
  if(!editorQuiz){view='lib';return lib()}
  const z=editorQuiz;
  const questionCards=z.q.map((q,i)=>`<section class="edit-question-card"><div class="edit-question-head"><span class="edit-question-number">${String(i+1).padStart(2,'0')}</span><b>Вопрос ${i+1}</b><button type="button" class="btn-icon danger-action" title="Удалить вопрос" onclick="editorRemoveQuestion(${i})" aria-label="Удалить вопрос">×</button></div><label class="field-label" for="eqt-${i}">Текст вопроса</label><textarea id="eqt-${i}" rows="2" maxlength="300" oninput="editorQuiz.q[${i}].t=this.value">${esc(q.t)}</textarea><div class="edit-answer-grid">${[0,1,2,3].map(j=>`<div class="edit-answer"><label class="field-label" for="eqa-${i}-${j}">Вариант ${j+1}</label><input id="eqa-${i}-${j}" maxlength="150" value="${esc((q.a||[])[j]||'')}" oninput="editorQuiz.q[${i}].a[${j}]=this.value;editorQuiz.q[${i}].a.length=Math.max(editorQuiz.q[${i}].a.length,${j+1})"><label class="edit-correct"><input type="checkbox" ${q.cs.includes(j)?'checked':''} onchange="editorCorrect(${i},${j},this.checked)"> Правильный</label></div>`).join('')}</div><div class="edit-question-time"><label class="field-label" for="eqtime-${i}">Время на вопрос (сек.)</label><input id="eqtime-${i}" type="number" min="5" max="240" value="${q.T||z.T||20}" onchange="editorQuiz.q[${i}].T=Number(this.value)"></div></section>`).join('');
- app().innerHTML=`<header class="app-topbar dashboard-topbar editor-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Редактор теста</span></div></div>${teacherRootNav('lib')}<button type="button" class="top-action" onclick="cancelEdit()">← К библиотеке</button></header><section class="quiz-editor-page"><div class="quiz-editor-intro"><span class="section-kicker">ТЕСТ</span><h1 class="page-title">Редактирование теста<span class="title-period">.</span></h1><p class="page-subtitle">Изменения сохраняются в библиотеке проекта и могут быть отправлены в GitHub.</p></div>${editorMsg?`<div class="notice notice-error">${esc(editorMsg)}</div>`:''}<section class="edit-settings-card"><div class="edit-settings-grid"><div><label class="field-label" for="edit-title">Название теста</label><input id="edit-title" maxlength="80" value="${esc(z.title)}" oninput="editorQuiz.title=this.value"></div><div class="edit-mode-note"><span class="field-label">Режим игры</span><div class="edit-mode-note-body"><span class="edit-mode-note-icon">↗</span><span><b>Выбирается при запуске</b><small>Для каждого запуска можно выбрать Classic или Color Kingdoms.</small></span></div></div><div><label class="field-label" for="edit-default-time">Время по умолчанию (сек.)</label><input id="edit-default-time" type="number" min="5" max="120" value="${z.T}" onchange="editorQuiz.T=Number(this.value)"></div><div><label class="field-label" for="edit-duration">Длительность Color Kingdoms (мин.)</label><input id="edit-duration" type="number" min="1" max="10" value="${z.dur}" onchange="editorQuiz.dur=Number(this.value)"></div><div><label class="field-label" for="edit-need">Верных ответов для флага</label><input id="edit-need" type="number" min="1" max="5" value="${z.need}" onchange="editorQuiz.need=Number(this.value)"></div></div></section><div class="edit-questions-head"><div><h2>Вопросы</h2><p>${z.q.length} из 100 · Отметьте правильные ответы</p></div><button type="button" class="sec" onclick="editorAddQuestion()" ${z.q.length>=100?'disabled':''}>＋ Добавить вопрос</button></div>${questionCards}<div class="editor-actions"><div class="row flex flex-wrap items-center justify-between gap-2"><button type="button" class="sec" onclick="cancelEdit()">Отмена</button><button type="button" class="btn-primary" onclick="saveEditor()">Сохранить изменения</button></div></div><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>Изменения теста в репозитории проекта</span></footer></section>`;
+ app().innerHTML=`<header class="app-topbar dashboard-topbar editor-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>Редактор теста</span></div></div>${teacherRootNav('lib')}</header><section class="quiz-editor-page"><div class="quiz-editor-intro"><span class="section-kicker">${tr('ТЕСТ')}</span><h1 class="page-title">${tr(editorIsNew?'Создание теста':'Редактирование теста')}<span class="title-period">.</span></h1><p class="page-subtitle">Изменения сохраняются в библиотеке проекта и могут быть отправлены в GitHub.</p></div>${editorMsg?`<div class="notice notice-error">${esc(editorMsg)}</div>`:''}<section class="edit-settings-card"><div class="edit-settings-grid"><div><label class="field-label" for="edit-title">Название теста</label><input id="edit-title" maxlength="80" value="${esc(z.title)}" oninput="editorQuiz.title=this.value"></div><div class="edit-mode-note"><span class="field-label">Режим игры</span><div class="edit-mode-note-body"><span class="edit-mode-note-icon">↗</span><span><b>${tr('Режим задаётся перед запуском')}</b><small>${tr('Выберите Classic или Color Kingdoms в библиотеке до нажатия кнопки запуска.')}</small></span></div></div><div><label class="field-label" for="edit-default-time">Время по умолчанию (сек.)</label><input id="edit-default-time" type="number" min="5" max="120" value="${z.T}" onchange="editorQuiz.T=Number(this.value)"></div><div><label class="field-label" for="edit-duration">Длительность Color Kingdoms (мин.)</label><input id="edit-duration" type="number" min="1" max="10" value="${z.dur}" onchange="editorQuiz.dur=Number(this.value)"></div><div><label class="field-label" for="edit-need">Верных ответов для флага</label><input id="edit-need" type="number" min="1" max="5" value="${z.need}" onchange="editorQuiz.need=Number(this.value)"></div></div></section><div class="edit-questions-head"><div><h2>Вопросы</h2><p>${z.q.length} из 100 · Отметьте правильные ответы</p></div><button type="button" class="sec" onclick="editorAddQuestion()" ${z.q.length>=100?'disabled':''}>＋ Добавить вопрос</button></div>${questionCards}<div class="editor-actions"><div class="row flex flex-wrap items-center justify-between gap-2"><button type="button" class="sec" onclick="cancelEdit()">Отмена</button><button type="button" class="btn-primary" onclick="saveEditor()">${tr(editorIsNew?'Создать тест':'Сохранить изменения')}</button></div></div><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>Изменения теста в репозитории проекта</span></footer></section>`;
 }
 function setLibraryFilter(filter){libFilter=filter;render()}
 function filterLibrary(){
@@ -339,16 +347,16 @@ function lib(){
  const currentFolder=FOLDERS.find(f=>f.id===selectedFolderId);
  const folderName=currentFolder?currentFolder.name:(selectedFolderId==='__root__'?tr('Без папки'):tr('Все тесты'));
  const folderOptions=`<option value="">${tr('Без папки')}</option>${FOLDERS.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}`;
- const card=t=>`<article class="quiz-card" data-mode="choose" data-search="${esc((t.title+' Classic Color Kingdoms '+(currentFolder?currentFolder.name:'')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon project-icon">▦</div><div class="quiz-card-copy"><h3 data-user-content="true" title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span>${tr('Режим выбирается при запуске')}</span></div></div></div><div class="quiz-card-actions"><button class="btn-primary btn-small" onclick="runQ('${t.id}')"><span aria-hidden="true">▶</span> ${tr('Запустить')}</button>${USER&&USER.admin?`<button class="sec btn-small" onclick="editQ('${t.id}')" title="${tr('Редактировать тест')}">✎ ${tr('Редактировать')}</button><button class="sec btn-small" onclick="copyQ('${t.id}')" title="${tr('Создать копию')}">▢ ${tr('Копировать')}</button><label class="quiz-move-control"><span>${tr('Папка')}</span><select data-user-content="true" aria-label="${tr('Папка назначения')}" onchange="moveQuizFolder('${t.id}',this.value)">${folderOptions.replace(`value="${esc(t.folderId||'')}"`,`value="${esc(t.folderId||'')}" selected`)}</select></label><button class="btn-icon danger-action" onclick="deleteQ('${t.id}')" title="${tr('Удалить тест')}" aria-label="${tr('Удалить тест')}">⌫</button>`:''}</div></article>`;
- const list=LIB===null?'<div class="loading-state">Загружаем тесты…</div>':items.map(card).join('')||`<div class="empty-state"><div class="empty-icon">▦</div><h3>${tr('В этой папке пока нет тестов')}</h3><p>${tr('Создайте папку для предмета или переместите сюда существующие тесты. Импорт XLSX добавит тесты в выбранную папку.')}</p>${USER&&USER.admin?`<button class="sec" onclick="openFolderDialog('create')">＋ ${tr('Создать папку')}</button>`:''}</div>`;
+ const card=t=>`<article class="quiz-card" data-mode="choose" data-search="${esc((t.title+' Classic Color Kingdoms '+(currentFolder?currentFolder.name:'')).toLocaleLowerCase('ru-RU'))}"><div class="quiz-card-main"><div class="quiz-card-icon project-icon">▦</div><div class="quiz-card-copy"><h3 data-user-content="true" title="${esc(t.title)}">${esc(t.title)}</h3><div class="quiz-meta"><span>${t.n} ${t.n===1?'вопрос':(t.n>=2&&t.n<=4?'вопроса':'вопросов')}</span><span class="meta-dot"></span><span class="quiz-mode-tag">${libraryLaunchMode==='kingdoms'?'Color Kingdoms':'Classic'}</span></div></div></div><div class="quiz-card-actions"><button type="button" class="btn-icon quiz-action-icon quiz-action-launch" onclick="runQ('${t.id}')" title="${tr('Запустить тест')}" aria-label="${tr('Запустить тест')}" ${modeLaunchPending?'disabled':''}>${actionIcon('play')}</button>${USER&&USER.admin?`<button type="button" class="btn-icon quiz-action-icon" onclick="editQ('${t.id}')" title="${tr('Редактировать тест')}" aria-label="${tr('Редактировать тест')}">${actionIcon('edit')}</button><button type="button" class="btn-icon quiz-action-icon" onclick="copyQ('${t.id}')" title="${tr('Копировать тест')}" aria-label="${tr('Копировать тест')}">${actionIcon('copy')}</button><label class="quiz-move-control"><span>${tr('Папка')}</span><select data-user-content="true" aria-label="${tr('Папка назначения')}" onchange="moveQuizFolder('${t.id}',this.value)">${folderOptions.replace(`value="${esc(t.folderId||'')}"`,`value="${esc(t.folderId||'')}" selected`)}</select></label><button type="button" class="btn-icon danger-action" onclick="deleteQ('${t.id}')" title="${tr('Удалить тест')}" aria-label="${tr('Удалить тест')}">⌫</button>`:''}</div></article>`
+ const list=LIB===null?`<div class="loading-state">${tr('Загружаем тесты…')}</div>`:items.map(card).join('')||`<div class="empty-state"><div class="empty-icon">▦</div><h3>${tr(selectedFolderId==='*'?'Библиотека пока пуста':'В этой папке пока нет тестов')}</h3><p>${tr('Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.')}</p></div>`;
  const total=LIB===null?'—':items.length;
  const folderNav=(id,label,count,icon)=>`<button type="button" class="folder-nav-item ${selectedFolderId===id?'is-active':''}" onclick="selectFolder('${id}')"><span class="folder-nav-icon">${icon}</span><span class="folder-nav-label">${label}</span><b>${count}</b></button>`;
- const folderRail=`<aside class="library-folder-sidebar"><div class="folder-sidebar-heading"><div><span class="section-kicker">${tr('СТРУКТУРА')}</span><h2>${tr('Предметы')}</h2></div>${USER&&USER.admin?`<button class="btn-icon folder-add-button" title="${tr('Создать папку')}" aria-label="${tr('Создать папку')}" onclick="openFolderDialog('create')">＋</button>`:''}</div><div class="folder-navigation">${folderNav('*',tr('Все тесты'),sourceItems.length,'▦')}${folderNav('__root__',tr('Без папки'),sourceItems.filter(t=>!t.folderId).length,'□')}<div class="folder-nav-divider"></div>${FOLDERS.map(f=>folderNav(f.id,`<span data-user-content="true">${esc(f.name)}</span>`,sourceItems.filter(t=>t.folderId===f.id).length,'▰')).join('')||`<div class="folder-nav-empty">${tr('Создайте папки по учебным предметам')}</div>`}</div>${currentFolder&&USER&&USER.admin?`<div class="folder-current-actions"><button class="sec btn-small" onclick="openFolderDialog('rename','${currentFolder.id}')">✎ ${tr('Переименовать')}</button><button class="btn-small folder-delete-button" onclick="deleteCurrentFolder()">${tr('Удалить папку')}</button></div>`:''}<div class="folder-sidebar-note">${tr('Тесты хранятся в корне или в папках предметов.')}</div></aside>`;
+ const folderRail=`<aside class="library-folder-sidebar"><div class="folder-sidebar-heading"><div><span class="section-kicker">${tr('БИБЛИОТЕКА')}</span><h2>${tr('Предметы')}</h2></div>${USER&&USER.admin?`<button type="button" class="btn-icon folder-add-button" title="${tr('Создать папку')}" aria-label="${tr('Создать папку')}" onclick="openFolderDialog('create')">＋</button>`:''}</div><div class="folder-navigation">${folderNav('*',tr('Все тесты'),sourceItems.length,'▦')}${folderNav('__root__',tr('Без папки'),sourceItems.filter(t=>!t.folderId).length,'□')}${FOLDERS.length?'<div class="folder-nav-divider"></div>':''}${FOLDERS.map(f=>folderNav(f.id,`<span data-user-content="true">${esc(f.name)}</span>`,sourceItems.filter(t=>t.folderId===f.id).length,'▰')).join('')||`<div class="folder-nav-empty">${tr('Создайте папки по учебным предметам')}</div>`}</div>${currentFolder&&USER&&USER.admin?`<div class="folder-current-actions"><button type="button" class="btn-icon" onclick="openFolderDialog('rename','${currentFolder.id}')" title="${tr('Переименовать папку')}" aria-label="${tr('Переименовать папку')}">${actionIcon('edit')}</button><button type="button" class="btn-icon danger-action" onclick="deleteCurrentFolder()" title="${tr('Удалить папку')}" aria-label="${tr('Удалить папку')}">⌫</button></div>`:''}</aside>`;
  app().innerHTML=`<header class="app-topbar dashboard-topbar"><div class="brand-lockup"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span>${tr('Кабинет преподавателя')}</span></div></div><nav class="dashboard-toolbar-actions" aria-label="${tr('Действия кабинета')}">${teacherRootNav('lib')}<button class="top-action" onclick="exportLib()" title="${tr('Скачать библиотеку тестов')}">↓ ${tr('Экспорт')}</button>${USER&&USER.admin?`<input type="file" id="impf" accept=".xlsx,.xls,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json" class="hidden" onchange="importRepoTests(this)"><button class="top-action" onclick="$('impf').click()" title="${tr('Импортировать тесты из Excel XLSX, XLS или JSON')}">↑ ${tr('Импорт')}</button>`:''}<button class="top-action" onclick="view='home';render()">${tr('На главную')}</button><button class="top-action top-action-quiet" onclick="logout()">${tr('Выйти')}</button></nav></header>
  <section class="dashboard-head minimal-dashboard-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span>${tr('КАБИНЕТ ПРЕПОДАВАТЕЛЯ')}</div><h1 class="page-title">${tr('Библиотека тестов')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('Управляйте тестами и запускайте игры для студентов.')}</p></div><div class="dashboard-user-inline"><span class="user-avatar">${esc((USER.name||USER.login||'У').slice(0,1).toLocaleUpperCase('ru-RU'))}</span><span><b data-user-content="true">${esc(USER.login||USER.name)}</b><small>${USER.admin?tr('Администратор'):tr('Преподаватель')}</small></span></div></section>
- <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="${tr('Поиск тестов')}" placeholder="${tr('Поиск по названию теста…')}" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div><div class="library-mode-hint"><span aria-hidden="true">↗</span> ${tr('Режим игры выбирается после нажатия «Запустить»')}</div></div>
+ <div class="library-toolbar"><div class="library-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="lib-search" type="search" aria-label="${tr('Поиск тестов')}" placeholder="${tr('Поиск по названию теста…')}" value="${esc(libSearch)}" oninput="filterLibrary()"><kbd>⌘ K</kbd></div><label class="library-launch-mode"><span>${tr('Режим запуска')}</span><select id="library-launch-mode" aria-label="${tr('Режим запуска')}" onchange="setLaunchMode(this.value)"><option value="classic" ${libraryLaunchMode==='classic'?'selected':''}>Classic · ${tr('Индивидуальный')}</option><option value="kingdoms" ${libraryLaunchMode==='kingdoms'?'selected':''}>Color Kingdoms · ${tr('Командный')}</option></select></label></div>
  <p id="library-result-count" class="library-result-count">${LIB===null?tr('Загрузка тестов…'):tr('Всего тестов: '+total)}</p>${libMsg?`<div class="notice notice-error">${esc(libMsg)}</div>`:''}${libInfo?`<div class="notice notice-success">${esc(libInfo)}</div>`:''}
- <div class="library-workspace">${folderRail}<section class="library-content-panel"><div class="library-section-head library-current-folder-head"><div><span class="section-kicker">${tr('БИБЛИОТЕКА')}</span><h2 ${currentFolder?'data-user-content="true"':''}>${esc(folderName)}</h2><p>${tr('Импортированные тесты можно распределять по папкам предметов.')}</p></div><div class="library-current-folder-tools">${currentFolder&&USER&&USER.admin?`<button class="sec btn-small" onclick="openFolderDialog('rename','${currentFolder.id}')">✎ ${tr('Переименовать')}</button><button class="btn-small folder-delete-button" onclick="deleteCurrentFolder()">${tr('Удалить папку')}</button>`:''}${USER&&USER.admin?`<button class="sec btn-small" onclick="openFolderDialog('create')">＋ ${tr('Создать папку')}</button>`:''}<span class="section-count">${total}</span></div></div><div class="library-test-list">${list}<div id="library-no-results" class="empty-state search-empty-state" hidden><div class="empty-icon">⌕</div><h3>${tr('По запросу ничего не найдено')}</h3><p>${tr('Попробуйте другое название или очистите поиск.')}</p></div></div></section></div>
+ <div class="library-workspace">${folderRail}<section class="library-content-panel"><div class="library-section-head library-current-folder-head"><div><h2 ${currentFolder?'data-user-content="true"':''}>${esc(folderName)}</h2><p>${tr('Тесты и вопросы выбранного раздела')}</p></div><div class="library-current-folder-tools">${USER&&USER.admin?`<button type="button" class="btn-primary btn-small create-test-button" onclick="newQuiz()"><span aria-hidden="true">＋</span> ${tr('Создать тест')}</button>`:''}<span class="section-count">${total}</span></div></div><div class="library-test-list">${list}<div id="library-no-results" class="empty-state search-empty-state" hidden><div class="empty-icon">⌕</div><h3>${tr('По запросу ничего не найдено')}</h3><p>${tr('Попробуйте другое название или очистите поиск.')}</p></div></div></section></div>
  <footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>${tr('Библиотека тестов · Управление через GitHub')}</span></footer>`;
 }
 
@@ -377,8 +385,24 @@ async function report(){
  XLSX.writeFile(wb,'results-'+pin+'.xlsx');
 }
 function reportDate(ts){const lang=currentUiLanguage()==='zh'?'zh-CN':currentUiLanguage()==='en'?'en-US':'ru-RU';try{return new Date(ts).toLocaleString(lang,{dateStyle:'medium',timeStyle:'short'})}catch(e){return new Date(ts).toLocaleString()}}
-async function openReports(){view='reports';REPORT_LIST=null;reportLoadError='';ACTIVE_REPORT=null;render();const r=await capi('reports/list',{});if(view!=='reports')return;if(r.error){REPORT_LIST=[];reportLoadError=r.error}else{REPORT_LIST=Array.isArray(r.items)?r.items:[]}render()}
-async function openReportDetail(id,automatic=false){activeReportId=id;ACTIVE_REPORT=null;reportTab='summary';participantTab='all';reportLoadError='';view='report-detail';render();const r=await capi('reports/get',{reportId:id});if(activeReportId!==id)return;if(r.error){reportLoadError=r.error}else{ACTIVE_REPORT=r.report||null}render()}
+async function openReports(){
+ if(!USER)return goAuth();
+ const nav=++cabinetNavSeq;
+ const r=await capi('reports/list',{});
+ if(nav!==cabinetNavSeq||!USER)return;
+ if(r.error){REPORT_LIST=[];reportLoadError=r.error}else{REPORT_LIST=Array.isArray(r.items)?r.items:[];reportLoadError=''}
+ ACTIVE_REPORT=null;activeReportId='';view='reports';
+ render();
+}
+async function openReportDetail(id,automatic=false){
+ const nav=++cabinetNavSeq;
+ const r=await capi('reports/get',{reportId:id});
+ if(nav!==cabinetNavSeq||!USER)return;
+ activeReportId=id;reportTab='summary';participantTab='all';
+ if(r.error){ACTIVE_REPORT=null;reportLoadError=r.error}else{ACTIVE_REPORT=r.report||null;reportLoadError=''}
+ view='report-detail';
+ render();
+}
 function reportListPage(a){
  const items=REPORT_LIST||[];const groups=new Map();items.forEach(r=>{const key=r.sourceId||r.title||'untitled';if(!groups.has(key))groups.set(key,{title:r.title||tr('Без названия'),items:[]});groups.get(key).items.push(r)});
  const groupHtml=[...groups.values()].map(g=>`<section class="report-test-group"><div class="report-test-group-head"><div><span class="section-kicker">${tr('ТЕСТ')}</span><h2 data-user-content="true">${esc(g.title)}</h2></div><span class="report-count-pill">${g.items.length} ${tr('прохождений')}</span></div><div class="report-session-list">${g.items.map(r=>`<article class="report-session-card"><div class="report-session-main"><div class="report-session-icon">${r.mode==='kingdoms'?'⚑':'◆'}</div><div class="report-session-copy"><b>${tr(r.modeName||r.mode)}</b><span>${reportDate(r.completedAt)}${r.incomplete?' · '+tr('Завершён досрочно'):''}</span><small>${r.participantCount} ${tr('участников')} · ${r.questionCount} ${tr('вопросов')} · ${tr('Точность')}: ${Number(r.accuracy)||0}%</small></div></div><button class="btn-primary btn-small" onclick="openReportDetail('${esc(r.id)}')">${tr('Открыть отчёт')} →</button></article>`).join('')}</div></section>`).join('');
@@ -640,7 +664,7 @@ Object.assign(UI_TRANSLATIONS.en,{
  'Режим выбирается при запуске':'Mode is selected when launching',
  'Выбирается при запуске':'Selected at launch',
  'Для каждого запуска можно выбрать Classic или Color Kingdoms.':'Choose Classic or Color Kingdoms each time you launch a quiz.',
- 'Режим игры выбирается после нажатия «Запустить»':'Choose a game mode after clicking “Launch”',
+ 
  'ПЕРЕД ЗАПУСКОМ':'BEFORE LAUNCH',
  'Поиск по названию теста…':'Search quiz titles…',
  'Выберите режим игры':'Choose a game mode',
@@ -656,7 +680,7 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Режим выбирается при запуске':'启动时选择模式',
  'Выбирается при запуске':'启动时选择',
  'Для каждого запуска можно выбрать Classic или Color Kingdoms.':'每次启动测验时都可以选择经典模式或彩色王国模式。',
- 'Режим игры выбирается после нажатия «Запустить»':'点击“启动”后选择游戏模式',
+ 
  'ПЕРЕД ЗАПУСКОМ':'启动前设置',
  'Поиск по названию теста…':'按测验名称搜索…',
  'Выберите режим игры':'选择游戏模式',
@@ -696,10 +720,10 @@ Object.assign(UI_TRANSLATIONS.en,{'Создаём игровую комнату�
 Object.assign(UI_TRANSLATIONS.zh,{'Создаём игровую комнату…':'正在创建游戏房间…','Подготавливаем экран ведущего и подключение участников…':'正在准备主持人界面并连接参与者…','Тест не загружен. Откройте его из библиотеки и попробуйте снова.':'尚未加载测验。请从题库中打开后重试。','Не удалось создать игровую комнату. Проверьте соединение и повторите попытку.':'无法创建游戏房间，请检查网络连接后重试。','Сервер не вернул данные игровой комнаты.':'服务器未返回游戏房间信息。'});
 
 Object.assign(UI_TRANSLATIONS.en,{
- 'Основная навигация кабинета':'Dashboard navigation','Выйти из редактора без сохранения изменений?':'Leave the editor without saving changes?','Кабинет преподавателя':'Teacher dashboard','СТРУКТУРА':'FOLDER TREE','Предметы':'Subjects','Все тесты':'All quizzes','Без папки':'Unfiled','Создать папку':'Create folder','Переименовать папку':'Rename folder','Переименовать':'Rename','Удалить папку':'Delete folder','Название папки':'Folder name','Папки помогают организовать тесты по учебным предметам.':'Folders help organise quizzes by subject.','Например, Экономика':'e.g. Economics','Папка':'Folder','Папка назначения':'Destination folder','Создайте папки по учебным предметам':'Create folders for subjects','Тесты хранятся в корне или в папках предметов.':'Quizzes are stored at the root or inside subject folders.','В этой папке пока нет тестов':'No quizzes in this folder yet','Создайте папку для предмета или переместите сюда существующие тесты. Импорт XLSX добавит тесты в выбранную папку.':'Create a subject folder or move existing quizzes here. XLSX imports are added to the selected folder.','Импортированные тесты можно распределять по папкам предметов.':'Imported quizzes can be organised into subject folders.','Введите название папки':'Enter a folder name','Папка переименована.':'Folder renamed.','Папка создана.':'Folder created.','Папка удалена. Тесты перемещены в «Без папки».':'Folder deleted. Its quizzes were moved to Unfiled.','Тест перемещён.':'Quiz moved.','Изменения автоматически сохранены в GitHub.':'Changes were saved to GitHub automatically.','Скачана резервная копия builtin-tests.json. На Render без GitHub-синхронизации временные изменения могут пропасть после нового деплоя.':'A backup of builtin-tests.json was downloaded. Without GitHub sync, temporary changes on Render may be lost after deployment.','Папка с таким названием уже существует':'A folder with this name already exists','Папка не найдена':'Folder not found','Удалить папку «':'Delete folder “','»? Тесты останутся в библиотеке и будут перемещены в «Без папки».':'”? Quizzes will remain in the library and move to Unfiled.','Режим выбирается при запуске':'Mode is chosen at launch','Импорт XLSX добавляет тесты в библиотеку проекта. Тесты можно редактировать, копировать и удалять.':'XLSX import adds quizzes to the project library. Quizzes can be edited, copied, and deleted.','Режим игры выбирается после нажатия «Запустить»':'Choose the game mode after clicking “Launch”.','Кабинет преподавателя':'Teacher dashboard','По запросу ничего не найдено':'No matching quizzes found','Попробуйте другое название или очистите поиск.':'Try another title or clear the search.','БИБЛИОТЕКА':'LIBRARY','Действия кабинета':'Dashboard actions','Выйти из кабинета':'Sign out of dashboard'
+ 'Основная навигация кабинета':'Dashboard navigation','Выйти из редактора без сохранения изменений?':'Leave the editor without saving changes?','Кабинет преподавателя':'Teacher dashboard','СТРУКТУРА':'FOLDER TREE','Предметы':'Subjects','Все тесты':'All quizzes','Без папки':'Unfiled','Создать папку':'Create folder','Переименовать папку':'Rename folder','Переименовать':'Rename','Удалить папку':'Delete folder','Название папки':'Folder name','Папки помогают организовать тесты по учебным предметам.':'Folders help organise quizzes by subject.','Например, Экономика':'e.g. Economics','Папка':'Folder','Папка назначения':'Destination folder','Создайте папки по учебным предметам':'Create folders for subjects','Тесты хранятся в корне или в папках предметов.':'Quizzes are stored at the root or inside subject folders.','В этой папке пока нет тестов':'No quizzes in this folder yet','Импортированные тесты можно распределять по папкам предметов.':'Imported quizzes can be organised into subject folders.','Введите название папки':'Enter a folder name','Папка переименована.':'Folder renamed.','Папка создана.':'Folder created.','Папка удалена. Тесты перемещены в «Без папки».':'Folder deleted. Its quizzes were moved to Unfiled.','Тест перемещён.':'Quiz moved.','Изменения автоматически сохранены в GitHub.':'Changes were saved to GitHub automatically.','Скачана резервная копия builtin-tests.json. На Render без GitHub-синхронизации временные изменения могут пропасть после нового деплоя.':'A backup of builtin-tests.json was downloaded. Without GitHub sync, temporary changes on Render may be lost after deployment.','Папка с таким названием уже существует':'A folder with this name already exists','Папка не найдена':'Folder not found','Удалить папку «':'Delete folder “','»? Тесты останутся в библиотеке и будут перемещены в «Без папки».':'”? Quizzes will remain in the library and move to Unfiled.','Режим выбирается при запуске':'Mode is chosen at launch','Импорт XLSX добавляет тесты в библиотеку проекта. Тесты можно редактировать, копировать и удалять.':'XLSX import adds quizzes to the project library. Quizzes can be edited, copied, and deleted.','Кабинет преподавателя':'Teacher dashboard','По запросу ничего не найдено':'No matching quizzes found','Попробуйте другое название или очистите поиск.':'Try another title or clear the search.','БИБЛИОТЕКА':'LIBRARY','Действия кабинета':'Dashboard actions','Выйти из кабинета':'Sign out of dashboard'
 });
 Object.assign(UI_TRANSLATIONS.zh,{
- 'Основная навигация кабинета':'控制台导航','Выйти из редактора без сохранения изменений?':'不保存更改并离开编辑器？','Кабинет преподавателя':'教师控制台','СТРУКТУРА':'文件夹结构','Предметы':'课程科目','Все тесты':'全部测验','Без папки':'未分类','Создать папку':'新建文件夹','Переименовать папку':'重命名文件夹','Переименовать':'重命名','Удалить папку':'删除文件夹','Название папки':'文件夹名称','Папки помогают организовать тесты по учебным предметам。':'文件夹可按课程科目整理测验。','Папки помогают организовать тесты по учебным предметам.':'文件夹可按课程科目整理测验。','Например, Экономика':'例如：经济学','Папка':'文件夹','Папка назначения':'目标文件夹','Создайте папки по учебным предметам':'为不同科目创建文件夹','Тесты хранятся в корне или в папках предметов.':'测验可保存在根目录或科目文件夹中。','В этой папке пока нет тестов':'此文件夹暂无测验','Создайте папку для предмета или переместите сюда существующие тесты. Импорт XLSX добавит тесты в выбранную папку.':'创建科目文件夹或将现有测验移入此处。XLSX 导入的测验会添加到当前文件夹。','Импортированные тесты можно распределять по папкам предметов.':'导入的测验可以按科目文件夹整理。','Введите название папки':'请输入文件夹名称','Папка переименована.':'文件夹已重命名。','Папка создана.':'文件夹已创建。','Папка удалена. Тесты перемещены в «Без папки».':'文件夹已删除，其中的测验已移至未分类。','Тест перемещён.':'测验已移动。','Изменения автоматически сохранены в GitHub.':'更改已自动保存到 GitHub。','Скачана резервная копия builtin-tests.json. На Render без GitHub-синхронизации временные изменения могут пропасть после нового деплоя.':'已下载 builtin-tests.json 备份。未启用 GitHub 同步时，Render 重新部署后临时更改可能丢失。','Папка с таким названием уже существует':'同名文件夹已存在','Папка не найдена':'未找到文件夹','Удалить папку «':'删除文件夹“','»? Тесты останутся в библиотеке и будут перемещены в «Без папки».':'”？测验不会删除，而是移动到未分类。','Режим выбирается при запуске':'启动时选择模式','Импорт XLSX добавляет тесты в библиотеку проекта. Тесты можно редактировать, копировать и удалять.':'XLSX 导入的测验会添加到项目题库。可以编辑、复制和删除测验。','Режим игры выбирается после нажатия «Запустить»':'点击“启动”后选择游戏模式','По запросу ничего не найдено':'未找到匹配的测验','Попробуйте другое название или очистите поиск.':'请尝试其他名称或清除搜索。','БИБЛИОТЕКА':'题库','Действия кабинета':'控制台操作','Выйти из кабинета':'退出控制台'
+ 'Основная навигация кабинета':'控制台导航','Выйти из редактора без сохранения изменений?':'不保存更改并离开编辑器？','Кабинет преподавателя':'教师控制台','СТРУКТУРА':'文件夹结构','Предметы':'课程科目','Все тесты':'全部测验','Без папки':'未分类','Создать папку':'新建文件夹','Переименовать папку':'重命名文件夹','Переименовать':'重命名','Удалить папку':'删除文件夹','Название папки':'文件夹名称','Папки помогают организовать тесты по учебным предметам。':'文件夹可按课程科目整理测验。','Папки помогают организовать тесты по учебным предметам.':'文件夹可按课程科目整理测验。','Например, Экономика':'例如：经济学','Папка':'文件夹','Папка назначения':'目标文件夹','Создайте папки по учебным предметам':'为不同科目创建文件夹','Тесты хранятся в корне или в папках предметов.':'测验可保存在根目录或科目文件夹中。','В этой папке пока нет тестов':'此文件夹暂无测验','Импортированные тесты можно распределять по папкам предметов.':'导入的测验可以按科目文件夹整理。','Введите название папки':'请输入文件夹名称','Папка переименована.':'文件夹已重命名。','Папка создана.':'文件夹已创建。','Папка удалена. Тесты перемещены в «Без папки».':'文件夹已删除，其中的测验已移至未分类。','Тест перемещён.':'测验已移动。','Изменения автоматически сохранены в GitHub.':'更改已自动保存到 GitHub。','Скачана резервная копия builtin-tests.json. На Render без GitHub-синхронизации временные изменения могут пропасть после нового деплоя.':'已下载 builtin-tests.json 备份。未启用 GitHub 同步时，Render 重新部署后临时更改可能丢失。','Папка с таким названием уже существует':'同名文件夹已存在','Папка не найдена':'未找到文件夹','Удалить папку «':'删除文件夹“','»? Тесты останутся в библиотеке и будут перемещены в «Без папки».':'”？测验不会删除，而是移动到未分类。','Режим выбирается при запуске':'启动时选择模式','Импорт XLSX добавляет тесты в библиотеку проекта. Тесты можно редактировать, копировать и удалять.':'XLSX 导入的测验会添加到项目题库。可以编辑、复制和删除测验。','По запросу ничего не найдено':'未找到匹配的测验','Попробуйте другое название или очистите поиск.':'请尝试其他名称或清除搜索。','БИБЛИОТЕКА':'题库','Действия кабинета':'控制台操作','Выйти из кабинета':'退出控制台'
 });
 
 function tr(text){
@@ -727,6 +751,9 @@ function tr(text){
  }
  return out;
 }
+
+Object.assign(UI_TRANSLATIONS.en,{'Создание теста':'Create quiz','Создать тест':'Create quiz','Тест создан.':'Quiz created.','Введите название теста.':'Enter a quiz title.','Режим запуска':'Launch mode','Индивидуальный':'Individual','Командный':'Team','Режим задаётся перед запуском':'Choose the mode before launch','Выберите Classic или Color Kingdoms в библиотеке до нажатия кнопки запуска.':'Choose Classic or Color Kingdoms in the library before pressing Launch.','Тесты и вопросы выбранного раздела':'Quizzes and questions in this section','Запустить тест':'Launch quiz','Редактировать тест':'Edit quiz','Копировать тест':'Duplicate quiz','Библиотека пока пуста':'The library is empty','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'Create a quiz here or import an XLSX file.','БИБЛИОТЕКА':'LIBRARY'});
+Object.assign(UI_TRANSLATIONS.zh,{'Создание теста':'创建测验','Создать тест':'创建测验','Тест создан.':'测验已创建。','Введите название теста.':'请输入测验名称。','Режим запуска':'启动模式','Индивидуальный':'个人','Командный':'团队','Режим задаётся перед запуском':'启动前选择模式','Выберите Classic или Color Kingdoms в библиотеке до нажатия кнопки запуска.':'点击启动前，请在题库中选择 Classic 或 Color Kingdoms。','Тесты и вопросы выбранного раздела':'此分类中的测验和问题','Запустить тест':'启动测验','Редактировать тест':'编辑测验','Копировать тест':'复制测验','Библиотека пока пуста':'题库为空','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'可在此创建测验，或导入 XLSX 文件。','БИБЛИОТЕКА':'题库'});
 function settingsHtml(){const lang=currentUiLanguage(),dark=document.documentElement.classList.contains('dark');const labels={ru:{theme:dark?'☀ Светлая тема':'🌙 Тёмная тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему',aria:'Настройки отображения'},en:{theme:dark?'☀ Light theme':'🌙 Dark theme',title:dark?'Switch to light theme':'Switch to dark theme',aria:'Display settings'},zh:{theme:dark?'☀ 浅色主题':'🌙 深色主题',title:dark?'切换到浅色主题':'切换到深色主题',aria:'显示设置'}}[lang];return `<div class="global-settings" aria-label="${labels.aria}"><label class="language-picker" aria-label="${tr('Язык интерфейса')}"><span class="settings-label">🌐</span><select id="ui-language" aria-label="${tr('Язык интерфейса')}" onchange="setUiLanguage(this.value)"><option value="ru" ${lang==='ru'?'selected':''}>🇷🇺 Русский</option><option value="en" ${lang==='en'?'selected':''}>🇬🇧 English</option><option value="zh" ${lang==='zh'?'selected':''}>🇨🇳 中文</option></select></label><button id="theme-toggle" type="button" class="sec theme-toggle" onclick="toggleTheme()" aria-label="${labels.title}" title="${labels.title}">${labels.theme}</button></div>`}
 function applyUiLanguage(){
  const lang=currentUiLanguage();document.documentElement.lang=lang==='zh'?'zh-CN':lang==='en'?'en':'ru';
@@ -754,7 +781,7 @@ window.alert=(message)=>_nativeAlert(tr(String(message)));
 function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  const real=$('app');vApp=document.createElement('div');
- try{draw();if(view==='lib'&&pendingModeQuizId)vApp.insertAdjacentHTML('beforeend',modePickerHtml());if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());vApp.insertAdjacentHTML('afterbegin',settingsHtml())}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
+ try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());vApp.insertAdjacentHTML('afterbegin',settingsHtml())}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
  if(view==='lib')filterLibrary();
  applyUiLanguage();
  enter();tick();
@@ -765,7 +792,7 @@ if(typeof addEventListener==='function'){
  addEventListener('pointerup',up,true);addEventListener('pointercancel',up,true);
 }
 setInterval(tick,250);
-if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&pendingModeQuizId){cancelModeChoice();return}if(e.key==='Escape'&&qrFull){qrFull=false;render()}});
+if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&qrFull){qrFull=false;render()}});
 (async()=>{
  try{INFO=await(await fetch('/api/info')).json()}catch(e){}
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}

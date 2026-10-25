@@ -449,7 +449,7 @@ http.createServer(async(req,res)=>{
     if(op==='list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length})),items:BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}))});}
     if(op==='get')return builtin?json(res,{quiz:builtin.quiz,folderId:builtin.folderId||'',builtin:true}):json(res,{error:'Тест не найден'},404);
     if(op==='export'){const doc=readBuiltinDocument();return json(res,{app:'kviz-arena',version:3,folders:doc.folders,items:doc.items});}
-    if(['import','update','copy','delete','folders/create','folders/update','folders/delete','move'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
+    if(['import','create','update','copy','delete','folders/create','folders/update','folders/delete','move'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
     if(op==='folders/list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length}))});}
     try{
       if(op==='folders/create'){
@@ -496,6 +496,17 @@ http.createServer(async(req,res)=>{
           return{items,folders,data:{added:parsed.length,skipped:incoming.length-parsed.length,folderId:targetFolder,importedFolders:incomingFolders.length}};
         },'Import tests into builtin-tests.json');
         return json(res,{ok:true,...result});
+      }
+      if(op==='create'){
+        const quiz=parseQuiz(b.quiz);if(!quiz)return json(res,{error:'Тест не прошёл проверку. Убедитесь, что у каждого вопроса есть варианты и правильный ответ.'},400);
+        const folderId=String(b.folderId||'');
+        const result=await mutateBuiltinDocument(doc=>{
+          if(folderId&&!doc.folders.some(f=>f.id===folderId))return{items:doc.items,folders:doc.folders,noChange:true,data:{reason:'folder-not-found'}};
+          const id='test-'+rid();
+          return{items:[...doc.items,{id,quiz,folderId}],folders:doc.folders,data:{created:true,id,folderId}};
+        },'Create built-in quiz '+String(quiz.title||'Untitled'));
+        if(result.reason==='folder-not-found')return json(res,{error:'Папка не найдена'},404);
+        return result.created?json(res,{ok:true,...result}):json(res,{error:'Не удалось создать тест'},500);
       }
       if(op==='update'){
         const quiz=parseQuiz(b.quiz);if(!quiz)return json(res,{error:'Тест не прошёл проверку. Убедитесь, что у каждого вопроса есть варианты и правильный ответ.'},400);
