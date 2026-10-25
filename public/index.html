@@ -9,9 +9,9 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.10.3">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.10.5">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.10.5">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.10.5">
+<link rel="stylesheet" href="/ui.css?v=1.10.6">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.10.6">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.10.6">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -37,10 +37,10 @@ function applyTheme(theme,persist=true){
  document.documentElement.classList.toggle('dark',dark);
  document.documentElement.dataset.theme=dark?'dark':'light';
  try{if(persist)localStorage.setItem('kviz-theme',dark?'dark':'light')}catch(e){}
- const btn=$('theme-toggle');if(btn){btn.textContent=dark?'☀ Светлая тема':'🌙 Тёмная тема';btn.title=dark?'Переключить на светлую тему':'Переключить на тёмную тему';btn.setAttribute('aria-label',btn.title)}
+ const btn=$('theme-toggle');let lang='ru';try{const savedLang=localStorage.getItem('kviz_ui_lang')||'ru';if(['en','zh'].includes(savedLang))lang=savedLang}catch(e){}const labels={ru:{status:dark?'Тёмная тема':'Светлая тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему'},en:{status:dark?'Dark theme':'Light theme',title:dark?'Switch to light theme':'Switch to dark theme'},zh:{status:dark?'深色主题':'浅色主题',title:dark?'切换到浅色主题':'切换到深色主题'}}[lang]||{status:dark?'Тёмная тема':'Светлая тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему'};const status=$('theme-mode-status');if(status)status.textContent=labels.status;if(btn){btn.title=labels.title;btn.setAttribute('aria-label',labels.title);btn.setAttribute('aria-checked',String(dark));btn.classList.toggle('is-dark',dark)}
  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#0b1020':'#7c3aed';
 }
-function toggleTheme(){const next=document.documentElement.classList.contains('dark')?'light':'dark';applyTheme(next,true);const b=$('theme-toggle');let l='ru';try{l=localStorage.getItem('kviz_ui_lang')||'ru'}catch(e){}if(b){const label=l==='en'?(next==='dark'?'☀ Light theme':'🌙 Dark theme'):l==='zh'?(next==='dark'?'☀ 浅色主题':'🌙 深色主题'):(next==='dark'?'☀ Светлая тема':'🌙 Тёмная тема');const title=l==='en'?(next==='dark'?'Switch to light theme':'Switch to dark theme'):l==='zh'?(next==='dark'?'切换到浅色主题':'切换到深色主题'):(next==='dark'?'Переключить на светлую тему':'Переключить на тёмную тему');b.textContent=label;b.title=title;b.setAttribute('aria-label',title)}}
+function toggleTheme(){const next=document.documentElement.classList.contains('dark')?'light':'dark';applyTheme(next,true)}
 applyTheme(document.documentElement.classList.contains('dark')?'dark':'light',false);try{document.documentElement.lang=localStorage.getItem('kviz_ui_lang')==='zh'?'zh-CN':localStorage.getItem('kviz_ui_lang')==='en'?'en':'ru'}catch(e){}
 try{libraryLaunchMode=localStorage.getItem('kviz-launch-mode')==='kingdoms'?'kingdoms':'classic'}catch(e){}
 function setLaunchMode(mode){const next=mode==='kingdoms'?'kingdoms':'classic';if(!CLIENT_SETTINGS.modes[next].enabled)return;libraryLaunchMode=next;try{localStorage.setItem('kviz-launch-mode',libraryLaunchMode)}catch(e){}render()}
@@ -1024,7 +1024,7 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Меню':'菜单','Навигация':'导航','Назад':'后退','Вперёд':'前进','Навигация по страницам':'页面导航','Квиз-арена — на главную':'测验竞技场主页','Экспорт библиотеки':'导出题库','Импорт файлов':'导入文件','На главную':'主页','Выйти':'退出','Открыть меню':'打开菜单','Закрыть меню':'关闭菜单','Экспорт Excel':'导出 Excel 报告'
 });
 
-function settingsHtml(){const lang=currentUiLanguage(),dark=document.documentElement.classList.contains('dark');const labels={ru:{theme:dark?'☀ Светлая тема':'🌙 Тёмная тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему',aria:'Настройки отображения'},en:{theme:dark?'☀ Light theme':'🌙 Dark theme',title:dark?'Switch to light theme':'Switch to dark theme',aria:'Display settings'},zh:{theme:dark?'☀ 浅色主题':'🌙 深色主题',title:dark?'切换到浅色主题':'切换到深色主题',aria:'显示设置'}}[lang];return `<div class="global-settings" aria-label="${labels.aria}"><label class="language-picker" aria-label="${tr('Язык интерфейса')}"><select id="ui-language" aria-label="${tr('Язык интерфейса')}" onchange="setUiLanguage(this.value)"><option value="ru" ${lang==='ru'?'selected':''}>🇷🇺 Русский</option><option value="en" ${lang==='en'?'selected':''}>🇬🇧 English</option><option value="zh" ${lang==='zh'?'selected':''}>🇨🇳 中文</option></select></label><button id="theme-toggle" type="button" class="sec theme-toggle" onclick="toggleTheme()" aria-label="${labels.title}" title="${labels.title}">${labels.theme}</button></div>`}
+function settingsHtml(){const lang=currentUiLanguage(),dark=document.documentElement.classList.contains('dark');const labels={ru:{themeTitle:'Тема оформления',status:dark?'Тёмная тема':'Светлая тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему',aria:'Настройки отображения',language:'Язык интерфейса'},en:{themeTitle:'Appearance',status:dark?'Dark theme':'Light theme',title:dark?'Switch to light theme':'Switch to dark theme',aria:'Display settings',language:'Interface language'},zh:{themeTitle:'外观主题',status:dark?'深色主题':'浅色主题',title:dark?'切换到浅色主题':'切换到深色主题',aria:'显示设置',language:'界面语言'}}[lang];return `<div class="global-settings" aria-label="${labels.aria}"><section class="setting-card setting-language-card"><label class="setting-heading" for="ui-language">${labels.language}</label><select id="ui-language" aria-label="${labels.language}" onchange="setUiLanguage(this.value)"><option value="ru" ${lang==='ru'?'selected':''}>🇷🇺 Русский</option><option value="en" ${lang==='en'?'selected':''}>🇬🇧 English</option><option value="zh" ${lang==='zh'?'selected':''}>🇨🇳 中文</option></select></section><section class="setting-card setting-theme-card"><div class="setting-theme-copy"><span class="setting-heading">${labels.themeTitle}</span><span class="theme-toggle-status" id="theme-mode-status">${labels.status}</span></div><button id="theme-toggle" type="button" role="switch" aria-checked="${dark}" class="theme-toggle ${dark?'is-dark':''}" onclick="toggleTheme()" aria-label="${labels.title}" title="${labels.title}"><span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span></button></section></div>`}
 function applyUiLanguage(){
  const lang=currentUiLanguage();document.documentElement.lang=lang==='zh'?'zh-CN':lang==='en'?'en':'ru';
  const root=document.getElementById('app')||document.body;document.title=tr('Квиз-арена');

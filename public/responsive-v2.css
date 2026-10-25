@@ -212,3 +212,141 @@ body { width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; margin:
   #app > .site-app-topbar,
   #app > .app-topbar { margin-top: 0 !important; }
 }
+
+
+/* v1.10.6: keep display preferences separate and make the theme a real switch. */
+#app .cabinet-menu-panel .global-settings {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  gap: 10px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  overflow: visible !important;
+}
+#app .cabinet-menu-panel .global-settings .setting-card {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--line, rgba(120,120,160,.2));
+  border-radius: 15px;
+  background: var(--surface, rgba(255,255,255,.6));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+}
+#app .cabinet-menu-panel .global-settings .setting-heading {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-main, #202035);
+  font-size: .78rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+#app .cabinet-menu-panel .global-settings select,
+#app .cabinet-menu-panel .global-settings .language-picker select {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  border-radius: 11px !important;
+  font-size: .86rem !important;
+  line-height: 1.25;
+}
+#app .cabinet-menu-panel .global-settings .setting-theme-card {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 72px;
+}
+#app .cabinet-menu-panel .global-settings .setting-theme-copy {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+#app .cabinet-menu-panel .global-settings .theme-toggle-status {
+  color: var(--text-muted, #71738a);
+  font-size: .78rem;
+  line-height: 1.3;
+}
+#app .cabinet-menu-panel .global-settings button.theme-toggle {
+  position: relative !important;
+  display: inline-flex !important;
+  flex: 0 0 52px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  overflow: visible !important;
+  color: inherit !important;
+  transform: none !important;
+}
+#app .cabinet-menu-panel .global-settings .theme-switch-track {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 28px;
+  flex: 0 0 48px;
+  border: 1px solid rgba(105, 108, 140, .22);
+  border-radius: 999px;
+  background: #d9dce8;
+  box-shadow: inset 0 1px 2px rgba(20, 22, 45, .12);
+  transition: background .18s ease, border-color .18s ease;
+}
+#app .cabinet-menu-panel .global-settings .theme-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(20, 22, 45, .22);
+  transition: transform .18s ease;
+}
+#app .cabinet-menu-panel .global-settings button.theme-toggle.is-dark .theme-switch-track {
+  background: #6f5be7;
+  border-color: #6f5be7;
+}
+#app .cabinet-menu-panel .global-settings button.theme-toggle.is-dark .theme-switch-thumb {
+  transform: translateX(20px);
+}
+#app .cabinet-menu-panel .global-settings button.theme-toggle:focus-visible {
+  outline: 3px solid var(--accent, #7465e8) !important;
+  outline-offset: 4px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #app .cabinet-menu-panel .global-settings .theme-switch-track,
+  #app .cabinet-menu-panel .global-settings .theme-switch-thumb { transition: none; }
+}
