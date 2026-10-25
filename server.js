@@ -304,7 +304,9 @@ function makeGameReport(g,{incomplete=false}={}){
     roster.forEach(p=>(p.log||[]).forEach(l=>{if(Number(l.qi)===qi){attempts.push({name:p.name,playerId:p.id||'',ok:!!l.ok,answers:Array.isArray(l.a)?l.a:[],points:Number(l.pts)||0,ms:Number(l.ms)||0});respondents.add(p.id||p.name)}}));
     const answerCounts=q.a.map((text,ai)=>({index:ai,text,count:attempts.reduce((n,l)=>n+(l.answers.includes(ai)?1:0),0),correct:(q.cs||[]).includes(ai)}));
     const correctCount=attempts.filter(a=>a.ok).length,incorrectCount=attempts.length-correctCount;
-    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:attempts.length?Math.round(correctCount/attempts.length*100):0,answerCounts,attempts};
+    const groupAccuracy=roster.length?Math.round(correctCount/roster.length*1000)/10:0;
+    const belowGroupThreshold=roster.length>0&&(correctCount/roster.length)<0.4;
+    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:attempts.length?Math.round(correctCount/attempts.length*100):0,groupAccuracy,belowGroupThreshold,answerCounts,attempts};
   });
   const participants=roster.map(p=>{
     const logs=Array.isArray(p.log)?p.log:[],correctCount=logs.filter(l=>l.ok).length,incorrectCount=logs.length-correctCount;
