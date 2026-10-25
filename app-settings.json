@@ -1,14 +1,22 @@
 {
   "version": 1,
   "general": {
-    "defaultQuestionTime": 20,
+    "defaultQuestionTime": 30,
     "maxPlayers": 100,
     "supportThreshold": 60,
     "autoOpenReports": true,
     "showCorrectAnswerAfterQuestion": true
   },
   "modes": {
-    "classic": { "enabled": true, "basePoints": 1000, "speedBonus": true },
-    "kingdoms": { "enabled": true, "durationMinutes": 5, "correctAnswersForFlag": 3 }
+    "classic": {
+      "enabled": true,
+      "basePoints": 1000,
+      "speedBonus": true
+    },
+    "kingdoms": {
+      "enabled": true,
+      "durationMinutes": 5,
+      "correctAnswersForFlag": 3
+    }
   }
 }
