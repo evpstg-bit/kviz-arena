@@ -1530,3 +1530,16 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 #app .kingdom-board-row > .kingdom-tile.is-stronghold {
   background-image:none!important;
 }
+
+
+/* Keep every captured tile in its team's single, consistent color. */
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-dark {
+  background-color:#d92f42!important;
+  background-image:none!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-dark {
+  background-color:#2878d4!important;
+  background-image:none!important;
+}

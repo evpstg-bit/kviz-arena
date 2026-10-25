@@ -10,8 +10,8 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.11.2">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.12.6">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.12.6">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.12.8">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.12.8">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -22,7 +22,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.6'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.8'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
