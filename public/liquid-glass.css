@@ -1530,3 +1530,64 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 #app .kingdom-board-row > .kingdom-tile.is-stronghold {
   background-image:none!important;
 }
+
+/* Color Kingdoms: true flat-top hexagonal tiles in a tight honeycomb. */
+#app .kingdom-board-frame,
+:root.dark #app .kingdom-board-frame {
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:min(100%,92vw,76dvh,1100px)!important;max-width:100%!important;
+  margin:clamp(10px,1.8vw,20px) auto clamp(14px,2vw,24px)!important;
+  padding:0!important;border:0!important;border-radius:0!important;
+  background:#36763b!important;background-image:none!important;box-shadow:none!important;overflow:visible!important;
+}
+#app .kingdom-board-frame::before,#app .kingdom-board-frame::after {content:none!important;display:none!important}
+#app .kingdom-board-grid {
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;
+  width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;aspect-ratio:auto!important;
+  margin:0 auto!important;padding:0!important;gap:0!important;overflow:visible!important;
+  border:0!important;border-radius:0!important;background:#36763b!important;background-image:none!important;box-shadow:none!important;
+}
+#app .kingdom-board-grid.is-small-board {width:min(100%,560px)!important;max-width:560px!important;margin-inline:auto!important}
+#app .kingdom-board-row {
+  display:grid!important;grid-template-columns:repeat(var(--board-size),minmax(0,1fr))!important;
+  flex:0 0 auto!important;align-self:stretch!important;width:calc(100% - var(--hex-offset,2.5%))!important;
+  min-width:0!important;min-height:0!important;margin-top:var(--row-overlap,-2%)!important;margin-left:0!important;
+  padding:0!important;gap:0!important;box-sizing:border-box!important;
+}
+#app .kingdom-board-row:first-child {margin-top:0!important}
+#app .kingdom-board-row.is-offset {margin-left:var(--hex-offset,2.5%)!important}
+#app .kingdom-board-row > .kingdom-tile {
+  position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;align-self:start!important;
+  width:100%!important;height:auto!important;min-width:0!important;min-height:0!important;aspect-ratio:1.1547 / 1!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)!important;
+  container-type:inline-size;overflow:hidden!important;color:#fff!important;line-height:1!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.55)!important;box-shadow:none!important;background-image:none!important;transform:none;
+}
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-light {background-color:#79a64b!important}
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-dark {background-color:#4d7834!important}
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-light {background-color:#e05a62!important}
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-dark {background-color:#aa303b!important}
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-light {background-color:#438cda!important}
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-dark {background-color:#255b9d!important}
+#app .kingdom-board-row > .kingdom-tile.is-stronghold {z-index:2!important;outline:1px solid rgba(255,236,153,.8)!important;outline-offset:-2px!important}
+#app .kingdom-board-row > .kingdom-tile .kingdom-tile-fortress {
+  position:absolute!important;inset:-14%!important;display:grid!important;place-items:center!important;
+  width:128%!important;height:128%!important;margin:0!important;padding:0!important;
+  font-family:Georgia,"Times New Roman",serif!important;font-size:126cqi!important;font-weight:900!important;
+  line-height:.8!important;color:#fff0a6!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.72),0 0 7px rgba(255,226,117,.42)!important;
+  filter:none!important;pointer-events:none!important;
+}
+#app .kingdom-board-row > .kingdom-tile .kingdom-tile-flag {
+  display:grid!important;place-items:center!important;width:100%!important;height:100%!important;
+  font-size:75cqi!important;line-height:1!important;color:#fff2a6!important;text-shadow:0 2px 3px rgba(0,0,0,.6)!important;filter:none!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target {
+  cursor:pointer!important;outline:2px solid rgba(255,241,170,.95)!important;outline-offset:-2px!important;
+  animation:kingdom-checker-target 1.25s ease-in-out infinite!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target:hover {filter:brightness(1.14)!important;z-index:3!important}
+#app .kingdom-board-row > .kingdom-tile:focus-visible {outline:3px solid #fff!important;outline-offset:-3px!important;z-index:4!important}
+#app .kingdom-board-frame.is-small-board {width:min(100%,560px)!important;max-width:560px!important}
+@media(max-width:680px) {#app .kingdom-board-frame {width:min(100%,92vw,76dvh,700px)!important}}
