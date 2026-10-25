@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=mobile-1">
 <link rel="stylesheet" href="/liquid-glass.css?v=10">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.9.0">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.10.0">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -94,7 +94,7 @@ async function submitAuth(){
 }
 async function logout(){cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;view='home';render()}
 function authView(a){
- a.innerHTML=`<header class="app-topbar auth-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}${simpleHeaderControls()}</header>
+ a.innerHTML=`<header class="app-topbar auth-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}${simpleHeaderControls(true,'auth')}</header>
  <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> КАБИНЕТ ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Меньше настройки.<br><span>Больше игры.</span></h1><p class="auth-promo-copy">Запускайте готовые викторины для участников.</p><div class="minimal-auth-note"><span>01</span><span>Войдите в кабинет</span></div><div class="minimal-auth-note"><span>02</span><span>Выберите тест</span></div><div class="minimal-auth-note"><span>03</span><span>Запустите игру и поделитесь PIN-кодом</span></div></div>
  <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>Вход в кабинет</h2><p class="mut">Введите логин и пароль администратора.</p></div><div class="card auth-card"><label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(msg)}</p><button class="btn-primary auth-submit" onclick="submitAuth()">Войти <span aria-hidden="true">→</span></button></div></div></section>`;
 }
@@ -372,11 +372,9 @@ function brandMarkup(subtitle){return `<a class="brand-lockup brand-home-link" h
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
  const section=active==='reports'?'reports':active==='settings'?'settings':active==='lib'?'lib':'';
+ const authenticated=!!USER;
  const reportExport=view==='report-detail'?menuItem('file','Экспорт Excel','closeCabinetMenu();exportReportXlsx()','site-menu-item-secondary'):'';
- return `<div class="cabinet-menu-wrap ${cabinetMenuToggled?'is-open':''}" id="cabinet-menu-wrap" onmouseenter="cabinetMenuHover(true)" onmouseleave="cabinetMenuPointerLeave()">
- <button type="button" id="cabinet-menu-trigger" class="cabinet-menu-trigger" aria-label="${tr('Меню')}" title="${tr('Меню')}" aria-haspopup="true" aria-expanded="${cabinetMenuToggled?'true':'false'}" aria-controls="cabinet-menu-panel" onclick="toggleCabinetMenu(event)">${navIcon('menu')}</button>
- <div class="cabinet-menu-panel" id="cabinet-menu-panel" role="menu" aria-label="${tr('Меню')}">
- <div class="cabinet-menu-caption">${tr('Навигация')}</div>
+ const navigation=authenticated?`<div class="cabinet-menu-caption">${tr('Навигация')}</div>
  ${menuItem('library','Библиотека',"closeCabinetMenu();navigateCabinet('lib')",section==='lib'?'is-active':'')}
  ${menuItem('reports','Отчёты',"closeCabinetMenu();navigateCabinet('reports')",section==='reports'?'is-active':'')}
  ${USER&&USER.admin?menuItem('settings','Настройки',"closeCabinetMenu();navigateCabinet('settings')",section==='settings'?'is-active':''):''}
@@ -386,7 +384,13 @@ function cabinetMenu(active){
  ${reportExport}
  <div class="cabinet-menu-separator"></div>
  ${menuItem('home','На главную','goHomeFromNav()')}
- ${menuItem('logout','Выйти','closeCabinetMenu();logout()','site-menu-item-logout')}
+ ${menuItem('logout','Выйти','closeCabinetMenu();logout()','site-menu-item-logout')}` : (view==='auth'?menuItem('home','На главную','goHomeFromNav()'):'');
+ return `<div class="cabinet-menu-wrap ${cabinetMenuToggled?'is-open':''}" id="cabinet-menu-wrap" onmouseenter="cabinetMenuHover(true)" onmouseleave="cabinetMenuPointerLeave()">
+ <button type="button" id="cabinet-menu-trigger" class="cabinet-menu-trigger" aria-label="${tr('Меню')}" title="${tr('Меню')}" aria-haspopup="true" aria-expanded="${cabinetMenuToggled?'true':'false'}" aria-controls="cabinet-menu-panel" onclick="toggleCabinetMenu(event)">${navIcon('menu')}</button>
+ <div class="cabinet-menu-panel" id="cabinet-menu-panel" role="menu" aria-label="${tr('Меню')}">
+ ${navigation?`${navigation}<div class="cabinet-menu-separator"></div>`:``}
+ <div class="cabinet-menu-caption">${tr('Настройки отображения')}</div>
+ ${settingsHtml()}
  </div></div>`;
 }
 function cabinetHeader(active,subtitle){return `<header class="app-topbar dashboard-topbar site-app-topbar">${brandMarkup(subtitle||tr('Кабинет преподавателя'))}<div class="site-header-controls">${siteHistoryButtons()}${cabinetMenu(active)}</div></header>`}
@@ -760,7 +764,7 @@ function player(a){
 }
 function home(a){
  const teacher=USER?`<p class="entry-description">Вы вошли как <b data-user-content="true">${esc(USER.name||USER.login)}</b>. В кабинете доступна библиотека тестов.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button></div>`:`<p class="entry-description">Войдите, чтобы выбрать тест и запустить викторину для студентов.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей</span></div>`;
- a.innerHTML=`<header class="app-topbar home-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}<div class="site-header-right"><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div>${simpleHeaderControls(!!USER,'home')}</div></header>
+ a.innerHTML=`<header class="app-topbar home-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}<div class="site-header-right"><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div>${simpleHeaderControls(true,'home')}</div></header>
  <section class="entry-grid minimal-entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ СТУДЕНТОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код, который показал преподаватель.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код</label><input type="text" id="jp" placeholder="6 цифр" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Имя в игре</label><input type="text" id="jn" placeholder="Ваше имя" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Аккаунт не нужен</div></article>
  <article class="entry-card teacher-card minimal-teacher-card"><span class="section-kicker">ДЛЯ ПРЕПОДАВАТЕЛЕЙ</span><h2>Тесты<br>для ваших учебных групп.</h2>${teacher}</article></section>
  <section class="home-hero minimal-home-hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> ОБУЧЕНИЕ В ФОРМАТЕ ИГРЫ</div><h1 class="home-title">Знания, которые<br><span>объединяют.</span></h1><p class="home-lead">Запускайте интерактивные викторины, подключайте студентов по PIN-коду и наблюдайте за результатами в реальном времени.</p><div class="hero-benefits"><span><i>✓</i> Без регистрации для участников</span><span><i>✓</i> Два режима игры</span></div></div><aside class="home-guide"><span class="section-kicker">КАК ЭТО РАБОТАЕТ</span><div class="guide-step"><span>1</span><div><b>Выберите тест</b><small>Вопросы из библиотеки проекта</small></div></div><div class="guide-step"><span>2</span><div><b>Запустите игру</b><small>Получите PIN-код комнаты</small></div></div><div class="guide-step"><span>3</span><div><b>Подключите группу</b><small>Студенты отвечают со своих устройств</small></div></div></aside></section>
@@ -1044,7 +1048,7 @@ function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  trackSiteNavigation();
  const real=$('app');vApp=document.createElement('div');
- try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());vApp.insertAdjacentHTML('afterbegin',settingsHtml())}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
+ try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());if(!vApp.querySelector('.cabinet-menu-wrap'))vApp.insertAdjacentHTML('afterbegin',`<div class="floating-menu-anchor">${cabinetMenu('')}</div>`)}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
  if(view==='lib')filterLibrary();
  applyUiLanguage();
  enter();tick();

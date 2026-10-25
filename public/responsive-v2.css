@@ -150,3 +150,62 @@ body { width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; margin:
 @media (prefers-reduced-motion: reduce) {
   #app *, #app *::before, #app *::after { scroll-behavior: auto !important; }
 }
+
+/* Portrait phones: remove the oversized top gap while retaining safe-area padding. */
+@media (max-width: 760px) and (orientation: portrait) {
+  #app { padding-top: 10px !important; }
+  #app .global-settings { margin-top: 0 !important; margin-bottom: 12px; }
+}
+@media (max-width: 440px) and (orientation: portrait) {
+  #app { padding-top: 8px !important; }
+  #app .global-settings { margin-bottom: 10px; }
+}
+/* In an installed PWA, retain just the safe top area needed by the device. */
+@media (display-mode: standalone) and (max-width: 760px) and (orientation: portrait) {
+  #app { padding-top: max(8px, env(safe-area-inset-top, 0px)) !important; }
+}
+
+
+/* v1.10.0: language and appearance settings live inside the pop-up menu. */
+#app .cabinet-menu-panel .global-settings {
+  display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start;
+  width:100%; min-width:0; gap:8px; margin:0; padding:2px 2px 5px;
+}
+#app .cabinet-menu-panel .global-settings .language-picker {
+  display:flex; align-items:center; gap:7px; width:100%; min-width:0; overflow:visible; padding:0;
+}
+#app .cabinet-menu-panel .global-settings .settings-label {
+  display:inline-flex; align-items:center; justify-content:center; width:24px; height:38px; flex:0 0 24px;
+}
+#app .cabinet-menu-panel .global-settings select,
+#app .cabinet-menu-panel .global-settings .language-picker select {
+  display:block; flex:1 1 auto; width:100% !important; min-width:0; max-width:none !important;
+  height:42px; min-height:42px; margin:0 !important; padding:8px 10px;
+  border-radius:12px; font-size:.84rem; line-height:1.25; text-overflow:clip;
+}
+#app .cabinet-menu-panel .global-settings button.theme-toggle {
+  display:flex; align-items:center; justify-content:flex-start; width:100%; max-width:none;
+  min-height:42px !important; height:auto; margin:0; padding:10px 12px !important;
+  white-space:normal; text-align:left; font-size:.84rem !important; line-height:1.25;
+}
+#app .cabinet-menu-panel .global-settings .settings-label { color:var(--text-soft); }
+#app .floating-menu-anchor {
+  position:fixed; top:max(8px, env(safe-area-inset-top, 0px));
+  right:max(12px, env(safe-area-inset-right, 0px)); z-index:2000;
+  width:auto; max-width:calc(100vw - 20px); pointer-events:none;
+}
+#app .floating-menu-anchor .cabinet-menu-wrap { pointer-events:auto; }
+#app .floating-menu-anchor .cabinet-menu-panel {
+  max-height:calc(100vh - max(16px, env(safe-area-inset-top, 0px)) - 16px);
+  max-height:calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - 16px);
+}
+@media (max-width:440px) {
+  #app .cabinet-menu-panel .global-settings button.theme-toggle,
+  #app .cabinet-menu-panel .global-settings select { font-size:.82rem !important; }
+  #app .floating-menu-anchor { right:max(10px, env(safe-area-inset-right, 0px)); }
+}
+/* Reserve room for the floating menu on gameplay screens that do not have a header. */
+#app:has(> .floating-menu-anchor) { padding-top:max(52px, calc(env(safe-area-inset-top, 0px) + 44px)) !important; }
+@media (max-width:900px) and (orientation:landscape) {
+  #app:has(> .floating-menu-anchor) { padding-top:max(46px, calc(env(safe-area-inset-top, 0px) + 38px)) !important; }
+}
