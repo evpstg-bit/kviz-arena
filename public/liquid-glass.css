@@ -1518,3 +1518,15 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
   #app .lobby-mode-settings-drawer {animation:none!important}
   #app .kingdom-board-row > .kingdom-tile.is-target {animation:none!important}
 }
+
+
+/* Ensure legacy terrain textures never override the new solid checkerboard cells. */
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-dark,
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-dark,
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-dark,
+#app .kingdom-board-row > .kingdom-tile.is-stronghold {
+  background-image:none!important;
+}
