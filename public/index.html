@@ -713,7 +713,7 @@ function podium(rows){
 function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
 function sendSel(){if(sel.length)act('answer',sel)}
 function boardK(o){
- const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[],rooks=Array.isArray(S.rooks)?S.rooks:[],hexOffset=(50/(N+.5)).toFixed(5),rowOverlap=(21.6506/(N+.5)).toFixed(5);
+ const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[],rooks=Array.isArray(S.rooks)?S.rooks:[],hexOffset=(50/(N+.5)).toFixed(5),rowOverlap=(-21.6506/(N+.5)).toFixed(5);
  const font=Math.max(7,Math.min(22,Math.round(225/N)));
  const cell=(ow,i)=>{
   const row=Math.floor(i/N),column=i%N;
