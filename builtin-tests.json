@@ -1,6 +1,14 @@
 {
   "app": "kviz-arena",
-  "version": 2,
+  "version": 3,
+  "folders": [
+    {
+      "id": "folder-430619a354a5",
+      "name": "Ghbvth",
+      "createdAt": 1792916549838,
+      "updatedAt": 1792916549838
+    }
+  ],
   "items": [
     {
       "id": "test-899f28a42c60",
@@ -38,7 +46,8 @@
             "T": 5
           }
         ]
-      }
+      },
+      "folderId": ""
     }
   ]
 }
