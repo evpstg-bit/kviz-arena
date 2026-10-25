@@ -1235,3 +1235,121 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 .report-participant-answer-grid p{margin:0;white-space:normal;overflow-wrap:anywhere;font-size:.84rem;line-height:1.45}
 .report-participant-no-errors,.report-participant-skipped{margin:0;padding:11px 12px;border-radius:11px;background:rgba(125,116,170,.08);color:var(--mut);font-size:.82rem;line-height:1.45}
 @media(max-width:600px){.report-participant-answer-grid{grid-template-columns:minmax(0,1fr)}.report-participant-tools{align-items:stretch;flex-direction:column}.report-participant-tools select{width:100%}}
+
+
+/* Color Kingdoms — grass terrain and honeycomb cells, v1.11.5 */
+#app .kingdom-board-frame{
+  border:1px solid rgba(180,211,115,.9)!important;
+  border-radius:clamp(14px,2vw,26px)!important;
+  background:
+    radial-gradient(ellipse at 16% 22%,rgba(201,235,116,.21),transparent 32%),
+    radial-gradient(ellipse at 82% 74%,rgba(9,48,23,.3),transparent 40%),
+    repeating-linear-gradient(117deg,rgba(218,255,153,.1) 0 1px,transparent 1px 7px),
+    linear-gradient(145deg,#6e9440 0%,#446c2f 35%,#31582a 68%,#233f21 100%)!important;
+  box-shadow:0 18px 44px rgba(10,32,9,.34),inset 0 1px 0 rgba(238,255,186,.35),inset 0 -3px 0 rgba(10,35,10,.42)!important;
+}
+#app .kingdom-board-frame::before{
+  border-color:rgba(214,242,147,.3)!important;
+  background:
+    repeating-linear-gradient(22deg,rgba(215,255,162,.05) 0 1px,transparent 1px 11px),
+    linear-gradient(90deg,rgba(255,255,255,.025),transparent 15%,transparent 85%,rgba(255,255,255,.025))!important;
+}
+#app .kingdom-board-frame::after{
+  content:"✦"!important;color:rgba(230,249,178,.78)!important;
+  text-shadow:0 1px 3px rgba(10,35,8,.8)!important;
+}
+#app .kingdom-board-grid{
+  display:flex!important;flex-direction:column;justify-content:center;align-items:stretch;
+  width:100%!important;max-width:none!important;aspect-ratio:1;
+  gap:0!important;padding:clamp(3px,.5vw,7px)!important;overflow:hidden;
+  border:1px solid rgba(200,229,143,.42)!important;border-radius:clamp(8px,1.1vw,14px)!important;
+  background:
+    radial-gradient(ellipse at 20% 35%,rgba(190,235,107,.2),transparent 32%),
+    radial-gradient(ellipse at 76% 74%,rgba(10,48,19,.28),transparent 40%),
+    repeating-linear-gradient(115deg,rgba(221,255,171,.13) 0 1px,transparent 1px 6px),
+    linear-gradient(140deg,#618b39,#3d6c2f 50%,#2c5128)!important;
+  box-shadow:inset 0 2px 9px rgba(12,37,10,.3),inset 0 0 0 1px rgba(234,255,195,.05)!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+#app .kingdom-board-row{
+  display:grid;grid-template-columns:repeat(var(--board-size),minmax(0,1fr));
+  width:100%;min-width:0;flex:1 1 0;min-height:0;gap:clamp(1px,.16vw,2px);
+}
+#app .kingdom-board-row.is-offset{
+  width:calc(100% - var(--hex-offset));margin-left:var(--hex-offset);
+}
+#app .kingdom-board-row > .kingdom-tile{
+  position:relative;display:flex;min-width:0;min-height:0;aspect-ratio:1;
+  align-items:center;justify-content:center;overflow:hidden;padding:0;border:0!important;
+  border-radius:0!important;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
+  color:#f5ffe7;font-size:var(--tile-font,12px)!important;line-height:1!important;
+  background-color:var(--tile-color,#5b8537)!important;
+  background-image:
+    repeating-linear-gradient(122deg,rgba(232,255,194,.12) 0 1px,transparent 1px 5px),
+    repeating-linear-gradient(35deg,rgba(27,61,20,.11) 0 1px,transparent 1px 8px),
+    linear-gradient(145deg,rgba(229,255,183,.12),rgba(15,51,13,.16) 64%,rgba(8,31,10,.28))!important;
+  filter:drop-shadow(0 1px 1px rgba(12,34,9,.55));
+  text-shadow:0 1px 2px rgba(12,32,8,.9);
+  transition:filter .12s ease,transform .12s ease;
+}
+#app .kingdom-board-row > .kingdom-tile.is-neutral{
+  background-color:#648d3b!important;
+  background-image:
+    repeating-linear-gradient(122deg,rgba(222,255,181,.18) 0 1px,transparent 1px 4px),
+    repeating-linear-gradient(35deg,rgba(35,79,24,.13) 0 1px,transparent 1px 7px),
+    linear-gradient(145deg,#7da64a 0%,#5b8735 52%,#426d2c 100%)!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom{
+  background-image:
+    repeating-linear-gradient(122deg,rgba(255,232,213,.14) 0 1px,transparent 1px 5px),
+    repeating-linear-gradient(35deg,rgba(54,18,12,.12) 0 1px,transparent 1px 8px),
+    linear-gradient(145deg,rgba(255,194,151,.48),rgba(175,36,48,.65) 45%,rgba(87,13,27,.76))!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom{
+  background-image:
+    repeating-linear-gradient(122deg,rgba(230,245,255,.16) 0 1px,transparent 1px 5px),
+    repeating-linear-gradient(35deg,rgba(17,27,55,.13) 0 1px,transparent 1px 8px),
+    linear-gradient(145deg,rgba(200,232,255,.49),rgba(37,102,184,.65) 45%,rgba(10,37,89,.78))!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-stronghold{
+  background-image:
+    repeating-linear-gradient(122deg,rgba(255,239,181,.22) 0 1px,transparent 1px 5px),
+    linear-gradient(145deg,rgba(240,209,118,.72),rgba(127,85,35,.82) 56%,rgba(58,49,26,.88))!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target{
+  z-index:2;cursor:pointer;outline:0!important;
+  animation:kingdom-grass-target 1.65s ease-in-out infinite;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target:hover{
+  filter:drop-shadow(0 0 3px rgba(255,231,143,.92)) brightness(1.17);
+  transform:scale(1.09);z-index:3;
+}
+#app .kingdom-board-row > .kingdom-tile.is-hot{
+  z-index:2;filter:drop-shadow(0 0 3px rgba(246,253,176,.98)) brightness(1.12);
+}
+#app .kingdom-board-row > .kingdom-tile .kingdom-tile-fortress{
+  display:inline-grid;place-items:center;color:#fff0bc;font-family:Georgia,serif;
+  font-size:calc(var(--tile-font,12px)*1.2)!important;line-height:1;
+  filter:drop-shadow(0 1px 1px rgba(25,35,9,.9)) drop-shadow(0 0 3px rgba(255,232,139,.4));
+}
+#app .kingdom-board-row > .kingdom-tile .kingdom-tile-flag{
+  display:inline-grid;place-items:center;color:#ffe9a4;
+  font-size:calc(var(--tile-font,12px)*1.25)!important;font-weight:900;line-height:1;
+  filter:drop-shadow(0 1px 1px rgba(21,28,8,.9));
+}
+@keyframes kingdom-grass-target{
+  0%,100%{filter:drop-shadow(0 0 1px rgba(255,218,105,.58)) brightness(1)}
+  50%{filter:drop-shadow(0 0 4px rgba(255,236,151,.95)) brightness(1.14)}
+}
+@media(max-width:680px){
+  #app .kingdom-board-frame{width:100%;padding:4px!important;border-radius:13px!important;margin:9px auto 14px}
+  #app .kingdom-board-grid{width:100%!important;gap:0!important;padding:2px!important;border-radius:8px!important}
+  #app .kingdom-board-row{gap:0!important}
+  #app .kingdom-board-row.is-offset{width:calc(100% - var(--hex-offset));margin-left:var(--hex-offset)}
+  #app .kingdom-board-row > .kingdom-tile{border-radius:0!important}
+  #app .kingdom-board-row > .kingdom-tile .kingdom-tile-fortress{font-size:calc(var(--tile-font,8px)*1.05)!important}
+  #app .kingdom-board-row > .kingdom-tile .kingdom-tile-flag{font-size:var(--tile-font,8px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #app .kingdom-board-row > .kingdom-tile.is-target{animation:none}
+}
