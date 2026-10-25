@@ -1378,3 +1378,155 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 #app .lobby-mode-settings-dialog .lobby-mode-settings-intro{margin-bottom:11px}
 #app .lobby-mode-settings-dialog .lobby-mode-setting-field,
 #app .lobby-mode-settings-dialog .lobby-mode-setting-toggle{padding:10px!important}
+
+
+/* Color Kingdoms: solid playing surface, centered square checkerboard, no cell gaps. */
+#app .kingdom-board-frame,
+:root.dark #app .kingdom-board-frame {
+  display:flex!important; align-items:center!important; justify-content:center!important;
+  width:min(100%,92vw,76dvh,1100px)!important; max-width:100%!important;
+  margin:clamp(10px,1.8vw,20px) auto clamp(14px,2vw,24px)!important;
+  padding:0!important; border:0!important; border-radius:0!important;
+  background:#36763b!important; background-image:none!important; box-shadow:none!important;
+  overflow:visible!important;
+}
+#app .kingdom-board-frame::before,#app .kingdom-board-frame::after {content:none!important;display:none!important}
+#app .kingdom-board-grid {
+  display:flex!important; flex-direction:column!important; align-items:stretch!important; justify-content:center!important;
+  width:100%!important; max-width:100%!important; aspect-ratio:1/1!important; min-width:0!important;
+  margin:0 auto!important; padding:0!important; gap:0!important; overflow:hidden!important;
+  border:0!important; border-radius:0!important; background:#36763b!important; background-image:none!important; box-shadow:none!important;
+}
+#app .kingdom-board-grid.is-small-board {width:min(100%,560px)!important;max-width:560px!important;margin-inline:auto!important}
+#app .kingdom-board-row {
+  display:grid!important; grid-template-columns:repeat(var(--board-size),minmax(0,1fr))!important;
+  flex:1 1 0!important; width:100%!important; min-width:0!important; min-height:0!important;
+  margin:0!important; padding:0!important; gap:0!important;
+}
+#app .kingdom-board-row.is-offset {width:100%!important;margin-left:0!important}
+#app .kingdom-board-row > .kingdom-tile {
+  position:relative!important; display:flex!important; align-items:center!important; justify-content:center!important;
+  width:100%!important; height:100%!important; min-width:0!important; min-height:0!important; aspect-ratio:1/1!important;
+  margin:0!important; padding:0!important; border:0!important; border-radius:0!important; clip-path:none!important;
+  container-type:inline-size; overflow:hidden!important; color:#fff!important; line-height:1!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.55)!important; box-shadow:inset 0 0 0 1px rgba(17,38,20,.18)!important;
+  background-image:none!important; transform:none;
+}
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-light {background-color:#79a64b!important}
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-dark {background-color:#4d7834!important}
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-light {background-color:#e05a62!important}
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-dark {background-color:#aa303b!important}
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-light {background-color:#438cda!important}
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-dark {background-color:#255b9d!important}
+#app .kingdom-board-row > .kingdom-tile.is-stronghold {z-index:2!important;outline:2px solid rgba(255,236,153,.9)!important;outline-offset:-3px!important}
+#app .kingdom-board-row > .kingdom-tile .kingdom-tile-fortress {
+  position:absolute!important; inset:-2%!important; display:grid!important; place-items:center!important;
+  width:104%!important; height:104%!important; margin:0!important; padding:0!important;
+  font-family:Georgia,"Times New Roman",serif!important; font-size:84cqi!important; font-weight:900!important;
+  line-height:.85!important; color:#fff0a6!important;
+  text-shadow:0 2px 2px rgba(0,0,0,.58),0 0 8px rgba(255,226,117,.36)!important;
+  filter:none!important; pointer-events:none!important;
+}
+#app .kingdom-board-row > .kingdom-tile .kingdom-tile-flag {
+  display:grid!important; place-items:center!important; width:100%!important; height:100%!important;
+  font-size:75cqi!important; line-height:1!important; color:#fff2a6!important;
+  text-shadow:0 2px 3px rgba(0,0,0,.6)!important; filter:none!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target {
+  cursor:pointer!important; outline:2px solid rgba(255,241,170,.95)!important; outline-offset:-3px!important;
+  animation:kingdom-checker-target 1.25s ease-in-out infinite!important;
+}
+#app .kingdom-board-row > .kingdom-tile.is-target:hover {filter:brightness(1.15)!important;z-index:3!important}
+#app .kingdom-board-row > .kingdom-tile:focus-visible {outline:3px solid #fff!important;outline-offset:-4px!important;z-index:4!important}
+#app .kingdom-board-frame.is-small-board {width:min(100%,560px)!important;max-width:560px!important}
+@keyframes kingdom-checker-target {
+  0%,100% {box-shadow:inset 0 0 0 1px rgba(17,38,20,.18),inset 0 0 0 2px rgba(255,239,158,.25)!important}
+  50% {box-shadow:inset 0 0 0 1px rgba(17,38,20,.18),inset 0 0 0 3px rgba(255,239,158,.95)!important}
+}
+
+/* Lobby settings use a separate right-side drawer, not a centered dialog. */
+#app .lobby-mode-settings-trigger {
+  position:fixed!important; z-index:70!important; top:clamp(118px,32vh,290px)!important;
+  right:max(12px,env(safe-area-inset-right))!important; left:auto!important; margin:0!important; padding:0!important;
+}
+#app .lobby-mode-settings-open {
+  display:inline-flex!important; align-items:center!important; justify-content:center!important; gap:8px!important;
+  min-height:44px!important; padding:11px 15px!important;
+  border:1px solid var(--line,rgba(115,105,180,.25))!important; border-radius:14px!important;
+  background:var(--surface,rgba(255,255,255,.94))!important; color:var(--text-main,#29263b)!important;
+  font-size:.84rem!important; font-weight:750!important; line-height:1.2!important;
+  box-shadow:0 8px 24px rgba(25,21,55,.13),inset 0 1px 0 rgba(255,255,255,.65)!important;
+  backdrop-filter:blur(16px)!important; -webkit-backdrop-filter:blur(16px)!important; white-space:nowrap!important;
+}
+#app .lobby-mode-settings-open:hover {transform:translateY(-1px);box-shadow:0 11px 28px rgba(25,21,55,.17)!important}
+#app .lobby-mode-settings-open:focus-visible,#app .lobby-mode-settings-close:focus-visible {outline:3px solid var(--accent,#7666e8)!important;outline-offset:3px!important}
+#app .lobby-settings-drawer-backdrop {
+  position:fixed!important; inset:0!important; z-index:100!important; display:flex!important; align-items:stretch!important;
+  justify-content:flex-end!important; padding:12px!important; background:rgba(21,24,38,.17)!important;
+  backdrop-filter:blur(2px)!important; -webkit-backdrop-filter:blur(2px)!important;
+}
+#app .lobby-mode-settings-drawer {
+  position:relative!important; display:flex!important; flex:0 1 420px!important; flex-direction:column!important; gap:14px!important;
+  width:min(420px,calc(100vw - 24px))!important; max-width:420px!important; height:100%!important; max-height:100%!important;
+  min-height:0!important; margin:0 0 0 auto!important; padding:22px!important; overflow-y:auto!important;
+  overscroll-behavior:contain!important; border:1px solid var(--line,rgba(122,113,177,.24))!important; border-radius:22px!important;
+  background:var(--surface,rgba(255,255,255,.97))!important; color:var(--text-main,#25243a)!important;
+  box-shadow:0 18px 60px rgba(20,18,44,.23),inset 0 1px 0 rgba(255,255,255,.65)!important;
+  -webkit-backdrop-filter:blur(22px)!important; backdrop-filter:blur(22px)!important;
+  animation:lobby-settings-slide-in .22s ease-out both;
+}
+#app .lobby-mode-settings-drawer-head {display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important}
+#app .lobby-mode-settings-drawer-head h3 {margin:5px 0 0!important;color:var(--text-main,#25243a)!important;font-size:1.15rem!important;font-weight:800!important;line-height:1.3!important}
+#app .lobby-mode-settings-drawer .section-kicker {color:var(--text-muted,#74748a)!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.08em!important}
+#app .lobby-mode-settings-drawer .lobby-mode-settings-intro,#app .lobby-mode-settings-drawer .lobby-mode-settings-note {
+  margin:0!important;color:var(--text-muted,#717189)!important;font-size:.82rem!important;line-height:1.5!important;
+}
+#app .lobby-mode-settings-grid {display:flex!important;flex-direction:column!important;gap:10px!important;width:100%!important;margin:0!important}
+#app .lobby-mode-settings-drawer .lobby-mode-setting-field,#app .lobby-mode-settings-drawer .lobby-mode-setting-toggle {
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+  width:100%!important;min-width:0!important;margin:0!important;padding:13px!important;
+  border:1px solid var(--line,rgba(115,105,180,.17))!important;border-radius:14px!important;
+  background:var(--surface-soft,rgba(125,115,180,.055))!important;color:var(--text-main,#29263b)!important;
+  font-size:.84rem!important;line-height:1.35!important;
+}
+#app .lobby-mode-settings-drawer .lobby-mode-setting-field > span:first-child,#app .lobby-mode-settings-drawer .lobby-mode-setting-toggle > span {flex:1 1 auto!important;min-width:0!important}
+#app .lobby-mode-settings-drawer .lobby-mode-setting-toggle > span {display:flex!important;flex-direction:column!important;gap:4px!important}
+#app .lobby-mode-settings-drawer .lobby-mode-setting-toggle small {color:var(--text-muted,#717189)!important;font-size:.72rem!important;line-height:1.35!important}
+#app .lobby-mode-setting-input {display:flex!important;flex:0 0 auto!important;align-items:center!important;gap:7px!important}
+#app .lobby-mode-settings-drawer input[type="number"],#app .lobby-mode-settings-drawer select {
+  width:92px!important;min-width:72px!important;max-width:110px!important;height:40px!important;margin:0!important;padding:7px 9px!important;
+  border:1px solid var(--line,rgba(115,105,180,.25))!important;border-radius:10px!important;
+  background:var(--surface,rgba(255,255,255,.98))!important;color:var(--text-main,#29263b)!important;font:inherit!important;font-size:.85rem!important;
+}
+#app .lobby-mode-settings-drawer .lobby-mode-setting-input small {color:var(--text-muted,#717189)!important;font-size:.72rem!important}
+#app .lobby-mode-settings-drawer input[type="checkbox"] {width:20px!important;height:20px!important;min-width:20px!important;accent-color:var(--accent,#7666e8)!important}
+#app .lobby-mode-settings-drawer .lobby-mode-settings-close {
+  display:grid!important;flex:0 0 36px!important;place-items:center!important;width:36px!important;height:36px!important;
+  margin:0!important;padding:0!important;border:1px solid var(--line,rgba(115,105,180,.2))!important;border-radius:11px!important;
+  background:var(--surface-soft,rgba(125,115,180,.07))!important;color:var(--text-main,#29263b)!important;font-size:1.4rem!important;line-height:1!important;
+}
+@keyframes lobby-settings-slide-in {from {transform:translateX(22px);opacity:.65} to {transform:translateX(0);opacity:1}}
+@media(max-width:680px) {
+  #app .kingdom-board-frame {width:min(100%,92vw,72dvh,700px)!important}
+  #app .kingdom-board-grid {width:100%!important}
+  #app .lobby-mode-settings-trigger {top:auto!important;right:max(10px,env(safe-area-inset-right))!important;bottom:max(14px,env(safe-area-inset-bottom))!important}
+  #app .lobby-mode-settings-open {min-height:42px!important;padding:10px 12px!important;font-size:.8rem!important}
+  #app .lobby-settings-drawer-backdrop {padding:8px!important}
+  #app .lobby-mode-settings-drawer {flex-basis:auto!important;width:min(430px,calc(100vw - 16px))!important;max-width:430px!important;padding:18px!important;border-radius:19px!important}
+}
+@media(prefers-reduced-motion:reduce) {
+  #app .lobby-mode-settings-drawer {animation:none!important}
+  #app .kingdom-board-row > .kingdom-tile.is-target {animation:none!important}
+}
+
+
+/* Ensure legacy terrain textures never override the new solid checkerboard cells. */
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-dark,
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-red-kingdom.is-checker-dark,
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-light,
+#app .kingdom-board-row > .kingdom-tile.is-blue-kingdom.is-checker-dark,
+#app .kingdom-board-row > .kingdom-tile.is-stronghold {
+  background-image:none!important;
+}
