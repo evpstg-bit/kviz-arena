@@ -10,7 +10,7 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.11.2">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.11.5">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.11.6">
 <link rel="stylesheet" href="/responsive-v2.css?v=1.11.2">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
@@ -26,7 +26,7 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
-let sseMissingChecks=0;
+let sseMissingChecks=0,gameRole='';
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
 try{const savedSort=localStorage.getItem('kviz-library-sort');if(['manual','title-asc','title-desc'].includes(savedSort))libSort=savedSort}catch(e){}
@@ -58,15 +58,24 @@ async function capi(p,o){
 }
 const getSess=()=>{try{return JSON.parse(sessionStorage.getItem('qs'))}catch(e){return null}};
 function clearSess(){try{sessionStorage.removeItem('qs')}catch(e){}}
+function unavailableGameMessage(role){
+ const lang=currentUiLanguage();
+ const messages={
+  host:{ru:'Игровая комната больше недоступна. Откройте кабинет преподавателя и запустите новую игру.',en:'The game room is no longer available. Open the teacher cabinet and launch a new game.',zh:'游戏房间已不可用。请打开教师面板并重新创建游戏。'},
+  player:{ru:'Игра больше недоступна. Попросите преподавателя запустить новую игру и введите новый PIN-код.',en:'This game is no longer available. Ask the teacher to start a new game and enter the new PIN.',zh:'当前游戏已不可用。请让教师重新开始游戏并输入新的 PIN 码。'},
+  other:{ru:'Предыдущая игровая сессия больше недоступна. Запустите новую игру или введите актуальный PIN-код.',en:'The previous game session is no longer available. Start a new game or enter a valid PIN.',zh:'之前的游戏会话已不可用。请重新开始游戏或输入有效的 PIN 码。'}
+ };
+ return (messages[role]||messages.other)[lang]||messages.other.ru;
+}
 function connect(){
  if(es)es.close();fbSeen=-2;bnSeen=-1;fbUntil=0;banUntil=0;
- try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me}))}catch(e){}
+ try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(e){}
  const source=new EventSource('/api/events?pin='+encodeURIComponent(pin)+'&id='+encodeURIComponent(me));
  es=source;
  source.onmessage=e=>{
   if(es!==source)return;
   sseMissingChecks=0;
-  S=JSON.parse(e.data);t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
+  S=JSON.parse(e.data);gameRole=S.host?'host':'player';try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
   if(S.host&&CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&S.reportId){
    if(autoReportSeen!==S.reportId){
@@ -96,7 +105,7 @@ function connect(){
   // immediately throw every participant back to the home screen.
   sseMissingChecks++;
   if(sseMissingChecks<4){setTimeout(()=>{if(es===source&&source.readyState===2)connect()},700*sseMissingChecks);return}
-  clearSess();S=null;view='home';msg='Игра не найдена или уже завершена';sseMissingChecks=0;render();
+  const lostRole=gameRole||(S?(S.host?'host':'player'):'');clearSess();pin='';me='';S=null;view='home';msg=unavailableGameMessage(lostRole);gameRole='';sseMissingChecks=0;if(es===source)es=null;render();
  };
 }
 function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';render()}
@@ -141,14 +150,14 @@ async function start(selectedMode){
  }
  // Switch to the game view before opening EventSource. Otherwise the initial lobby
  // event is ignored for navigation because the SSE handler deliberately preserves 'lib'.
- launchModeDialog=false;launchModeQuizId='';pin=String(r.pin);me=String(r.id);msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
+ launchModeDialog=false;launchModeQuizId='';gameRole='host';pin=String(r.pin);me=String(r.id);msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
 }
 async function join(){
  const p=$('jp').value.trim(),n=$('jn').value.trim();prePin=p;preName=n;
  if(!/^\d{6}$/.test(p)||!n){msg='Введите 6-значный PIN и никнейм';return render()}
  const r=await api('join',{pin:p,name:n});
  if(r.error){msg=r.error;return render()}
- pin=p;me=r.id;prePin='';msg='';
+ gameRole='player';pin=p;me=r.id;prePin='';msg='';
  try{history.replaceState(null,'',location.pathname)}catch(e){}
  connect();
 }
@@ -1211,7 +1220,12 @@ if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaK
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
  if(TOKEN){const r=await api('auth/me',{token:TOKEN});if(r.user)USER=r.user;else{TOKEN='';saveToken()}}
  const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp))prePin=qp;
- const sv=getSess();if(sv&&(!prePin||sv.pin===prePin)){pin=sv.pin;me=sv.id;return connect()}
+ const sv=getSess();if(sv&&(!prePin||sv.pin===prePin)){
+  const savedRole=sv.role||'';let status=null;
+  try{status=await api('alive',{pin:sv.pin,id:sv.id})}catch(e){status={error:'Нет связи с сервером'}}
+  if(status&&status.alive||status&&status.error){pin=String(sv.pin);me=String(sv.id);gameRole=savedRole;return connect()}
+  clearSess();gameRole='';msg=unavailableGameMessage(savedRole);
+ }
  render();if(prePin&&$('jn'))$('jn').focus();
 })();
 
