@@ -10,7 +10,7 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css?v=1.11.2">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.11.4">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.11.5">
 <link rel="stylesheet" href="/responsive-v2.css?v=1.11.2">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
@@ -711,7 +711,8 @@ function boardK(o){
   const label=stronghold?'Крепость':canPlace?'Поставить флаг':ow===0?'Территория красных':ow===1?'Территория синих':'Нейтральная клетка';
   return `<div ${canPlace?`role="button" tabindex="0" onclick="placeAt(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();placeAt(${i})}"`:''} class="${classes}" aria-label="${label}" style="--tile-color:${ow<0?'#46505f':'var(--c'+ow+')'};--tile-team:var(--c${canPlace?team:(ow<0?team:ow)});--tile-font:${Math.max(7,Math.min(22,Math.round(225/N)))}px">${stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':(canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'')}</div>`;
  };
- return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N};grid-template-columns:repeat(${N},minmax(0,1fr))">${S.board.map(cell).join('')}</div></div>`;
+ const rows=Array.from({length:N},(_,row)=>`<div class="kingdom-board-row ${row%2?'is-offset':''}" style="--board-row:${row}">${S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')}</div>`).join('');
+ return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N};--hex-offset:${(50/N).toFixed(4)}%">${rows}</div></div>`;
 }
 async function placeAt(i){const r=await act('place',undefined,{tile:i});if(r.error){msg=r.error;render()}}
 function scoreChips(){return `<div class="row justify-center gap-2 text-sm font-bold">${S.stats.map(t=>`<span class="chip" style="background:var(--c${t.k})">${SH[t.k]} ${t.tiles} · 🏆${t.trophies}</span>`).join('')}</div>`}
