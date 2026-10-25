@@ -6,7 +6,7 @@
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
 <link rel="stylesheet" href="/ui.css">
-<link rel="stylesheet" href="/liquid-glass.css?v=9">
+<link rel="stylesheet" href="/liquid-glass.css?v=10">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -24,7 +24,7 @@ let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',pa
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
 // In-app back/forward history for the single-page teacher workflow.
-let siteNavHistory=[],siteNavIndex=-1,siteNavTraveling=false,cabinetMenuToggled=false;
+let siteNavHistory=[],siteNavIndex=-1,siteNavTraveling=false,cabinetMenuToggled=false,cabinetMenuHoverTimer=null;
 let quiz=null;
 const $=id=>document.getElementById(id),app=()=>vApp||$('app');
 function applyTheme(theme,persist=true){
@@ -391,9 +391,23 @@ function cabinetMenu(active){
 function cabinetHeader(active,subtitle){return `<header class="app-topbar dashboard-topbar site-app-topbar">${brandMarkup(subtitle||tr('Кабинет преподавателя'))}<div class="site-header-controls">${siteHistoryButtons()}${cabinetMenu(active)}</div></header>`}
 function captureCurrentNavigationSnapshot(){const entry=makeSiteNavEntry();if(entry&&siteNavIndex>=0&&siteNavHistory[siteNavIndex])siteNavHistory[siteNavIndex]=entry}
 function toggleCabinetMenu(e){if(e)e.stopPropagation();cabinetMenuToggled=!cabinetMenuToggled;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.toggle('is-open',cabinetMenuToggled);if(btn)btn.setAttribute('aria-expanded',String(cabinetMenuToggled))}
-function closeCabinetMenu(){cabinetMenuToggled=false;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.remove('is-open');if(btn)btn.setAttribute('aria-expanded','false')}
-function cabinetMenuHover(open){const btn=$('cabinet-menu-trigger');if(btn&&!cabinetMenuToggled)btn.setAttribute('aria-expanded',String(!!open))}
-function cabinetMenuPointerLeave(){if(window.matchMedia&&window.matchMedia('(hover: hover)').matches)closeCabinetMenu()}
+function closeCabinetMenu(){if(cabinetMenuHoverTimer){clearTimeout(cabinetMenuHoverTimer);cabinetMenuHoverTimer=null}cabinetMenuToggled=false;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.remove('is-open');if(btn)btn.setAttribute('aria-expanded','false')}
+function cabinetMenuHover(open){
+ if(cabinetMenuHoverTimer){clearTimeout(cabinetMenuHoverTimer);cabinetMenuHoverTimer=null}
+ const btn=$('cabinet-menu-trigger');
+ if(btn&&!cabinetMenuToggled)btn.setAttribute('aria-expanded',String(!!open));
+}
+function cabinetMenuPointerLeave(){
+ if(!(window.matchMedia&&window.matchMedia('(hover: hover)').matches))return;
+ if(cabinetMenuHoverTimer)clearTimeout(cabinetMenuHoverTimer);
+ // Allow the pointer to travel from the trigger across the bridge and into
+ // the floating panel. Only close if the pointer has truly left the wrapper.
+ cabinetMenuHoverTimer=setTimeout(()=>{
+  cabinetMenuHoverTimer=null;
+  const wrap=$('cabinet-menu-wrap');
+  if(!cabinetMenuToggled&&wrap&&!wrap.matches(':hover')&&!wrap.querySelector(':focus'))closeCabinetMenu();
+ },220);
+}
 function openCabinetImport(e){if(e)e.stopPropagation();closeCabinetMenu();const input=$('site-menu-import');if(input)input.click()}
 function goHomeFromNav(){closeCabinetMenu();captureCurrentNavigationSnapshot();if(view==='quiz-editor'&&!confirm(tr('Выйти из редактора без сохранения изменений?')))return;view='home';msg='';render()}
 function goBrandHome(e){if(e)e.preventDefault();goHomeFromNav();return false}

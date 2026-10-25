@@ -137,3 +137,8 @@ node server.js
 - Навигация поддерживает русский, английский и китайский языки.
 
 Текущая сборка: **1.8.0**. Основные действия кабинета скрыты в раскрывающемся меню, в шапке добавлены стрелки назад/вперёд по истории приложения, бренд «Квиз-арена» ведёт на главную страницу. Результаты проверки записаны в `TESTING-REPORT-MENU-NAVIGATION.md`.
+
+
+## Navigation menu fix
+
+The floating menu stays open while moving the pointer from the hamburger button into the panel. Its surface is more opaque in both light and dark themes.
