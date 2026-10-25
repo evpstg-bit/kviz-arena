@@ -109,7 +109,7 @@ function loadProjectQuizFile(filename,prefix,source){
         if(!quiz){console.warn('Пропущен тест №'+(i+1)+' в '+filename+': проверьте формат и вопросы');continue}
         const rawId=String(item&&item.id||prefix+'-'+(i+1));
         const id=/^[A-Za-z0-9_-]{1,80}$/.test(rawId)?rawId:prefix+'-'+(i+1);
-        result.push({id,quiz,builtin:true,source});
+        result.push({id,quiz,folderId:String(item&&item.folderId||''),builtin:true,source});
       }catch(e){console.warn('Пропущен тест №'+(i+1)+' в '+filename+': '+e.message)}
     }
     console.log(filename+': загружено тестов '+result.length);
@@ -125,14 +125,24 @@ function loadProjectQuizzes(){
 BUILTINQ=loadProjectQuizzes();
 let REPORTS=readJ('reports.json',[]);if(!Array.isArray(REPORTS))REPORTS=[];
 
-// Нормализованная модель файла: { app, version, items: [{ id, quiz }] }.
-// Файл хранится в репозитории, а не в DATA_DIR, чтобы его можно было версионировать.
+// Файл проекта хранит папки и тесты вместе, чтобы они синхронизировались одним GitHub-коммитом.
+function normalizeFolders(folders){
+  const out=[],ids=new Set(),names=new Set();
+  (Array.isArray(folders)?folders:[]).forEach((f,i)=>{
+    if(!f||typeof f!=='object')return;
+    let id=String(f.id||'folder-'+(i+1)).slice(0,80);
+    const name=str(f.name,64).trim();
+    if(!/^[A-Za-z0-9_-]{1,80}$/.test(id)||ids.has(id)||!name||names.has(name.toLocaleLowerCase()))return;
+    ids.add(id);names.add(name.toLocaleLowerCase());out.push({id,name,createdAt:Number(f.createdAt)||Date.now(),updatedAt:Number(f.updatedAt)||Date.now()});
+  });
+  return out;
+}
 function readBuiltinDocument(){
   try{
     const raw=JSON.parse(fs.readFileSync(path.join(__dirname,'builtin-tests.json'),'utf8'));
     const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
-    return{app:'kviz-arena',version:2,items};
-  }catch(e){return{app:'kviz-arena',version:2,items:[]}}
+    const folders=normalizeFolders(raw&&raw.folders),validFolders=new Set(folders.map(f=>f.id)),normalizedItems=normalizeBuiltinItems(items);normalizedItems.forEach(item=>{if(item.folderId&&!validFolders.has(item.folderId))item.folderId=''});return{app:'kviz-arena',version:3,folders,items:normalizedItems};
+  }catch(e){return{app:'kviz-arena',version:3,folders:[],items:[]}}
 }
 function normalizeBuiltinItems(items){
   const out=[],ids=new Set();
@@ -140,15 +150,19 @@ function normalizeBuiltinItems(items){
     const quiz=parseQuiz(item&&item.quiz?item.quiz:item);if(!quiz)return;
     let id=String(item&&item.id||'builtin-'+(index+1)).slice(0,80);
     if(!/^[A-Za-z0-9_-]{1,80}$/.test(id)||ids.has(id)){id='test-'+rid();while(ids.has(id))id='test-'+rid()}
-    ids.add(id);out.push({id,quiz});
+    ids.add(id);const folderId=String(item&&item.folderId||'');
+    out.push({id,quiz,folderId:/^[A-Za-z0-9_-]{1,80}$/.test(folderId)?folderId:''});
   });
   return out;
 }
 function builtinQuizzesFromItems(items){
-  return normalizeBuiltinItems(items).map(x=>({id:x.id,quiz:x.quiz,builtin:true,source:'builtin'}));
+  return normalizeBuiltinItems(items).map(x=>({id:x.id,quiz:x.quiz,folderId:x.folderId,builtin:true,source:'builtin'}));
 }
-function writeBuiltinDocument(items){
-  const doc={app:'kviz-arena',version:2,items:normalizeBuiltinItems(items)};
+function writeBuiltinDocument(items,folders){
+  const previous=readBuiltinDocument();
+  const doc={app:'kviz-arena',version:3,folders:normalizeFolders(folders===undefined?previous.folders:folders),items:normalizeBuiltinItems(items)};
+  // Degraded/legacy data that refers to a missing folder is moved to the root.
+  const folderIds=new Set(doc.folders.map(f=>f.id));doc.items.forEach(x=>{if(x.folderId&&!folderIds.has(x.folderId))x.folderId=''});
   const file=path.join(__dirname,'builtin-tests.json'),tmp=file+'.tmp';
   fs.writeFileSync(tmp,JSON.stringify(doc,null,2)+'\n','utf8');fs.renameSync(tmp,file);
   BUILTINQ=loadProjectQuizzes();
@@ -161,44 +175,47 @@ const githubConfig=()=>{
 async function githubReadBuiltin(cfg){
   const url='https://api.github.com/repos/'+cfg.repo+'/contents/builtin-tests.json?ref='+encodeURIComponent(cfg.branch);
   const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'}});
-  if(r.status===404)return{sha:null,items:normalizeBuiltinItems(readBuiltinDocument().items)};
+  if(r.status===404){const local=readBuiltinDocument();return{sha:null,items:local.items,folders:local.folders}}
   if(!r.ok)throw new Error('GitHub не смог прочитать builtin-tests.json (HTTP '+r.status+'). Проверьте GITHUB_TOKEN, репозиторий, ветку и разрешение Contents: read/write.');
   const data=await r.json();
   if(!data.content)throw new Error('GitHub вернул пустой файл builtin-tests.json');
   let raw;try{raw=JSON.parse(Buffer.from(String(data.content).replace(/\s/g,''),'base64').toString('utf8'))}catch(e){throw new Error('В GitHub находится некорректный builtin-tests.json')}
   const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
-  return{sha:data.sha,items:normalizeBuiltinItems(items)};
+  const folders=normalizeFolders(raw&&raw.folders),validFolders=new Set(folders.map(f=>f.id)),normalizedItems=normalizeBuiltinItems(items);normalizedItems.forEach(item=>{if(item.folderId&&!validFolders.has(item.folderId))item.folderId=''});return{sha:data.sha,items:normalizedItems,folders};
 }
-async function githubWriteBuiltin(cfg,sha,items,message){
+async function githubWriteBuiltin(cfg,sha,items,folders,message){
   const url='https://api.github.com/repos/'+cfg.repo+'/contents/builtin-tests.json';
-  const doc={app:'kviz-arena',version:2,items:normalizeBuiltinItems(items)};
+  const folderList=normalizeFolders(folders),folderIds=new Set(folderList.map(f=>f.id));
+  const itemList=normalizeBuiltinItems(items);itemList.forEach(x=>{if(x.folderId&&!folderIds.has(x.folderId))x.folderId=''});
+  const doc={app:'kviz-arena',version:3,folders:folderList,items:itemList};
   const body={message,content:Buffer.from(JSON.stringify(doc,null,2)+'\n','utf8').toString('base64'),branch:cfg.branch};
   if(sha)body.sha=sha;
   return fetch(url,{method:'PUT',headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena','Content-Type':'application/json'},body:JSON.stringify(body)});
 }
-// Применяет изменение к проектному файлу и, если заданы GITHUB_TOKEN / GITHUB_REPOSITORY,
-// автоматически создаёт коммит в GitHub. При отсутствии секрета меняется файл текущего сервера.
-async function mutateBuiltinItems(mutator,message){
+async function mutateBuiltinDocument(mutator,message){
   const cfg=githubConfig();
   if(cfg){
     for(let attempt=0;attempt<3;attempt++){
-      const remote=await githubReadBuiltin(cfg),out=mutator(remote.items.map(x=>({id:x.id,quiz:x.quiz})));
-      if(out.noChange)return{persistedToGitHub:true,itemCount:remote.items.length,...(out.data||{})};
-      const next=normalizeBuiltinItems(out.items);
-      const wr=await githubWriteBuiltin(cfg,remote.sha,next,message);
+      const remote=await githubReadBuiltin(cfg),out=mutator({items:remote.items.map(x=>({...x,quiz:x.quiz})),folders:remote.folders.map(x=>({...x}))});
+      if(out.noChange)return{persistedToGitHub:true,itemCount:remote.items.length,folderCount:remote.folders.length,...(out.data||{})};
+      const nextItems=normalizeBuiltinItems(out.items===undefined?remote.items:out.items),nextFolders=normalizeFolders(out.folders===undefined?remote.folders:out.folders);
+      const wr=await githubWriteBuiltin(cfg,remote.sha,nextItems,nextFolders,message);
       if((wr.status===409||wr.status===422)&&attempt<2)continue;
-      if(!wr.ok){const detail=await wr.text().catch(()=> '');throw new Error('Не удалось сохранить тесты в GitHub (HTTP '+wr.status+'). '+detail.slice(0,220))}
-      try{writeBuiltinDocument(next)}catch(e){BUILTINQ=builtinQuizzesFromItems(next);console.warn('GitHub файл обновлён, но локальную копию не удалось записать:',e.message)}
-      return{persistedToGitHub:true,itemCount:next.length,...(out.data||{})};
+      if(!wr.ok){const detail=await wr.text().catch(()=> '');throw new Error('Не удалось сохранить библиотеку в GitHub (HTTP '+wr.status+'). '+detail.slice(0,220))}
+      try{writeBuiltinDocument(nextItems,nextFolders)}catch(e){BUILTINQ=builtinQuizzesFromItems(nextItems);console.warn('GitHub файл обновлён, но локальную копию не удалось записать:',e.message)}
+      return{persistedToGitHub:true,itemCount:nextItems.length,folderCount:nextFolders.length,...(out.data||{})};
     }
     throw new Error('Файл изменился одновременно в GitHub. Повторите операцию.');
   }
-  const local=normalizeBuiltinItems(readBuiltinDocument().items),out=mutator(local.map(x=>({id:x.id,quiz:x.quiz})));
-  if(out.noChange)return{persistedToGitHub:false,itemCount:local.length,...(out.data||{})};
-  const doc=writeBuiltinDocument(out.items);
-  return{persistedToGitHub:false,itemCount:doc.items.length,...(out.data||{})};
+  const local=readBuiltinDocument(),out=mutator({items:local.items.map(x=>({...x})),folders:local.folders.map(x=>({...x}))});
+  if(out.noChange)return{persistedToGitHub:false,itemCount:local.items.length,folderCount:local.folders.length,...(out.data||{})};
+  const doc=writeBuiltinDocument(out.items===undefined?local.items:out.items,out.folders===undefined?local.folders:out.folders);
+  return{persistedToGitHub:false,itemCount:doc.items.length,folderCount:doc.folders.length,...(out.data||{})};
 }
-
+// Mutations that only affect tests retain the current folder tree.
+async function mutateBuiltinItems(mutator,message){
+  return mutateBuiltinDocument(doc=>{const out=mutator(doc.items);return{...out,items:out.items===undefined?doc.items:out.items,folders:doc.folders}},message);
+}
 // ================= игры =================
 const ranked=g=>[...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score);
 const playerOnline=(g,id)=>[...g.clients].some(c=>c.id===id);
@@ -429,29 +446,65 @@ http.createServer(async(req,res)=>{
   if(u.pathname.startsWith('/api/lib/')){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
     const op=u.pathname.slice(9),builtin=BUILTINQ.find(x=>x.id===b.id);
-    if(op==='list')return json(res,{items:BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,builtin:true,source:'builtin'}))});
-    if(op==='get')return builtin?json(res,{quiz:builtin.quiz,builtin:true}):json(res,{error:'Тест не найден'},404);
-    if(op==='export')return json(res,{app:'kviz-arena',version:2,items:normalizeBuiltinItems(readBuiltinDocument().items)});
-    if(['import','update','copy','delete'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
+    if(op==='list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length})),items:BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}))});}
+    if(op==='get')return builtin?json(res,{quiz:builtin.quiz,folderId:builtin.folderId||'',builtin:true}):json(res,{error:'Тест не найден'},404);
+    if(op==='export'){const doc=readBuiltinDocument();return json(res,{app:'kviz-arena',version:3,folders:doc.folders,items:doc.items});}
+    if(['import','update','copy','delete','folders/create','folders/update','folders/delete','move'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
+    if(op==='folders/list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length}))});}
     try{
+      if(op==='folders/create'){
+        const name=str(b.name,64).trim();if(!name)return json(res,{error:'Введите название папки'},400);
+        const id='folder-'+rid();
+        const result=await mutateBuiltinDocument(doc=>{if(doc.folders.some(f=>f.name.toLocaleLowerCase()===name.toLocaleLowerCase()))return{items:doc.items,folders:doc.folders,noChange:true,data:{created:false,reason:'duplicate'}};return{items:doc.items,folders:[...doc.folders,{id,name,createdAt:Date.now(),updatedAt:Date.now()}],data:{created:true,id,name}}},'Create quiz folder '+name);
+        if(result.reason==='duplicate')return json(res,{error:'Папка с таким названием уже существует'},409);
+        return json(res,{ok:true,...result});
+      }
+      if(op==='folders/update'){
+        const name=str(b.name,64).trim(),id=String(b.id||'');if(!name)return json(res,{error:'Введите название папки'},400);
+        const result=await mutateBuiltinDocument(doc=>{const idx=doc.folders.findIndex(f=>f.id===id);if(idx<0)return{items:doc.items,folders:doc.folders,noChange:true,updated:false};if(doc.folders.some((f,i)=>i!==idx&&f.name.toLocaleLowerCase()===name.toLocaleLowerCase()))return{items:doc.items,folders:doc.folders,noChange:true,data:{reason:'duplicate'}};const folders=doc.folders.map((f,i)=>i===idx?{...f,name,updatedAt:Date.now()}:f);return{items:doc.items,folders,data:{updated:true,id,name}}},'Rename quiz folder '+name);
+        if(result.reason==='duplicate')return json(res,{error:'Папка с таким названием уже существует'},409);
+        return result.updated?json(res,{ok:true,...result}):json(res,{error:'Папка не найдена'},404);
+      }
+      if(op==='folders/delete'){
+        const id=String(b.id||'');
+        const result=await mutateBuiltinDocument(doc=>{const folders=doc.folders.filter(f=>f.id!==id),removed=folders.length!==doc.folders.length;if(!removed)return{items:doc.items,folders:doc.folders,noChange:true,removed:false};let moved=0;const items=doc.items.map(item=>{if(item.folderId===id){moved++;return{...item,folderId:''}}return item});return{items,folders,data:{removed:true,id,moved}}},'Delete quiz folder '+id);
+        return result.removed?json(res,{ok:true,...result}):json(res,{error:'Папка не найдена'},404);
+      }
+      if(op==='move'){
+        const id=String(b.id||''),folderId=String(b.folderId||'');
+        const result=await mutateBuiltinDocument(doc=>{const index=doc.items.findIndex(item=>item.id===id);if(index<0)return{items:doc.items,folders:doc.folders,noChange:true,moved:false};if(folderId&&!doc.folders.some(f=>f.id===folderId))return{items:doc.items,folders:doc.folders,noChange:true,data:{reason:'folder-not-found'}};const items=doc.items.map((item,i)=>i===index?{...item,folderId}:item);return{items,folders:doc.folders,data:{moved:true,id,folderId}}},'Move quiz '+id+' to folder '+(folderId||'root'));
+        if(result.reason==='folder-not-found')return json(res,{error:'Папка не найдена'},404);
+        return result.moved?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
+      }
       if(op==='import'){
         const incoming=Array.isArray(b.items)?b.items:[];
         if(!incoming.length)return json(res,{error:'Не получены тесты для импорта'},400);
         if(incoming.length>200)return json(res,{error:'За один импорт допускается не более 200 тестов'},400);
-        const parsed=[];for(let i=0;i<incoming.length;i++){const item=incoming[i],quiz=parseQuiz(item&&item.quiz?item.quiz:item);if(quiz)parsed.push(quiz)}
+        const parsed=[];for(let i=0;i<incoming.length;i++){const item=incoming[i],quiz=parseQuiz(item&&item.quiz?item.quiz:item);if(quiz)parsed.push({quiz,sourceFolderId:String(item&&item.folderId||'')})}
         if(!parsed.length)return json(res,{error:'Нет корректных тестов. Проверьте вопросы, варианты ответов и правильные ответы.'},400);
-        const addedIds=parsed.map(()=> 'test-'+rid());
-        const result=await mutateBuiltinItems(items=>({items:[...items,...parsed.map((quiz,i)=>({id:addedIds[i],quiz}))],data:{added:parsed.length,skipped:incoming.length-parsed.length}}),'Import tests into builtin-tests.json');
+        const addedIds=parsed.map(()=> 'test-'+rid()),requestedFolder=String(b.folderId||''),incomingFolders=normalizeFolders(b.folders);
+        const result=await mutateBuiltinDocument(doc=>{
+          const folders=doc.folders.map(f=>({...f})),folderMap={};
+          folders.forEach(folder=>{folderMap[folder.id]=folder.id});
+          for(const source of incomingFolders){
+            let target=folders.find(f=>f.name.toLocaleLowerCase()===source.name.toLocaleLowerCase());
+            if(!target){target={id:'folder-'+rid(),name:source.name,createdAt:Date.now(),updatedAt:Date.now()};folders.push(target)}
+            folderMap[source.id]=target.id;
+          }
+          const targetFolder=requestedFolder&&folders.some(f=>f.id===requestedFolder)?requestedFolder:'';
+          const items=[...doc.items,...parsed.map((entry,i)=>({id:addedIds[i],quiz:entry.quiz,folderId:targetFolder||folderMap[entry.sourceFolderId]||''}))];
+          return{items,folders,data:{added:parsed.length,skipped:incoming.length-parsed.length,folderId:targetFolder,importedFolders:incomingFolders.length}};
+        },'Import tests into builtin-tests.json');
         return json(res,{ok:true,...result});
       }
       if(op==='update'){
         const quiz=parseQuiz(b.quiz);if(!quiz)return json(res,{error:'Тест не прошёл проверку. Убедитесь, что у каждого вопроса есть варианты и правильный ответ.'},400);
-        const result=await mutateBuiltinItems(items=>{const index=items.findIndex(item=>item.id===b.id);if(index<0)return{items,noChange:true,data:{id:b.id,updated:false}};const next=items.slice();next[index]={id:next[index].id,quiz};return{items:next,data:{id:b.id,updated:true}}},'Edit built-in quiz '+String(b.id||''));
+        const result=await mutateBuiltinItems(items=>{const index=items.findIndex(item=>item.id===b.id);if(index<0)return{items,noChange:true,data:{id:b.id,updated:false}};const next=items.slice();next[index]={id:next[index].id,quiz,folderId:next[index].folderId||''};return{items:next,data:{id:b.id,updated:true,folderId:next[index].folderId||''}}},'Edit built-in quiz '+String(b.id||''));
         return result.updated?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
       }
       if(op==='copy'){
         const newId='test-'+rid();
-        const result=await mutateBuiltinItems(items=>{const source=items.find(item=>item.id===b.id);if(!source)return{items,noChange:true,data:{id:null,copied:false}};const quiz={...source.quiz,title:(String(source.quiz.title||'Тест')+' — копия').slice(0,80),q:source.quiz.q.map(q=>({...q,a:[...q.a],cs:[...q.cs]}))};return{items:[...items,{id:newId,quiz}],data:{id:newId,copied:true}}},'Copy built-in quiz '+String(b.id||''));
+        const result=await mutateBuiltinItems(items=>{const source=items.find(item=>item.id===b.id);if(!source)return{items,noChange:true,data:{id:null,copied:false}};const quiz={...source.quiz,title:(String(source.quiz.title||'Тест')+' — копия').slice(0,80),q:source.quiz.q.map(q=>({...q,a:[...q.a],cs:[...q.cs]}))};return{items:[...items,{id:newId,quiz,folderId:source.folderId||''}],data:{id:newId,copied:true,folderId:source.folderId||''}}},'Copy built-in quiz '+String(b.id||''));
         return result.copied?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
       }
       if(op==='delete'){
