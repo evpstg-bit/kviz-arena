@@ -1,6 +1,6 @@
 // Квиз-арена: сервер без npm-зависимостей (Node.js 18+). Запуск: node server.js
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),os=require('os');
-const PORT=process.env.PORT||3000,games=new Map();
+const PORT=process.env.PORT||3000,games=new Map(),APP_VERSION=require('./package.json').version;
 const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,'data'),INVITE=process.env.INVITE_CODE||'';
 const rid=()=>crypto.randomBytes(6).toString('hex');
 const str=(s,n)=>String(s??'').slice(0,n);
@@ -658,7 +658,7 @@ http.createServer(async(req,res)=>{
   if(req.method==='GET'&&u.pathname==='/api/info'){
     await hydrateAppSettingsFromGitHub();
     const urls=Object.values(os.networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).map(i=>'http://'+i.address+':'+PORT);
-    return json(res,{urls,hasUsers:USERS.length>0,regOpen:USERS.length===0||!!INVITE,needInvite:USERS.length>0&&!!INVITE,settings:APP_SETTINGS});
+    return json(res,{urls,hasUsers:USERS.length>0,regOpen:USERS.length===0||!!INVITE,needInvite:USERS.length>0&&!!INVITE,settings:APP_SETTINGS,version:APP_VERSION});
   }
   if(req.method!=='POST')return json(res,{},404);
   const b=await body(req),werr=()=>json(res,{error:'Не удалось записать файл на сервере (проверьте права на папку data)'},500);
