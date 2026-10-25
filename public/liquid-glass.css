@@ -175,7 +175,7 @@ body::after {
   -webkit-backdrop-filter: blur(22px) saturate(170%);
   backdrop-filter: blur(22px) saturate(170%);
 }
-#app .global-settings .language-picker { gap: 6px; padding-left: 5px; }
+#app .global-settings .language-picker { gap: 6px; padding-left: 0; }
 #app .global-settings select,
 #app .global-settings .language-picker select {
   color: var(--text-main) !important;

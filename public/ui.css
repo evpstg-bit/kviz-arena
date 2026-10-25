@@ -642,7 +642,6 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
 #app { padding-top: 18px !important; }
 .global-settings { display:flex; align-items:center; justify-content:flex-end; gap:8px; width:100%; min-width:0; margin:0 0 18px; }
 .global-settings .language-picker { display:flex; align-items:center; gap:6px; min-width:0; }
-.global-settings .settings-label { display:inline-flex; align-items:center; justify-content:center; width:28px; height:36px; flex:0 0 28px; color:var(--text-soft); }
 #app .global-settings select { width:auto !important; min-width:0; max-width:190px; height:39px; min-height:39px; margin:0 !important; padding:6px 28px 6px 10px; font-size:.78rem; line-height:1.2; border-radius:11px; }
 #app .global-settings button.theme-toggle { position:static !important; top:auto !important; right:auto !important; z-index:2; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; min-height:39px !important; height:39px; margin:0; padding:6px 11px !important; white-space:nowrap; font-size:.76rem !important; box-shadow:none !important; backdrop-filter:none; }
 #app .global-settings button.theme-toggle:hover { background:var(--surface-muted) !important; transform:none !important; }
@@ -650,7 +649,6 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
 @media (max-width:440px) {
   #app { padding:14px 13px 22px !important; }
   .global-settings { gap:6px; margin-bottom:14px; }
-  .global-settings .settings-label { display:none; }
   #app .global-settings select { max-width:155px; padding:6px 22px 6px 8px; font-size:.72rem; }
   #app .global-settings button.theme-toggle { padding:6px 8px !important; font-size:.7rem !important; }
 }
