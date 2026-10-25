@@ -543,7 +543,7 @@ http.createServer(async(req,res)=>{
     if(op==='list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length})),items:BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}))});}
     if(op==='get')return builtin?json(res,{quiz:builtin.quiz,folderId:builtin.folderId||'',builtin:true}):json(res,{error:'Тест не найден'},404);
     if(op==='export'){const doc=readBuiltinDocument();return json(res,{app:'kviz-arena',version:3,folders:doc.folders,items:doc.items});}
-    if(['import','create','update','copy','delete','folders/create','folders/update','folders/delete','move'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
+    if(['import','create','update','copy','delete','folders/create','folders/update','folders/delete','move','reorder'].includes(op)&&!me.admin)return json(res,{error:'Редактировать библиотеку может только администратор'},403);
     if(op==='folders/list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length}))});}
     try{
       if(op==='folders/create'){
@@ -569,6 +569,21 @@ http.createServer(async(req,res)=>{
         const result=await mutateBuiltinDocument(doc=>{const index=doc.items.findIndex(item=>item.id===id);if(index<0)return{items:doc.items,folders:doc.folders,noChange:true,moved:false};if(folderId&&!doc.folders.some(f=>f.id===folderId))return{items:doc.items,folders:doc.folders,noChange:true,data:{reason:'folder-not-found'}};const items=doc.items.map((item,i)=>i===index?{...item,folderId}:item);return{items,folders:doc.folders,data:{moved:true,id,folderId}}},'Move quiz '+id+' to folder '+(folderId||'root'));
         if(result.reason==='folder-not-found')return json(res,{error:'Папка не найдена'},404);
         return result.moved?json(res,{ok:true,...result}):json(res,{error:'Тест не найден'},404);
+      }
+      if(op==='reorder'){
+        const folderId=String(b.folderId||''),ids=Array.isArray(b.ids)?b.ids.map(x=>String(x)):[];
+        if(!folderId||!ids.length||ids.length>5000)return json(res,{error:'Некорректный порядок тестов.'},400);
+        const result=await mutateBuiltinDocument(doc=>{
+          if(!doc.folders.some(f=>f.id===folderId))return{items:doc.items,folders:doc.folders,noChange:true,data:{reason:'folder-not-found'}};
+          const current=doc.items.filter(item=>item.folderId===folderId),currentIds=current.map(item=>item.id);
+          if(ids.length!==currentIds.length||new Set(ids).size!==ids.length||!ids.every(id=>currentIds.includes(id)))return{items:doc.items,folders:doc.folders,noChange:true,data:{reason:'invalid-order'}};
+          const byId=new Map(current.map(item=>[item.id,item])),ordered=ids.map(id=>byId.get(id));let i=0;
+          const items=doc.items.map(item=>item.folderId===folderId?ordered[i++]:item);
+          return{items,folders:doc.folders,data:{reordered:true,folderId}};
+        },'Reorder quizzes in folder '+folderId);
+        if(result.reason==='folder-not-found')return json(res,{error:'Папка не найдена'},404);
+        if(result.reason==='invalid-order')return json(res,{error:'Список тестов изменился. Обновите папку и повторите попытку.'},409);
+        return result.reordered?json(res,{ok:true,...result}):json(res,{error:'Не удалось изменить порядок тестов.'},500);
       }
       if(op==='import'){
         const incoming=Array.isArray(b.items)?b.items:[];

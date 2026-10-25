@@ -1072,3 +1072,11 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
   .host-controls-block > .row { display: flex; justify-content: center; }
   .host-results-controls { display: flex; }
 }
+
+
+/* Folder sorting and manual ordering controls. */
+#app .library-sort-control { display:grid; gap:4px; flex:0 0 215px; min-width:180px; color:var(--text-muted); font-size:.68rem; font-weight:750; letter-spacing:.025em; }
+#app .library-sort-control select { width:100%; min-height:42px; margin:0; padding:9px 34px 9px 12px; border:1px solid var(--lg-edge)!important; border-radius:12px!important; background:var(--lg-surface-strong)!important; color:var(--text-main)!important; font:inherit; font-size:.8rem; letter-spacing:0; }
+#app .quiz-card-actions .quiz-order-action { font-size:1.05rem; font-weight:800; line-height:1; }
+#app .quiz-card-actions .quiz-order-action:disabled { opacity:.28; cursor:not-allowed; transform:none!important; }
+@media(max-width:760px){#app .library-sort-control{width:100%;min-width:0;flex:1 1 auto}#app .library-sort-control select{max-width:100%}}
