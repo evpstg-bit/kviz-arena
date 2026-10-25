@@ -142,3 +142,8 @@ node server.js
 ## Navigation menu fix
 
 The floating menu stays open while moving the pointer from the hamburger button into the panel. Its surface is more opaque in both light and dark themes.
+
+
+## Последнее изменение главной страницы
+
+Карточки подключения студента и входа преподавателя расположены сразу под верхней панелью, выше заголовка «Знания, которые объединяют.» и блока «КАК ЭТО РАБОТАЕТ». Их HTML-классы и оформление сохранены. Подробности: `CHANGELOG-HOME-CARDS-ABOVE-HERO.md`.
