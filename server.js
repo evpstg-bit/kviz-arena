@@ -3,6 +3,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),crypto=require(
 const PORT=process.env.PORT||3000,games=new Map(),APP_VERSION=require('./package.json').version;
 const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,'data'),INVITE=process.env.INVITE_CODE||'';
 const rid=()=>crypto.randomBytes(6).toString('hex');
+const TEAM_NAMES=['Красные','Синие','Зелёные','Золотые'];
 const str=(s,n)=>String(s??'').slice(0,n);
 const same=(a,b)=>Array.isArray(a)&&a.length===b.length&&a.every((x,i)=>x===b[i]);
 const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -14,7 +15,7 @@ const DEFAULT_APP_SETTINGS={
   general:{defaultQuestionTime:20,maxPlayers:100,supportThreshold:60,autoOpenReports:true,showCorrectAnswerAfterQuestion:true},
   modes:{
     classic:{enabled:true,basePoints:1000,speedBonus:true},
-    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3}
+    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2}
   }
 };
 const clampInt=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.min(max,Math.max(min,Math.round(Number(value)))):fallback;
@@ -32,7 +33,7 @@ function normalizeAppSettings(value){
     showCorrectAnswerAfterQuestion:g.showCorrectAnswerAfterQuestion!==false
   },modes:{
     classic:{enabled:c.enabled!==false,basePoints:clampInt(c.basePoints,100,3000,1000),speedBonus:c.speedBonus!==false},
-    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3)}
+    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3),kingdomCount:clampInt(k.kingdomCount,2,4,2)}
   }};
 }
 function readAppSettingsFile(){try{return normalizeAppSettings(JSON.parse(fs.readFileSync(path.join(__dirname,'app-settings.json'),'utf8')))}catch(e){return normalizeAppSettings(DEFAULT_APP_SETTINGS)}}
@@ -437,7 +438,7 @@ function newPlayer(g,name){
   const p={name,score:0,lastQ:-1,lastA:[],lastPts:0,log:[]};
   if(g.mode==='kingdoms'){
     Object.assign(p,{team:0,prog:0,flags:0,placed:0,correctN:0,answeredN:0,qn:0,fb:null,queue:[],qi:0,cur:0});
-    if(g.kb){const c=[0,1].map(t=>[...g.players.values()].filter(x=>x.team===t).length);p.team=c[0]<c[1]?0:c[1]<c[0]?1:Math.round(Math.random());initQ(g,p)}
+    if(g.kb){const count=g.kb.kingdomCount||2,c=Array.from({length:count},(_,t)=>[...g.players.values()].filter(x=>x.team===t).length);p.team=c.indexOf(Math.min(...c));initQ(g,p)}
   }
   return p;
 }
@@ -471,7 +472,7 @@ function makeGameReport(g,{incomplete=false}={}){
   const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
   const totalPossible=g.mode==='classic'?participants.length*questions.length:null;
   const teamKeys=[...new Set(participants.map(p=>p.team).filter(Number.isInteger))].sort((a,b)=>a-b);
-  const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:k===0?'Красные':'Синие',members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:answers?Math.round(correctCount/answers*100):0,flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
+  const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:answers?Math.round(correctCount/answers*100):0,flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
   const accuracies=participants.filter(p=>p.answeredCount>0).map(p=>p.accuracy);
   return{id:'report-'+g.pin+'-'+Date.now().toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),completedAt:Date.now(),incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:totalAnswers?Math.round(totalCorrect/totalAnswers*100):0,averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds:Math.max(0,Math.round((Date.now()-(g.born||Date.now()))/1000)),winner:g.kb?g.kb.winner:null}};
 }
@@ -500,7 +501,8 @@ async function saveGameReport(g,options={}){
 function view(g,id,R0){
   const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
   const v={state:g.state,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
-    elapsed:Date.now()-g.qStart,host,top:R.slice(0,5).map(p=>({name:p.name,score:p.score}))};
+    elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:R.slice(0,5).map(p=>({name:p.name,score:p.score}))};
+  if(host&&g.state==='lobby'){const app=g.appSettings||APP_SETTINGS;v.lobbySettings={classic:{basePoints:app.modes.classic.basePoints,speedBonus:app.modes.classic.speedBonus},kingdoms:{durationMinutes:g.quiz.dur,correctAnswersForFlag:g.quiz.need,kingdomCount:clampInt(app.modes.kingdoms.kingdomCount,2,4,2)}}}
   if(host&&g.reportId)v.reportId=g.reportId;
   if(g.state==='question'||g.state==='results')v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1};
   if(g.state==='results'&&(host||(g.appSettings||APP_SETTINGS).general.showCorrectAnswerAfterQuestion))v.correct=q.cs;
@@ -529,13 +531,34 @@ function startQ(g){
 }
 function toResults(g){if(g.state!=='question')return;clearTimeout(g.timer);g.state='results';push(g)}
 
-// ---- Color Kingdoms (две команды, темп у каждого свой) ----
-const adjN=(i,N)=>{const x=i%N,y=(i-x)/N,r=[];if(x>0)r.push(i-1);if(x<N-1)r.push(i+1);if(y>0)r.push(i-N);if(y<N-1)r.push(i+N);return r};
+// ---- Color Kingdoms: six-neighbour hex map and 2–4 kingdoms ----
+const adjN=(i,N)=>{
+  const x=i%N,y=Math.floor(i/N),r=[];
+  if(x>0)r.push(i-1);if(x<N-1)r.push(i+1);
+  const diagonals=y%2===0?[-1,0]:[0,1];
+  for(const yy of [y-1,y+1]){
+    if(yy<0||yy>=N)continue;
+    for(const dx of diagonals){const xx=x+dx;if(xx>=0&&xx<N)r.push(yy*N+xx)}
+  }
+  return r;
+};
 function resetBoard(kb){
-  const N=kb.N,R=N-1-Math.round(N/4),r=Math.round(N/4);
-  kb.board=Array(N*N).fill(-1);
-  [[r,r,1],[R,R,-1]].forEach(([y,x,d],t)=>{[[y,x],[y,x+d],[y+d,x]].forEach(([yy,xx])=>kb.board[yy*N+xx]=t)});
-  kb.rooks=[r*N+r,R*N+R];kb.hot=[];
+  const N=kb.N,R=N-1-Math.round(N/4),r=Math.round(N/4),count=kb.kingdomCount||2;
+  const forts=[
+    {y:r,x:r,arms:[[0,0],[0,1],[1,0]]},
+    {y:R,x:R,arms:[[0,0],[0,-1],[-1,0]]},
+    {y:r,x:R,arms:[[0,0],[0,-1],[1,0]]},
+    {y:R,x:r,arms:[[0,0],[0,1],[-1,0]]}
+  ];
+  kb.board=Array(N*N).fill(-1);kb.rooks=Array(count).fill(-1);
+  forts.slice(0,count).forEach((fort,team)=>{
+    kb.rooks[team]=fort.y*N+fort.x;
+    fort.arms.forEach(([dy,dx])=>{
+      const yy=fort.y+dy,xx=fort.x+dx;
+      if(yy>=0&&yy<N&&xx>=0&&xx<N)kb.board[yy*N+xx]=team;
+    });
+  });
+  kb.hot=[];
 }
 function initQ(g,p){p.queue=shuffle(g.quiz.q.map((_,i)=>i));p.qi=0;p.cur=p.queue[0]}
 function nextQ(g,p){
@@ -544,19 +567,26 @@ function nextQ(g,p){
   p.cur=p.queue[p.qi];
 }
 function startK(g){
-  const ids=shuffle([...g.players.keys()]);ids.forEach((id,i)=>{const p=g.players.get(id);p.team=i%2;initQ(g,p)});
-  const n=ids.length,N=n<=10?9:n<=20?11:n<=35?15:n<=60?17:19;
-  const kb=g.kb={N,round:1,trophies:[0,0],need:g.quiz.need,dur:g.quiz.dur*60000,banner:null,winner:null};
-  resetBoard(kb);kb.endsAt=Date.now()+kb.dur;g.state='playing';clearTimeout(g.timer);g.timer=setTimeout(()=>finishK(g),kb.dur+200);push(g);
+  const ids=shuffle([...g.players.keys()]),n=ids.length,N=n<=10?9:n<=20?11:n<=35?15:n<=60?17:19;
+  const cfg=(g.appSettings||APP_SETTINGS).modes.kingdoms||APP_SETTINGS.modes.kingdoms;
+  const kingdomCount=clampInt(cfg.kingdomCount,2,4,2),durationMinutes=clampInt(g.quiz.dur,5,20,cfg.durationMinutes),need=clampInt(g.quiz.need,1,5,cfg.correctAnswersForFlag);
+  const kb=g.kb={N,kingdomCount,round:1,trophies:Array(kingdomCount).fill(0),need,dur:durationMinutes*60000,banner:null,winner:null};
+  resetBoard(kb);ids.forEach((id,i)=>{const p=g.players.get(id);p.team=i%kingdomCount;initQ(g,p)});
+  kb.endsAt=Date.now()+kb.dur;g.state='playing';clearTimeout(g.timer);g.timer=setTimeout(()=>finishK(g),kb.dur+200);push(g);
 }
 async function finishK(g){
-  if(g.state!=='playing')return;clearTimeout(g.timer);const kb=g.kb,t=[0,1].map(k=>kb.board.filter(o=>o===k).length);
-  if(t[0]!==t[1])kb.trophies[t[0]>t[1]?0:1]++;           // время вышло: у кого больше клеток — тот берёт трофей
-  kb.winner=kb.trophies[0]!==kb.trophies[1]?(kb.trophies[0]>kb.trophies[1]?0:1):(t[0]!==t[1]?(t[0]>t[1]?0:1):-1);
+  if(g.state!=='playing')return;
+  clearTimeout(g.timer);
+  const kb=g.kb,count=kb.kingdomCount||2,tiles=Array.from({length:count},(_,k)=>kb.board.filter(o=>o===k).length),maxTiles=Math.max(...tiles);
+  const territorialLeaders=tiles.map((n,k)=>n===maxTiles?k:-1).filter(k=>k>=0);
+  if(territorialLeaders.length===1)kb.trophies[territorialLeaders[0]]++;
+  const maxTrophies=Math.max(...kb.trophies),trophyLeaders=kb.trophies.map((n,k)=>n===maxTrophies?k:-1).filter(k=>k>=0);
+  if(trophyLeaders.length===1)kb.winner=trophyLeaders[0];
+  else kb.winner=territorialLeaders.length===1?territorialLeaders[0]:-1;
   g.state='final';await saveGameReport(g);push(g);
 }
 const validTiles=(kb,team)=>{const r=[];for(let i=0;i<kb.board.length;i++)if(kb.board[i]!==team&&!kb.rooks.includes(i)&&adjN(i,kb.N).some(j=>kb.board[j]===team))r.push(i);return r};
-function enclose(kb,team){ // клетки, полностью окружённые территорией команды (край поля не считается стеной)
+function enclose(kb,team){
   const N=kb.N,b=kb.board,seen=new Uint8Array(N*N),st=[],add=i=>{if(b[i]!==team&&!seen[i]){seen[i]=1;st.push(i)}};
   for(let k=0;k<N;k++){add(k);add((N-1)*N+k);add(k*N);add(k*N+N-1)}
   while(st.length){const i=st.pop();adjN(i,N).forEach(add)}
@@ -567,7 +597,8 @@ function placeK(g,p,tile){
   if(!(p.flags>0)||!Number.isInteger(tile)||!validTiles(kb,p.team).includes(tile))return false;
   kb.board[tile]=p.team;p.flags--;p.placed++;
   const caught=enclose(kb,p.team);caught.forEach(i=>{kb.board[i]=p.team});kb.hot=[tile,...caught];
-  if(caught.includes(kb.rooks[1-p.team])){kb.trophies[p.team]++;kb.banner={team:p.team,at:Date.now()};kb.round++;resetBoard(kb)}
+  const captured=kb.rooks.map((rook,team)=>({rook,team})).filter(x=>x.team!==p.team&&caught.includes(x.rook));
+  if(captured.length){kb.trophies[p.team]+=captured.length;kb.banner={team:p.team,at:Date.now()};kb.round++;resetBoard(kb)}
   return true;
 }
 function answerK(g,p,b){
@@ -579,9 +610,9 @@ function answerK(g,p,b){
   p.lastAnswerOk=ok;p.lastAnswerAt=Date.now();p.fb={id:p.qn,ok,correct:qq.cs,ans:qq.cs.map(i=>qq.a[i])};p.qn++;nextQ(g,p);return true;
 }
 function commonK(g,R){
-  const kb=g.kb,now=Date.now();
-  const stats=[0,1].map(t=>{const m=R.filter(p=>p.team===t);return{k:t,tiles:kb.board.filter(o=>o===t).length,members:m.length,trophies:kb.trophies[t],correct:m.reduce((s,p)=>s+p.correctN,0),flags:m.reduce((s,p)=>s+p.placed,0)}});
-  return{state:g.state,mode:'kingdoms',pin:g.pin,title:g.quiz.title,N:kb.N,board:kb.board,rooks:kb.rooks,hot:kb.hot,round:kb.round,need:kb.need,dur:kb.dur,reportId:g.reportId||null,
+  const kb=g.kb,now=Date.now(),count=kb.kingdomCount||2;
+  const stats=Array.from({length:count},(_,t)=>{const m=R.filter(p=>p.team===t);return{k:t,name:TEAM_NAMES[t]||('Королевство '+(t+1)),tiles:kb.board.filter(o=>o===t).length,members:m.length,trophies:kb.trophies[t],correct:m.reduce((s,p)=>s+p.correctN,0),flags:m.reduce((s,p)=>s+p.placed,0)}});
+  return{state:g.state,mode:'kingdoms',pin:g.pin,title:g.quiz.title,N:kb.N,kingdomCount:count,board:kb.board,rooks:kb.rooks,hot:kb.hot,round:kb.round,need:kb.need,dur:kb.dur,reportId:g.reportId||null,
     left:g.state==='playing'?Math.max(0,kb.endsAt-now):0,stats,winner:kb.winner,locked:!!g.locked,total:g.quiz.q.length,
     banner:kb.banner&&now-kb.banner.at<4500?{team:kb.banner.team,age:now-kb.banner.at,n:kb.round}:null,
     top:R.slice().sort((a,b)=>b.placed-a.placed||b.correctN-a.correctN).slice(0,8).map(p=>({name:p.name,team:p.team,placed:p.placed,correct:p.correctN}))};
@@ -884,6 +915,23 @@ http.createServer(async(req,res)=>{
   }
   if(u.pathname==='/api/action'){
     const host=b.id===g.hostId,p=g.players.get(b.id),KM=g.mode==='kingdoms';
+    if(b.type==='lobby-settings'){
+      if(!host)return json(res,{error:'Изменять настройки лобби может только ведущий'},403);
+      if(g.state!=='lobby')return json(res,{error:'Настройки можно менять только до начала игры'},400);
+      const incoming=b.settings&&typeof b.settings==='object'?b.settings:{},next=normalizeAppSettings(g.appSettings||APP_SETTINGS);
+      if(KM){
+        const value=incoming.kingdoms&&typeof incoming.kingdoms==='object'?incoming.kingdoms:{};
+        next.modes.kingdoms.durationMinutes=clampInt(value.durationMinutes,5,20,next.modes.kingdoms.durationMinutes);
+        next.modes.kingdoms.correctAnswersForFlag=clampInt(value.correctAnswersForFlag,1,5,next.modes.kingdoms.correctAnswersForFlag);
+        next.modes.kingdoms.kingdomCount=clampInt(value.kingdomCount,2,4,next.modes.kingdoms.kingdomCount);
+        g.quiz.dur=next.modes.kingdoms.durationMinutes;g.quiz.need=next.modes.kingdoms.correctAnswersForFlag;
+      }else{
+        const value=incoming.classic&&typeof incoming.classic==='object'?incoming.classic:{};
+        next.modes.classic.basePoints=clampInt(value.basePoints,100,3000,next.modes.classic.basePoints);
+        if(typeof value.speedBonus==='boolean')next.modes.classic.speedBonus=value.speedBonus;
+      }
+      g.appSettings=next;push(g);return json(res,{ok:1});
+    }
     if(host&&b.type==='start'&&g.state==='lobby'&&g.players.size){
       try{
         if(KM)startK(g);else{g.qi=0;startQ(g)}
