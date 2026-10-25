@@ -292,7 +292,7 @@ function removePlayer(g,id,msg){
   const p=g.players.get(id);if(!p)return;
   g.left.push({id,name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:Array.isArray(p.log)?p.log.map(l=>({...l,a:Array.isArray(l.a)?[...l.a]:[]})):[]});
   g.players.delete(id);
-  [...g.clients].filter(c=>c.id===id).forEach(c=>{if(msg)c.res.write('data: '+JSON.stringify(msg)+'\n\n');c.res.end();g.clients.delete(c)});
+  [...g.clients].filter(c=>c.id===id).forEach(c=>{if(msg)safeSseWrite(g,c,msg);try{if(!c.res.destroyed&&!c.res.writableEnded)c.res.end()}catch(e){}g.clients.delete(c)});
   if(g.state==='question'&&g.players.size&&[...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
 }
 
@@ -437,11 +437,26 @@ function viewK(g,id,C){
   return v;
 }
 function viewAny(g,id,R,C){return g.mode==='kingdoms'&&g.kb&&g.state!=='lobby'?viewK(g,id,C||commonK(g,R)):view(g,id,R)}
-function push(g){
-  const R=ranked(g),C=g.mode==='kingdoms'&&g.kb&&g.state!=='lobby'?commonK(g,R):null;
-  g.clients.forEach(c=>c.res.write('data: '+JSON.stringify(viewAny(g,c.id,R,C))+'\n\n'));
+function safeSseWrite(g,c,payload){
+  const res=c&&c.res;
+  if(!res||res.destroyed||res.writableEnded){if(g&&g.clients)g.clients.delete(c);return false}
+  try{res.write('data: '+JSON.stringify(payload)+'\n\n');return true}
+  catch(e){
+    // A mobile client may drop its SSE connection just as a large board update is broadcast.
+    // Never let a closed stream crash the whole game process and erase every in-memory room.
+    if(g&&g.clients)g.clients.delete(c);
+    try{if(!res.destroyed&&!res.writableEnded)res.end()}catch(_){}
+    console.warn('SSE-клиент отключён при отправке обновления:',e.message);
+    return false;
+  }
 }
-const pushOne=(g,id)=>{const R=ranked(g),C=g.kb?commonK(g,R):null;g.clients.forEach(c=>{if(c.id===id)c.res.write('data: '+JSON.stringify(viewAny(g,id,R,C))+'\n\n')})};
+function push(g){
+  try{
+    const R=ranked(g),C=g.mode==='kingdoms'&&g.kb&&g.state!=='lobby'?commonK(g,R):null;
+    [...g.clients].forEach(c=>{try{safeSseWrite(g,c,viewAny(g,c.id,R,C))}catch(e){g.clients.delete(c);try{if(!c.res.destroyed&&!c.res.writableEnded)c.res.end()}catch(_){}console.error('Ошибка обновления клиента:',e.message)}});
+  }catch(e){console.error('Ошибка рассылки состояния игры '+g.pin+':',e.stack||e.message)}
+}
+const pushOne=(g,id)=>{try{const R=ranked(g),C=g.kb?commonK(g,R):null;g.clients.forEach(c=>{if(c.id===id){try{safeSseWrite(g,c,viewAny(g,id,R,C))}catch(e){g.clients.delete(c);console.error('Ошибка персонального обновления:',e.message)}}})}catch(e){console.error('Ошибка персональной рассылки '+g.pin+':',e.stack||e.message)}};
 const sched=g=>{if(g.pend)return;g.pend=setTimeout(()=>{g.pend=0;push(g)},180)};
 
 // ================= HTTP =================
@@ -465,10 +480,12 @@ http.createServer(async(req,res)=>{
     const g=games.get(u.searchParams.get('pin')),id=u.searchParams.get('id');
     if(!g||(id!==g.hostId&&!g.players.has(id))){res.writeHead(404);return res.end()}
     res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive','X-Accel-Buffering':'no'});
-    const c={res,id};g.clients.add(c);const R=ranked(g);res.write('data: '+JSON.stringify(viewAny(g,id,R))+'\n\n');
+    const c={res,id};g.clients.add(c);
+    try{const R=ranked(g);if(!safeSseWrite(g,c,viewAny(g,id,R))){try{res.end()}catch(_){};return}}
+    catch(e){g.clients.delete(c);console.error('Не удалось отправить начальное состояние игры:',e.stack||e.message);try{res.end()}catch(_){};return}
     // Broadcast connection status so the host's participant panel updates immediately.
     push(g);
-    const ka=setInterval(()=>res.write(': ka\n\n'),15000);
+    const ka=setInterval(()=>{try{if(res.destroyed||res.writableEnded){clearInterval(ka);g.clients.delete(c);return}res.write(': ka\n\n')}catch(e){clearInterval(ka);g.clients.delete(c);try{if(!res.destroyed&&!res.writableEnded)res.end()}catch(_){}}},15000);
     req.on('close',()=>{clearInterval(ka);g.clients.delete(c);setImmediate(()=>{if(games.get(g.pin)===g)push(g)})});return;
   }
   if(req.method==='GET'&&u.pathname==='/api/info'){
@@ -686,7 +703,16 @@ http.createServer(async(req,res)=>{
   }
   if(u.pathname==='/api/action'){
     const host=b.id===g.hostId,p=g.players.get(b.id),KM=g.mode==='kingdoms';
-    if(host&&b.type==='start'&&g.state==='lobby'&&g.players.size){if(KM)startK(g);else{g.qi=0;startQ(g)}}
+    if(host&&b.type==='start'&&g.state==='lobby'&&g.players.size){
+      try{
+        if(KM)startK(g);else{g.qi=0;startQ(g)}
+      }catch(e){
+        console.error('Не удалось запустить игру '+g.pin+' ('+g.mode+'):',e.stack||e.message);
+        clearTimeout(g.timer);g.timer=null;
+        if(KM){g.kb=null;g.state='lobby'}else{g.state='lobby';g.qi=0}
+        return json(res,{error:'Не удалось запустить игру. Комната сохранена; попробуйте ещё раз. Подробности записаны в журнал сервера.'},500);
+      }
+    }
     else if(host&&b.type==='skip'){if(KM)finishK(g);else toResults(g)}
     else if(host&&b.type==='lock'){g.locked=!g.locked;push(g)}
     else if(host&&!KM&&b.type==='next'&&g.state==='results'){

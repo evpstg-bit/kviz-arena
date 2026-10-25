@@ -8,15 +8,7 @@
     "showCorrectAnswerAfterQuestion": true
   },
   "modes": {
-    "classic": {
-      "enabled": true,
-      "basePoints": 1000,
-      "speedBonus": true
-    },
-    "kingdoms": {
-      "enabled": true,
-      "durationMinutes": 20,
-      "correctAnswersForFlag": 1
-    }
+    "classic": { "enabled": true, "basePoints": 1000, "speedBonus": true },
+    "kingdoms": { "enabled": true, "durationMinutes": 5, "correctAnswersForFlag": 3 }
   }
 }

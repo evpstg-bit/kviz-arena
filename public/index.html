@@ -26,6 +26,7 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportLoadError='',autoReportSeen='',autoReportPending='';
+let sseMissingChecks=0;
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
 try{const savedSort=localStorage.getItem('kviz-library-sort');if(['manual','title-asc','title-desc'].includes(savedSort))libSort=savedSort}catch(e){}
@@ -60,8 +61,11 @@ function clearSess(){try{sessionStorage.removeItem('qs')}catch(e){}}
 function connect(){
  if(es)es.close();fbSeen=-2;bnSeen=-1;fbUntil=0;banUntil=0;
  try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me}))}catch(e){}
- es=new EventSource('/api/events?pin='+pin+'&id='+me);
- es.onmessage=e=>{
+ const source=new EventSource('/api/events?pin='+encodeURIComponent(pin)+'&id='+encodeURIComponent(me));
+ es=source;
+ source.onmessage=e=>{
+  if(es!==source)return;
+  sseMissingChecks=0;
   S=JSON.parse(e.data);t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
   if(S.host&&CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&S.reportId){
@@ -80,13 +84,19 @@ function connect(){
   // painting the end-game screen and immediately replacing it with the report.
   if(!(autoReportPending&&view==='game'))render();
  };
- es.onerror=async()=>{
-  // Браузер обрывает поток и при обновлении страницы — поэтому игру «забываем» только если сервер подтвердил, что её нет.
-  if(es.readyState!==2||(S&&['final','ended','kicked'].includes(S.state)))return;
-  const r=await api('alive',{pin,id:me});
-  if(r.alive){setTimeout(()=>{if(es&&es.readyState===2)connect()},800);return}
-  if(r.error)return;
-  clearSess();S=null;view='home';msg='Игра не найдена или уже завершена';render();
+ source.onerror=async()=>{
+  // Ignore stale EventSource handlers after a reconnect or a deliberate navigation.
+  if(es!==source||source.readyState!==2||(S&&['final','ended','kicked'].includes(S.state)))return;
+  let r;
+  try{r=await api('alive',{pin,id:me})}catch(e){r={error:'Нет связи с сервером'}}
+  if(es!==source)return;
+  if(r&&r.alive){sseMissingChecks=0;setTimeout(()=>{if(es===source&&source.readyState===2)connect()},800);return}
+  if(r&&r.error){setTimeout(()=>{if(es===source&&source.readyState===2)connect()},1200);return}
+  // Confirm a missing room several times. Temporary routing/restart blips should not
+  // immediately throw every participant back to the home screen.
+  sseMissingChecks++;
+  if(sseMissingChecks<4){setTimeout(()=>{if(es===source&&source.readyState===2)connect()},700*sseMissingChecks);return}
+  clearSess();S=null;view='home';msg='Игра не найдена или уже завершена';sseMissingChecks=0;render();
  };
 }
 function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';render()}
@@ -766,6 +776,11 @@ function playerK(a){
  <div class="grid mt-3">${S.q.a.map((x,j)=>`<button data-user-content="true" class="ans a${j}${mu&&sel.includes(j)?' sel':''}${mu&&sel.length&&!sel.includes(j)?' dim':''}" onclick="${mu?'tg2('+j+')':'ansK(['+j+'])'}">${SH[j]} ${esc(x)}</button>`).join('')}</div>${mu?`<div class="c" style="margin-top:14px"><button ${sel.length?'':'disabled'} onclick="ansK(sel)">Ответить</button></div>`:''}`;
 }
 function ansK(a){if(!a.length||!S||!S.me)return;act('answer',a,{qn:S.me.qn});sel=[]}
+async function startHostedGame(){
+ const r=await act('start');
+ if(r&&r.error){msg=r.error;render();return}
+ if(r&&r.code){msg=r.error||'Не удалось запустить игру';render()}
+}
 function hostBar(){
  const KM=S.mode==='kingdoms';
  return (S.state==='lobby'?'':`<div class="c mut" style="margin-top:20px">Можно подключиться и сейчас: ${esc(joinUrl())} · PIN ${S.pin}</div>${showQR?qrBox(260):''}`)+`<div class="row justify-center" style="margin-top:16px">${S.state==='lobby'?'':`${KM&&S.state==='playing'?'<button class="sec" onclick="finishNow()">🏁 Подвести итоги</button>':''}<button class="sec" onclick="showQR=!showQR;render()">📱 QR-код</button><button class="sec" onclick="act('lock')">${S.locked?'🔓 Открыть вход':'🔒 Закрыть вход'}</button>`}<button class="sec" onclick="endGame()">Завершить игру</button></div>`;
@@ -777,7 +792,7 @@ function host(a){
  if(S.state==='lobby')return a.innerHTML=`<div class="c"><div class="row justify-center gap-10"><div><b>📱 Наведите камеру телефона</b>${qrBox(230)}<span class="mut">PIN подставится сам, останется ввести имя<br>🔍 Нажмите на QR-код — он откроется на весь экран</span></div>
  <div><p class="mut">или откройте в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и введите PIN:</p><div class="pin">${S.pin}</div></div></div><h2 data-user-content="true">${esc(S.title)}</h2><p class="mut">Режим: ${mode}</p>
  <div class="chips">${S.rows.map(p=>`<span class="chip"><span data-user-content="true">${esc(p.name)}</span><button type="button" class="player-kick" title="Исключить участника" aria-label="${tr('Исключить')} ${esc(p.name)}" onclick="kick('${p.id}')">✕</button></span>`).join('')||'<span class="mut">Ожидаем участников…</span>'}</div><p class="big">${N} / 100 участников</p>
- <button ${N?'':'disabled'} onclick="act('start')">Начать</button></div>`;
+ ${msg?`<p class="bad" role="alert">${esc(msg)}</p>`:''}<button ${N?'':'disabled'} onclick="startHostedGame()">Начать</button></div>`;
  if(S.state==='question')return a.innerHTML=`<div class="row justify-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span id="tm" class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-3xl font-black text-white shadow-lg"></span><span class="mut">Ответили: ${S.answered} / ${N}</span></div><div class="bar"><i id="tb"></i></div>
   <h1 data-user-content="true" class="my-8 text-4xl sm:text-5xl">${esc(q.t)}</h1>${q.multi?'<p class="c mut">Несколько правильных ответов — выберите все</p>':''}<div class="grid">${q.a.map((x,j)=>`<div data-user-content="true" class="ans a${j} text-xl sm:text-2xl">${SH[j]} ${esc(x)}</div>`).join('')}</div>
   <div class="c host-question-controls" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить вопрос</button></div>
