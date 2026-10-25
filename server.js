@@ -1,6 +1,6 @@
 // Квиз-арена: сервер без npm-зависимостей (Node.js 18+). Запуск: node server.js
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),os=require('os');
-const PORT=process.env.PORT||3000,MAX_PLAYERS=100,games=new Map();
+const PORT=process.env.PORT||3000,games=new Map();
 const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,'data'),INVITE=process.env.INVITE_CODE||'';
 const rid=()=>crypto.randomBytes(6).toString('hex');
 const str=(s,n)=>String(s??'').slice(0,n);
@@ -9,6 +9,38 @@ const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math
 
 // ================= хранилище: аккаунты, сессии, личные библиотеки =================
 const readJ=(f,d)=>{try{return JSON.parse(fs.readFileSync(path.join(DATA_DIR,f),'utf8'))}catch(e){return d}};
+const DEFAULT_APP_SETTINGS={
+  version:1,
+  general:{defaultQuestionTime:20,maxPlayers:100,supportThreshold:60,autoOpenReports:true,showCorrectAnswerAfterQuestion:true},
+  modes:{
+    classic:{enabled:true,basePoints:1000,speedBonus:true},
+    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3}
+  }
+};
+const clampInt=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.min(max,Math.max(min,Math.round(Number(value)))):fallback;
+function normalizeAppSettings(value){
+  const v=value&&typeof value==='object'?value:{};
+  const g=v.general&&typeof v.general==='object'?v.general:{};
+  const m=v.modes&&typeof v.modes==='object'?v.modes:{};
+  const c=m.classic&&typeof m.classic==='object'?m.classic:{};
+  const k=m.kingdoms&&typeof m.kingdoms==='object'?m.kingdoms:{};
+  return{version:1,general:{
+    defaultQuestionTime:clampInt(g.defaultQuestionTime,5,120,20),
+    maxPlayers:clampInt(g.maxPlayers,2,100,100),
+    supportThreshold:clampInt(g.supportThreshold,0,100,60),
+    autoOpenReports:g.autoOpenReports!==false,
+    showCorrectAnswerAfterQuestion:g.showCorrectAnswerAfterQuestion!==false
+  },modes:{
+    classic:{enabled:c.enabled!==false,basePoints:clampInt(c.basePoints,100,3000,1000),speedBonus:c.speedBonus!==false},
+    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,1,10,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3)}
+  }};
+}
+function readAppSettingsFile(){try{return normalizeAppSettings(JSON.parse(fs.readFileSync(path.join(__dirname,'app-settings.json'),'utf8')))}catch(e){return normalizeAppSettings(DEFAULT_APP_SETTINGS)}}
+function writeAppSettingsFile(value){
+  try{const file=path.join(__dirname,'app-settings.json'),tmp=file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(normalizeAppSettings(value),null,2)+'\n','utf8');fs.renameSync(tmp,file);return true}
+  catch(e){console.error('Не удалось записать app-settings.json:',e.message);return false}
+}
+let APP_SETTINGS=readAppSettingsFile();
 function writeJ(f,v){
   try{fs.mkdirSync(DATA_DIR,{recursive:true});const p=path.join(DATA_DIR,f),t=p+'.tmp';fs.writeFileSync(t,JSON.stringify(v));fs.renameSync(t,p);return true}
   catch(e){console.error('Не удалось записать',f+':',e.message);return false}
@@ -172,6 +204,35 @@ const githubConfig=()=>{
   const token=String(process.env.GITHUB_TOKEN||'').trim(),repo=String(process.env.GITHUB_REPOSITORY||'').trim(),branch=String(process.env.GITHUB_BRANCH||'main').trim();
   return token&&/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)?{token,repo,branch}:null;
 };
+async function githubReadAppSettings(cfg){
+  const url='https://api.github.com/repos/'+cfg.repo+'/contents/app-settings.json?ref='+encodeURIComponent(cfg.branch);
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'}});
+  if(r.status===404)return{sha:null,settings:readAppSettingsFile(),exists:false};
+  if(!r.ok)throw new Error('Не удалось прочитать app-settings.json из GitHub (HTTP '+r.status+'). Проверьте GITHUB_TOKEN, репозиторий, ветку и Contents: read/write.');
+  const data=await r.json();if(!data.content)throw new Error('GitHub вернул пустой app-settings.json');
+  let parsed;try{parsed=JSON.parse(Buffer.from(String(data.content).replace(/\s/g,''),'base64').toString('utf8'))}catch(e){throw new Error('В GitHub находится некорректный app-settings.json')}
+  return{sha:data.sha,settings:normalizeAppSettings(parsed),exists:true};
+}
+async function githubWriteAppSettings(cfg,sha,settings,message){
+  const url='https://api.github.com/repos/'+cfg.repo+'/contents/app-settings.json';
+  const body={message,content:Buffer.from(JSON.stringify(normalizeAppSettings(settings),null,2)+'\n','utf8').toString('base64'),branch:cfg.branch};if(sha)body.sha=sha;
+  return fetch(url,{method:'PUT',headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena','Content-Type':'application/json'},body:JSON.stringify(body)});
+}
+// Hydrate global settings from GitHub once per process before the UI or a new game relies on local defaults.
+let APP_SETTINGS_HYDRATED=false,APP_SETTINGS_HYDRATION=null;
+async function hydrateAppSettingsFromGitHub(){
+  const cfg=githubConfig();if(!cfg||APP_SETTINGS_HYDRATED)return;
+  if(!APP_SETTINGS_HYDRATION){
+    APP_SETTINGS_HYDRATION=(async()=>{
+      const remote=await githubReadAppSettings(cfg);
+      APP_SETTINGS=remote.settings;
+      if(remote.exists)writeAppSettingsFile(APP_SETTINGS);
+      APP_SETTINGS_HYDRATED=true;
+    })().catch(e=>{console.warn('Не удалось загрузить настройки из GitHub; используется локальный app-settings.json:',e.message)}).finally(()=>{APP_SETTINGS_HYDRATION=null});
+  }
+  await APP_SETTINGS_HYDRATION;
+}
+
 async function githubReadBuiltin(cfg){
   const url='https://api.github.com/repos/'+cfg.repo+'/contents/builtin-tests.json?ref='+encodeURIComponent(cfg.branch);
   const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'}});
@@ -257,7 +318,7 @@ function makeGameReport(g,{incomplete=false}={}){
   const teamKeys=[...new Set(participants.map(p=>p.team).filter(Number.isInteger))].sort((a,b)=>a-b);
   const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:k===0?'Красные':'Синие',members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:answers?Math.round(correctCount/answers*100):0,flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
   const accuracies=participants.filter(p=>p.answeredCount>0).map(p=>p.accuracy);
-  return{id:'report-'+g.pin+'-'+Date.now().toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',completedAt:Date.now(),incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:totalAnswers?Math.round(totalCorrect/totalAnswers*100):0,averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds:Math.max(0,Math.round((Date.now()-(g.born||Date.now()))/1000)),winner:g.kb?g.kb.winner:null}};
+  return{id:'report-'+g.pin+'-'+Date.now().toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),completedAt:Date.now(),incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:totalAnswers?Math.round(totalCorrect/totalAnswers*100):0,averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds:Math.max(0,Math.round((Date.now()-(g.born||Date.now()))/1000)),winner:g.kb?g.kb.winner:null}};
 }
 function saveGameReport(g,options={}){
   if(g.reportId)return g.reportId;
@@ -273,7 +334,7 @@ function view(g,id,R0){
     elapsed:Date.now()-g.qStart,host,top:R.slice(0,5).map(p=>({name:p.name,score:p.score}))};
   if(host&&g.reportId)v.reportId=g.reportId;
   if(g.state==='question'||g.state==='results')v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1};
-  if(g.state==='results')v.correct=q.cs;
+  if(g.state==='results'&&(host||(g.appSettings||APP_SETTINGS).general.showCorrectAnswerAfterQuestion))v.correct=q.cs;
   if(host){
     v.names=R.map(p=>p.name);
     v.rows=R.map(p=>{
@@ -409,11 +470,42 @@ http.createServer(async(req,res)=>{
     req.on('close',()=>{clearInterval(ka);g.clients.delete(c);setImmediate(()=>{if(games.get(g.pin)===g)push(g)})});return;
   }
   if(req.method==='GET'&&u.pathname==='/api/info'){
+    await hydrateAppSettingsFromGitHub();
     const urls=Object.values(os.networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).map(i=>'http://'+i.address+':'+PORT);
-    return json(res,{urls,hasUsers:USERS.length>0,regOpen:USERS.length===0||!!INVITE,needInvite:USERS.length>0&&!!INVITE});
+    return json(res,{urls,hasUsers:USERS.length>0,regOpen:USERS.length===0||!!INVITE,needInvite:USERS.length>0&&!!INVITE,settings:APP_SETTINGS});
   }
   if(req.method!=='POST')return json(res,{},404);
   const b=await body(req),werr=()=>json(res,{error:'Не удалось записать файл на сервере (проверьте права на папку data)'},500);
+
+  // ---------- global platform settings ----------
+  if(u.pathname.startsWith('/api/settings/')){
+    const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
+    if(!me.admin)return json(res,{error:'Настройки платформы доступны только администратору'},403);
+    const op=u.pathname.slice('/api/settings/'.length),cfg=githubConfig();
+    try{
+      if(op==='get'){
+        if(cfg){const remote=await githubReadAppSettings(cfg);APP_SETTINGS=remote.settings;APP_SETTINGS_HYDRATED=true;writeAppSettingsFile(APP_SETTINGS);return json(res,{settings:APP_SETTINGS,persistedToGitHub:remote.exists,source:remote.exists?'github':'local',notice:remote.exists?'':'Файл настроек пока не найден в GitHub. Сохраните настройки, чтобы создать его.'})}
+        APP_SETTINGS=readAppSettingsFile();return json(res,{settings:APP_SETTINGS,persistedToGitHub:false,source:'local'});
+      }
+      if(op==='save'){
+        const next=normalizeAppSettings(b.settings);
+        if(!next.modes.classic.enabled&&!next.modes.kingdoms.enabled)return json(res,{error:'Включите хотя бы один игровой режим.'},400);
+        if(cfg){
+          for(let attempt=0;attempt<3;attempt++){
+            const remote=await githubReadAppSettings(cfg),wr=await githubWriteAppSettings(cfg,remote.sha,next,'Update platform settings');
+            if((wr.status===409||wr.status===422)&&attempt<2)continue;
+            if(!wr.ok){const detail=await wr.text().catch(()=> '');throw new Error('Не удалось сохранить настройки в GitHub (HTTP '+wr.status+'). '+detail.slice(0,220))}
+            APP_SETTINGS=next;APP_SETTINGS_HYDRATED=true;writeAppSettingsFile(next);
+            return json(res,{ok:true,settings:APP_SETTINGS,persistedToGitHub:true,source:'github'});
+          }
+          throw new Error('Настройки одновременно изменились в GitHub. Повторите сохранение.');
+        }
+        if(!writeAppSettingsFile(next))return json(res,{error:'Не удалось записать app-settings.json'},500);
+        APP_SETTINGS=next;APP_SETTINGS_HYDRATED=true;return json(res,{ok:true,settings:APP_SETTINGS,persistedToGitHub:false,source:'local',notice:'Настройки записаны только в локальный файл. Для постоянного хранения на Render настройте GitHub-синхронизацию.'});
+      }
+    }catch(e){console.error('Ошибка настроек платформы:',e.message);return json(res,{error:e.message||'Не удалось обработать настройки'},500)}
+    return json(res,{error:'Неизвестная операция настроек'},404);
+  }
 
   // ---------- аккаунты ----------
   if(u.pathname.startsWith('/api/auth/')){
@@ -542,14 +634,18 @@ http.createServer(async(req,res)=>{
 
   // ---------- создание игры ----------
   if(u.pathname==='/api/create'){
+    await hydrateAppSettingsFromGitHub();
     const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
     const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Можно запускать только тесты из библиотеки проекта.'},403);
     const requestedMode=String(b.mode||'');
     if(!['classic','kingdoms'].includes(requestedMode))return json(res,{error:'Выберите режим игры перед запуском теста.'},400);
+    const modeSettings=APP_SETTINGS.modes[requestedMode];if(!modeSettings||!modeSettings.enabled)return json(res,{error:'Этот режим отключён в общих настройках платформы.'},403);
     const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Тест некорректен. Проверьте библиотеку тестов.'},400);
     quiz.mode=requestedMode;
+    if(requestedMode==='kingdoms'){quiz.dur=APP_SETTINGS.modes.kingdoms.durationMinutes;quiz.need=APP_SETTINGS.modes.kingdoms.correctAnswersForFlag;}
+    const gameSettings=JSON.parse(JSON.stringify(APP_SETTINGS));
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
-    const g={pin,hostId:rid(),owner:me.id,sourceId:source.id,quiz,state:'lobby',mode:requestedMode,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
+    const g={pin,hostId:rid(),owner:me.id,sourceId:source.id,quiz,state:'lobby',mode:requestedMode,appSettings:gameSettings,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
     games.set(pin,g);return json(res,{pin,id:g.hostId});
   }
 
@@ -558,7 +654,7 @@ http.createServer(async(req,res)=>{
   if(!g)return json(res,{error:'Игра не найдена'},404);
   if(u.pathname==='/api/join'){
     const name=str(b.name,16).trim();
-    if(g.players.size>=MAX_PLAYERS)return json(res,{error:'Игра заполнена (максимум '+MAX_PLAYERS+' игроков)'},400);
+    const playerLimit=(g.appSettings||APP_SETTINGS).general.maxPlayers;if(g.players.size>=playerLimit)return json(res,{error:'Игра заполнена (максимум '+playerLimit+' игроков)'},400);
     if(!name)return json(res,{error:'Введите имя'},400);
     if(g.state==='final'||g.state==='ended')return json(res,{error:'Игра уже завершена'},400);
     if(g.locked)return json(res,{error:'Ведущий закрыл вход в игру'},400);
@@ -585,7 +681,7 @@ http.createServer(async(req,res)=>{
     }else if(p&&!KM&&b.type==='answer'&&g.state==='question'){
       const qq=g.quiz.q[g.qi],T=qq.T*1000,el=Date.now()-g.qStart,sel=[...new Set([].concat(b.a).map(Number))].filter(Number.isInteger).sort((x,y)=>x-y);
       if(p.lastQ!==g.qi&&el<=T+300&&sel.length&&sel.every(x=>x>=0&&x<qq.a.length)){
-        const okk=same(sel,qq.cs),pts=okk?Math.round(1000*(1-Math.min(el,T)/T/2)):0;
+        const okk=same(sel,qq.cs),classicSettings=(g.appSettings||APP_SETTINGS).modes.classic,pts=okk?Math.round(classicSettings.basePoints*(classicSettings.speedBonus?1-Math.min(el,T)/T/2:1)):0;
         Object.assign(p,{score:p.score+pts,lastQ:g.qi,lastA:sel,lastPts:pts,lastMs:el});p.log.push({qi:g.qi,a:sel,ok:okk,pts,ms:el});
         if([...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
       }

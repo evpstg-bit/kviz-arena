@@ -1,7 +1,8 @@
 # Quiz data is stored in builtin-tests.json in the Git repository.
-# To make import/edit/copy/delete in the cabinet automatically commit changes,
+# To persist library and global platform settings automatically from the cabinet,
 # set these as secret / environment values in Render Dashboard:
 # GITHUB_TOKEN, GITHUB_REPOSITORY (owner/repo), GITHUB_BRANCH (e.g. main).
+# Grant the token Contents: Read and write. This syncs builtin-tests.json and app-settings.json.
 services:
   - type: web
     name: kviz-arena
