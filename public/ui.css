@@ -699,7 +699,9 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
   #app .modal, #app .dialog, #app .folder-dialog { max-width: calc(100vw - 24px); }
 }
 @media (max-width: 440px) {
-  #app { padding: 64px 12px 20px !important; }
+  /* Keep home/header screens near the top; reserve extra room only for headerless gameplay screens. */
+  #app { padding: 8px 12px 20px !important; }
+  #app:has(> .floating-menu-anchor) { padding-top: 64px !important; }
   #app .global-settings { justify-content: space-between; gap: 6px; }
   #app .global-settings .language-picker { flex: 1 1 auto; }
   #app .global-settings select { max-width: min(42vw, 155px); }

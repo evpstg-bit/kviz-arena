@@ -206,8 +206,7 @@ body { width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; margin:
   #app:has(> .floating-menu-anchor) { padding-top:max(46px, calc(env(safe-area-inset-top, 0px) + 38px)) !important; }
 }
 
-/* v1.10.4: remove excessive top space on mobile portrait home/auth screens.
-   The cache-busted stylesheet ensures this override reaches existing mobile browsers. */
+/* v1.10.5: mobile home/auth screens; responsive-v2.css is explicitly served by the app. */
 @media (max-width: 600px) and (orientation: portrait) {
   #app { padding-top: 6px !important; }
   #app > .site-app-topbar,
