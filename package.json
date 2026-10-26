@@ -1,6 +1,6 @@
 {
   "name": "kviz-arena",
-  "version": "1.13.6",
+  "version": "1.13.7",
   "private": true,
   "scripts": {
     "start": "node server.js",
