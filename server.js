@@ -982,6 +982,17 @@ http.createServer(async(req,res)=>{
   }
   if(u.pathname==='/api/action'){
     const host=b.id===g.hostId,p=g.players.get(b.id),KM=g.mode==='kingdoms';
+    // Handle moderation before the mode-specific action chain, so kicking works
+    // the same way in the lobby, Classic and Color Kingdoms.
+    if(b.type==='kick'){
+      if(!host)return json(res,{error:'Только ведущий может исключать игроков'},403);
+      const targetId=String(b.a||''),target=g.players.get(targetId);
+      if(!target)return json(res,{error:'Игрок уже отсутствует в этой комнате. Обновите список участников.'},409);
+      const removed={id:targetId,name:target.name};
+      removePlayer(g,targetId,{state:'kicked'});
+      console.log('Ведущий исключил игрока «'+removed.name+'» из комнаты '+g.pin);
+      return json(res,{ok:1,removed});
+    }
     if(b.type==='lobby-settings'){
       if(!host)return json(res,{error:'Изменять настройки лобби может только ведущий'},403);
       if(g.state!=='lobby')return json(res,{error:'Настройки можно менять только до начала игры'},400);
@@ -1025,7 +1036,6 @@ http.createServer(async(req,res)=>{
         if([...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
       }
     }else if(p&&b.type==='leave')removePlayer(g,b.id);
-    else if(host&&b.type==='kick'&&g.players.has(b.a))removePlayer(g,b.a,{state:'kicked'});
     else if(host&&b.type==='end'){
       await saveGameReport(g,{incomplete:g.state!=='final'});g.state='ended';clearTimeout(g.timer);clearTimeout(g.pend);push(g);
       setTimeout(()=>{g.clients.forEach(c=>c.res.end());games.delete(g.pin)},1500);
