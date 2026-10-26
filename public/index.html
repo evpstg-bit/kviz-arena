@@ -3,16 +3,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.4">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.4">
-<link rel="shortcut icon" href="/favicon.ico?v=1.13.4">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.4">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.5">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.5">
+<link rel="shortcut icon" href="/favicon.ico?v=1.13.5">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.5">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.13.4">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.13.4">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.13.4">
-<link rel="stylesheet" href="/lobby.css?v=1.13.4">
+<link rel="stylesheet" href="/ui.css?v=1.13.5">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.13.5">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.13.5">
+<link rel="stylesheet" href="/lobby.css?v=1.13.5">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -29,7 +29,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.4'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.5'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
@@ -422,7 +422,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.4')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.5')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -630,16 +630,17 @@ async function report(){
  if(typeof XLSX==='undefined')return alert('Библиотека Excel не загрузилась');
  const r=await api('report',{pin,id:me});if(r.error)return alert(r.error);
  const Q=r.questions,K=r.mode==='kingdoms',pc=(n,d)=>d?Math.round(n/d*100)+'%':'0%';
+ const coverage=p=>{const n=new Set((Array.isArray(p.log)?p.log:[]).map(l=>Number(l.qi)).filter(qi=>Number.isInteger(qi)&&qi>=0&&qi<Q.length)).size;return n+' / '+Q.length+' ('+pc(n,Q.length)+')'};
  const wb=XLSX.utils.book_new(),add=(n,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows.map((row,i)=>i===0?row.map(v=>typeof v==='string'?tr(v):v):row)),tr(n));
  add('Итоги',[['Показатель','Значение'],['Название теста',r.title],['Режим',K?'Color Kingdoms':'Classic'],['Время прохождения',formatReportDuration(r.playedSeconds)],['Количество вопросов',Q.length],['Участников',r.players.length]]);
  if(K){
   const P=[...r.players].sort((a,b)=>(b.placed||0)-(a.placed||0)||(b.correctN||0)-(a.correctN||0));
-  add('Рейтинг',[['Место','Имя','Команда','Флагов','Верно','Ответов','Точность'],...P.map((p,i)=>[i+1,p.name,KN[p.team]||'',p.placed||0,p.correctN||0,p.answeredN||0,pc(p.correctN||0,p.answeredN||0)])]);
+  add('Рейтинг',[['Место','Имя','Команда','Флагов','Верно','Ответов','Точность','Охват теста'],...P.map((p,i)=>[i+1,p.name,KN[p.team]||'',p.placed||0,p.correctN||0,p.answeredN||0,pc(p.correctN||0,p.answeredN||0),coverage(p)])]);
   add('По вопросам',[['№','Вопрос','Правильный ответ','Ответов','Верно','% верных'],...Q.map((q,i)=>{const L=P.flatMap(p=>p.log.filter(l=>l.qi===i)),ok=L.filter(l=>l.ok).length;return[i+1,q.t,q.cs.map(k=>q.a[k]).join(' + '),L.length,ok,pc(ok,L.length)]})]);
   if(r.teams)add('Команды',[['Команда','Трофеи','Клеток','Игроков','Флагов','Верных ответов'],...r.teams.map(t=>[KN[t.k],t.trophies,t.tiles,t.members,t.flags,t.correct])]);
  }else{
   const P=[...r.players].sort((a,b)=>b.score-a.score);
-  add('Рейтинг',[['Место','Имя','Очки','Верно','Отвечено','Всего вопросов','Точность'],...P.map((p,i)=>{const ok=p.log.filter(l=>l.ok).length;return[i+1,p.name,p.score,ok,p.log.length,Q.length,pc(ok,p.log.length)]})]);
+  add('Рейтинг',[['Место','Имя','Очки','Верно','Отвечено','Всего вопросов','Точность','Охват теста'],...P.map((p,i)=>{const ok=p.log.filter(l=>l.ok).length;return[i+1,p.name,p.score,ok,p.log.length,Q.length,pc(ok,p.log.length),coverage(p)]})]);
   add('Ответы',[['Имя',...Q.map((q,i)=>(i+1)+'. '+q.t)],...P.map(p=>[p.name,...Q.map((q,i)=>{const l=p.log.find(x=>x.qi===i);return l?(l.ok?'✓ ':'✗ ')+l.a.map(k=>q.a[k]).join(' + '):'—'})])]);
   add('По вопросам',[['№','Вопрос','Правильный ответ','Верно','Ответили','% верных'],...Q.map((q,i)=>{const L=P.map(p=>p.log.find(x=>x.qi===i)).filter(Boolean),ok=L.filter(l=>l.ok).length;return[i+1,q.t,q.cs.map(k=>q.a[k]).join(' + '),ok,L.length,pc(ok,L.length)]})]);
  }
@@ -647,6 +648,8 @@ async function report(){
 }
 function formatReportDuration(seconds){const total=Math.max(0,Math.floor(Number(seconds)||0)),hours=Math.floor(total/3600),minutes=Math.floor((total%3600)/60),secs=total%60,parts=[];if(hours)parts.push(hours+' '+tr('ч.'));if(minutes||hours)parts.push(minutes+' '+tr('мин.'));parts.push(secs+' '+tr('сек.'));return parts.join(' ')}
 function reportDate(ts){const lang=currentUiLanguage()==='zh'?'zh-CN':currentUiLanguage()==='en'?'en-US':'ru-RU';try{return new Date(ts).toLocaleString(lang,{dateStyle:'medium',timeStyle:'short'})}catch(e){return new Date(ts).toLocaleString()}}
+function reportUniqueAnsweredCount(p,totalQuestions){const total=Math.max(0,Number(totalQuestions)||0);if(p&&p.uniqueAnsweredCount!==undefined&&Number.isFinite(Number(p.uniqueAnsweredCount)))return Math.max(0,Math.min(total,Math.floor(Number(p.uniqueAnsweredCount))));const logs=Array.isArray(p&&p.log)?p.log:[];return new Set(logs.map(l=>Number(l.qi)).filter(qi=>Number.isInteger(qi)&&qi>=0&&qi<total)).size}
+function reportCoverageLabel(p,totalQuestions){const total=Math.max(0,Number(totalQuestions)||0),done=reportUniqueAnsweredCount(p,total);return done+' / '+total+' ('+(total?Math.round(done/total*100):0)+'%)'}
 function clearReportFiltersState(){
  reportSearch='';reportPeriod='all';reportSort='date-desc';reportFrom='';reportTo='';reportMode='all';reportStatus='all';
 }
@@ -830,11 +833,11 @@ function reportDetailPage(a){
    }).join('');
    const wrongContent=wrongAnswerHtml||`<p class="report-participant-no-errors">${tr('Ошибочных ответов у участника нет.')}</p>`;
    const skippedNote=p.unansweredCount>0?`<p class="report-participant-skipped">${tr('Пропущено вопросов')}: ${p.unansweredCount}</p>`:'';
-   const row=`<tr class="report-participant-main-row"><td><span class="report-rank">${p.rank}</span></td><td><button type="button" class="report-participant-trigger" onclick="toggleReportParticipant(${Number(p.rank)||0})" aria-expanded="${open?'true':'false'}"><b data-user-content="true">${esc(p.name)}</b><span aria-hidden="true">${open?'−':'+'}</span></button>${p.removed?`<small class="report-status-removed">${tr('Вышел или исключён')}</small>`:''}</td><td><b class="report-points">${r.mode==='kingdoms'?(p.placed+' '+tr('флагов')):p.score}</b></td><td class="is-good">${p.correctCount}</td><td class="is-bad">${p.incorrectCount}</td><td>${p.unansweredCount===null?'—':p.unansweredCount}</td><td><span class="report-accuracy ${p.accuracy<(r.supportThreshold??60)?'is-low':''}">${p.accuracy}%</span></td><td>${p.accuracy<(r.supportThreshold??60)||p.answeredCount===0?`<span class="report-help-status">${tr('Нуждается в помощи')}</span>`:`<span class="report-ok-status">${tr('Уверенно')}</span>`}</td></tr>`;
-   const detail=open?`<tr class="report-participant-detail-row"><td colspan="8"><div class="report-participant-detail"><div class="report-participant-detail-head"><strong>${tr('Вопросы с неправильными ответами')}</strong><span class="report-count-pill">${wrongLogs.length}</span></div>${wrongContent}${skippedNote}</div></td></tr>`:'';
+   const row=`<tr class="report-participant-main-row"><td><span class="report-rank">${p.rank}</span></td><td><button type="button" class="report-participant-trigger" onclick="toggleReportParticipant(${Number(p.rank)||0})" aria-expanded="${open?'true':'false'}"><b data-user-content="true">${esc(p.name)}</b><span aria-hidden="true">${open?'−':'+'}</span></button>${p.removed?`<small class="report-status-removed">${tr('Вышел или исключён')}</small>`:''}</td><td><b class="report-points">${r.mode==='kingdoms'?(p.placed+' '+tr('флагов')):p.score}</b></td><td class="is-good">${p.correctCount}</td><td class="is-bad">${p.incorrectCount}</td><td>${p.unansweredCount===null?'—':p.unansweredCount}</td><td><span class="report-coverage">${reportCoverageLabel(p,qs.length)}</span></td><td><span class="report-accuracy ${p.accuracy<(r.supportThreshold??60)?'is-low':''}">${p.accuracy}%</span></td><td>${p.accuracy<(r.supportThreshold??60)||p.answeredCount===0?`<span class="report-help-status">${tr('Нуждается в помощи')}</span>`:`<span class="report-ok-status">${tr('Уверенно')}</span>`}</td></tr>`;
+   const detail=open?`<tr class="report-participant-detail-row"><td colspan="9"><div class="report-participant-detail"><div class="report-participant-detail-head"><strong>${tr('Вопросы с неправильными ответами')}</strong><span class="report-count-pill">${wrongLogs.length}</span></div>${wrongContent}${skippedNote}</div></td></tr>`:'';
    return row+detail;
   }).join('');
-  participantContent=filtered.length?`<div class="report-question-tools report-participant-tools"><label for="report-participant-sort">${tr('Сортировка участников')}</label><select id="report-participant-sort" onchange="reportParticipantSort=this.value;render()">${participantSortOptions}</select></div><p class="report-participant-hint">${tr('Нажмите на участника, чтобы посмотреть ошибки')}</p><div class="report-table-wrap"><table class="report-table"><thead><tr><th>${tr('Место')}</th><th>${tr('Участник')}</th><th>${r.mode==='kingdoms'?tr('Флаги'):tr('Баллы')}</th><th>${tr('Верно')}</th><th>${tr('Неверно')}</th><th>${tr('Пропуски')}</th><th>${tr('Точность')}</th><th>${tr('Статус')}</th></tr></thead><tbody>${participantRows}</tbody></table></div>`:`<div class="report-empty-inline"><h3>${tr('Нет участников в этой категории')}</h3><p>${tr('Все участники будут показаны здесь после завершения игры.')}</p></div>`;
+  participantContent=filtered.length?`<div class="report-question-tools report-participant-tools"><label for="report-participant-sort">${tr('Сортировка участников')}</label><select id="report-participant-sort" onchange="reportParticipantSort=this.value;render()">${participantSortOptions}</select></div><p class="report-participant-hint">${tr('Нажмите на участника, чтобы посмотреть ошибки')}</p><div class="report-table-wrap"><table class="report-table"><thead><tr><th>${tr('Место')}</th><th>${tr('Участник')}</th><th>${r.mode==='kingdoms'?tr('Флаги'):tr('Баллы')}</th><th>${tr('Верно')}</th><th>${tr('Неверно')}</th><th>${tr('Пропуски')}</th><th>${tr('Охват теста')}</th><th>${tr('Точность')}</th><th>${tr('Статус')}</th></tr></thead><tbody>${participantRows}</tbody></table></div>`:`<div class="report-empty-inline"><h3>${tr('Нет участников в этой категории')}</h3><p>${tr('Все участники будут показаны здесь после завершения игры.')}</p></div>`;
 
  }
  const participantsHtml=`<div class="report-subtabs">${partSubTabs.map(([key,label])=>`<button class="report-subtab ${participantTab===key?'is-active':''}" onclick="participantTab='${key}';render()">${tr(label)}</button>`).join('')}</div>${participantContent}`;
@@ -848,7 +851,7 @@ function exportReportXlsx(){
  const wb=XLSX.utils.book_new(),add=(name,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),tr(name));
  const pc=(n,d)=>d?Math.round(n/d*100)+'%':'0%';
  add('Summary',[['Тест',r.title],['Режим',tr(r.modeName||r.mode)],['Дата',reportDate(r.completedAt)],['Участников',r.participantCount],['Вопросов',r.questionCount],['Ответов',r.summary.totalAnswers],['Правильных ответов',r.summary.totalCorrect],['Неправильных ответов',r.summary.totalIncorrect],['Точность',pc(r.summary.totalCorrect,r.summary.totalAnswers)],['Средний балл',r.summary.averageScore]]);
- add('Participants',[['Место','Участник','Очки','Правильно','Неправильно','Пропуски','Точность','Статус'],...r.participants.map(p=>[p.rank,p.name,r.mode==='kingdoms'?p.placed:p.score,p.correctCount,p.incorrectCount,p.unansweredCount===null?'—':p.unansweredCount,pc(p.correctCount,p.answeredCount),p.removed?'Вышел или исключён':''])]);
+ add('Participants',[['Место','Участник','Очки','Правильно','Неправильно','Пропуски','Точность ответов','Охват теста','Статус'],...r.participants.map(p=>[p.rank,p.name,r.mode==='kingdoms'?p.placed:p.score,p.correctCount,p.incorrectCount,p.unansweredCount===null?'—':p.unansweredCount,pc(p.correctCount,p.answeredCount),reportCoverageLabel(p,r.questionCount),p.removed?'Вышел или исключён':''])]);
  add('Questions',[['№','Вопрос','Правильный ответ','Ответов','Правильных','Неправильных','Точность'],...r.questions.map(q=>[q.index,q.t,q.correctText.join(' / '),q.responseCount,q.correctCount,q.incorrectCount,pc(q.correctCount,q.responseCount)])]);
  if(r.teams.length)add('Teams',[['Команда','Участников','Очки','Флаги','Клетки','Правильных','Неправильных','Точность'],...r.teams.map(t=>[t.name,t.members,t.points,t.flags,t.tiles,t.correctCount,t.incorrectCount,pc(t.correctCount,t.answers)])]);
  XLSX.writeFile(wb,'report-'+String(r.title||'quiz').replace(/[^\p{L}\p{N}-]+/gu,'-').slice(0,40)+'-'+r.pin+'.xlsx');
@@ -1311,7 +1314,7 @@ Object.assign(UI_TRANSLATIONS.en,{
  'Точность по возрастанию':'Accuracy: low to high','Больше пропусков':'Most unanswered questions',
  'Нажмите на участника, чтобы посмотреть ошибки':'Select a participant to inspect incorrect answers',
  'Вопросы с неправильными ответами':'Questions answered incorrectly','Ответ участника':'Participant answer',
- 'Ошибочных ответов у участника нет.':'This participant has no incorrect answers.','Пропущено вопросов':'Questions skipped'
+ 'Ошибочных ответов у участника нет.':'This participant has no incorrect answers.','Пропущено вопросов':'Questions skipped','Охват теста':'Test coverage'
 });
 Object.assign(UI_TRANSLATIONS.zh,{
  'Сортировка участников':'参与者排序','По месту':'按排名','Имя А—Я':'姓名升序','Имя Я—А':'姓名降序',
@@ -1320,7 +1323,7 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Точность по возрастанию':'正确率从低到高','Больше пропусков':'未作答题目较多优先',
  'Нажмите на участника, чтобы посмотреть ошибки':'点击参与者查看答错的问题',
  'Вопросы с неправильными ответами':'答错的问题','Ответ участника':'参与者的答案',
- 'Ошибочных ответов у участника нет.':'该参与者没有答错的问题。','Пропущено вопросов':'未作答题目'
+ 'Ошибочных ответов у участника нет.':'该参与者没有答错的问题。','Пропущено вопросов':'未作答题目','Охват теста':'测验覆盖率'
 });
 
 Object.assign(UI_TRANSLATIONS.en,{
