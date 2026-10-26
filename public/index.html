@@ -1433,7 +1433,7 @@ function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  trackSiteNavigation();
  const real=$('app');vApp=document.createElement('div');
- try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());if(!(S&&S.host&&S.state==='lobby')&&!vApp.querySelector('.cabinet-menu-wrap'))vApp.insertAdjacentHTML('afterbegin',`<div class="floating-menu-anchor">${cabinetMenu('')}</div>`)}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
+ try{draw();if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());if(view!=='game'&&!vApp.querySelector('.cabinet-menu-wrap'))vApp.insertAdjacentHTML('afterbegin',`<div class="floating-menu-anchor">${cabinetMenu('')}</div>`)}finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
  if(view==='lib')filterLibrary();
  applyUiLanguage();
  enter();tick();
