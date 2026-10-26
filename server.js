@@ -497,6 +497,10 @@ function removePlayer(g,id,msg){
 }
 
 // Build an immutable teacher report from the completed game. Reports are private to the owner.
+function answeredAccuracy(correctCount,answeredCount){
+  const answered=Math.max(0,Number(answeredCount)||0),correct=Math.max(0,Number(correctCount)||0);
+  return answered?Math.round(Math.min(correct,answered)/answered*100):0;
+}
 function makeGameReport(g,{incomplete=false}={}){
   const roster=[...g.players.entries()].map(([id,p])=>({id,...p,removed:false})).concat((g.left||[]).map(p=>({...p,removed:true,log:Array.isArray(p.log)?p.log:[]})));
   const questions=(g.quiz.q||[]).map((q,qi)=>{
@@ -506,22 +510,22 @@ function makeGameReport(g,{incomplete=false}={}){
     const correctCount=attempts.filter(a=>a.ok).length,incorrectCount=attempts.length-correctCount;
     const groupAccuracy=roster.length?Math.round(correctCount/roster.length*1000)/10:0;
     const belowGroupThreshold=roster.length>0&&(correctCount/roster.length)<0.4;
-    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:attempts.length?Math.round(correctCount/attempts.length*100):0,groupAccuracy,belowGroupThreshold,answerCounts,attempts};
+    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:answeredAccuracy(correctCount,attempts.length),groupAccuracy,belowGroupThreshold,answerCounts,attempts};
   });
   const participants=roster.map(p=>{
     const logs=Array.isArray(p.log)?p.log:[],correctCount=logs.filter(l=>l.ok).length,incorrectCount=logs.length-correctCount;
     const uniqueQuestions=new Set(logs.map(l=>Number(l.qi))).size;
     const classicUnanswered=g.mode==='classic'?Math.max(0,questions.length-uniqueQuestions):null;
-    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,accuracy:logs.length?Math.round(correctCount/logs.length*100):0,removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
+    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,accuracy:answeredAccuracy(correctCount,logs.length),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
   }).sort((a,b)=>g.mode==='kingdoms'?(b.placed-a.placed||b.correctCount-a.correctCount||a.name.localeCompare(b.name)):(b.score-a.score||b.correctCount-a.correctCount||a.name.localeCompare(b.name)));
   participants.forEach((p,i)=>p.rank=i+1);
   const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
   const totalPossible=g.mode==='classic'?participants.length*questions.length:null;
   const teamKeys=[...new Set(participants.map(p=>p.team).filter(Number.isInteger))].sort((a,b)=>a-b);
-  const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:answers?Math.round(correctCount/answers*100):0,flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
+  const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:answeredAccuracy(correctCount,answers),flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
   const accuracies=participants.filter(p=>p.answeredCount>0).map(p=>p.accuracy);
   const completedAt=Date.now(),startedAt=Number(g.startedAt)||Number(g.born)||completedAt,playedSeconds=Math.max(0,Math.round((completedAt-startedAt)/1000));
-  return{id:'report-'+g.pin+'-'+completedAt.toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),startedAt,completedAt,incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:totalAnswers?Math.round(totalCorrect/totalAnswers*100):0,averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds,winner:g.kb?g.kb.winner:null}};
+  return{id:'report-'+g.pin+'-'+completedAt.toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),startedAt,completedAt,incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:answeredAccuracy(totalCorrect,totalAnswers),averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,completionRate:g.mode==='classic'&&totalPossible?Math.round(totalAnswers/totalPossible*100):null,playedSeconds,winner:g.kb?g.kb.winner:null}};
 }
 async function saveGameReport(g,options={}){
   if(g.reportSavePromise)return g.reportSavePromise;
@@ -558,7 +562,7 @@ function view(g,id,R0){
     v.names=R.map(p=>p.name);
     v.rows=R.map(p=>{
       const an=p.lastQ===g.qi,answeredN=(p.log||[]).length,correctN=(p.log||[]).reduce((n,l)=>n+(l.ok?1:0),0);
-      const r={id:p.id,name:p.name,score:p.score,ans:an,team:Number.isInteger(p.team)?p.team:null,online:playerOnline(g,p.id),answeredN,correctN,accuracy:answeredN?Math.round(correctN/answeredN*100):0};
+      const r={id:p.id,name:p.name,score:p.score,ans:an,team:Number.isInteger(p.team)?p.team:null,online:playerOnline(g,p.id),answeredN,correctN,accuracy:answeredAccuracy(correctN,answeredN)};
       if(g.state==='results'&&an){r.ok=same(p.lastA,q.cs);r.pts=p.lastPts}
       return r;
     });
@@ -690,7 +694,7 @@ function viewK(g,id,C){
   if(host)v.rows=[...g.players.entries()].map(([i,p])=>({
     id:i,name:p.name,team:p.team,placed:p.placed,flags:p.placed||0,score:p.score||0,
     correct:p.correctN||0,correctN:p.correctN||0,answered:p.answeredN||0,answeredN:p.answeredN||0,
-    accuracy:p.answeredN?Math.round((p.correctN||0)/p.answeredN*100):0,
+    accuracy:answeredAccuracy(p.correctN||0,p.answeredN||0),
     online:playerOnline(g,i),lastOk:typeof p.lastAnswerOk==='boolean'?p.lastAnswerOk:null
   }));
   else{
