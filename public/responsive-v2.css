@@ -455,3 +455,27 @@ html.dark .classic-ranking-caption { color: #aeb3ca; }
   .classic-ranking-place { min-width: 27px; } .classic-ranking-list { gap: 5px; }
   .classic-ranking-caption { margin-top: 10px; font-size: .73rem; }
 }
+
+
+/* v1.12.29: show points awarded for the current question in the Classic top-10. */
+.classic-ranking-row { min-height: 48px; }
+.classic-ranking-person {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.classic-ranking-earned {
+  display: block;
+  color: #6f7187;
+  font-size: .72rem;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+html.dark .classic-ranking-earned { color: #aeb3ca; }
+@media (max-width: 520px) {
+  .classic-ranking-row { min-height: 45px; }
+  .classic-ranking-earned { font-size: .67rem; }
+}
