@@ -1099,8 +1099,20 @@
   min-height: 44px !important;
   padding: 0 !important;
   gap: 0 !important;
-  font-size: 1.15rem !important;
+  color: #fff !important;
+  font-size: 1.55rem !important;
+  line-height: 1 !important;
   border-radius: 12px !important;
+}
+:root:not(.dark) #app .lobby-host-screen .lobby-footer-actions .lobby-mode-settings-open {
+  color: #fff !important;
+  background: linear-gradient(135deg, #7566ef, #5b4ad9) !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 15px rgba(99, 82, 219, .25) !important;
+}
+:root:not(.dark) #app .lobby-host-screen .lobby-footer-actions .lobby-mode-settings-open:hover {
+  color: #fff !important;
+  background: linear-gradient(135deg, #6656e5, #4f3ecb) !important;
 }
 #app .lobby-host-screen .lobby-footer-actions .lobby-mode-settings-open > span {
   display: block;
@@ -1114,6 +1126,6 @@
     height: 36px;
     min-height: 36px !important;
     border-radius: 10px !important;
-    font-size: 1rem !important;
+    font-size: 1.35rem !important;
   }
 }
