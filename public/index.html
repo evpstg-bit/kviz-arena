@@ -930,12 +930,16 @@ function hostK(a){
   return `<div class="kingdom-team-card" style="--team-color:${palette.color};--team-color-light:${palette.light};--team-color-dark:${palette.dark};--team-color-border:${palette.border}"><div class="flex items-center justify-between"><b class="text-xl">♜ ${tr(KN[t])}</b><span class="text-2xl">${stat.trophies?'🏆'.repeat(stat.trophies):'<span class="text-sm opacity-70">без трофеев</span>'}</span></div><div class="mt-1 text-3xl font-black">${stat.tiles} <span class="text-base font-semibold opacity-90">клеток</span></div><div class="text-sm opacity-90">${stat.members} участников · флагов ${stat.flags} · верных ответов ${stat.correct}</div></div>`;
  };
  const participantPanel=fin?'':liveParticipantsPanel();
- a.innerHTML=(fin?`<h1>🏁 Игра окончена</h1>${S.winner<0?'<h2 class="c text-3xl">Ничья!</h2>':`<h2 class="c text-3xl" style="color:${(KINGDOM_PALETTE[S.winner]||KINGDOM_PALETTE[0]).color}">${KINGDOM_MARKS[S.winner]} Победили ${KS[S.winner]}!</h2>`}:
-  `<div class="row justify-between"><span class="mut">Раунд ${S.round}</span><span id="tm" class="flex h-16 min-w-[6rem] items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 px-4 text-3xl font-black tabular-nums text-white shadow-lg"></span><span data-user-content="true" class="mut">${esc(S.title)}</span></div><div class="bar mt-2"><i id="tb"></i></div>`)+
-  `<div class="kingdom-team-stats-grid">${st.map(item=>team(item.k)).join('')}</div>${boardK({})}
-  ${fin?'':`<p class="c mut text-sm">Ставьте флаги рядом со своей территории · окружите ладью ♜ соперника, чтобы выиграть раунд · в конце времени побеждает команда с бо́льшим числом трофеев</p>`}
-  ${participantPanel}
-  ${fin?`<div class="row justify-center" style="margin-top:14px"><button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button><button onclick="newGame()">Новая игра</button></div>`:''}`;
+ const winnerHeading=S.winner<0
+  ? '<h2 class="c text-3xl">Ничья!</h2>'
+  : `<h2 class="c text-3xl" style="color:${(KINGDOM_PALETTE[S.winner]||KINGDOM_PALETTE[0]).color}">${KINGDOM_MARKS[S.winner]} Победили ${KS[S.winner]}!</h2>`;
+ const top=fin
+  ? `<h1>🏁 Игра окончена</h1>${winnerHeading}`
+  : `<div class="row justify-between"><span class="mut">Раунд ${S.round}</span><span id="tm" class="flex h-16 min-w-[6rem] items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 px-4 text-3xl font-black tabular-nums text-white shadow-lg"></span><span data-user-content="true" class="mut">${esc(S.title)}</span></div><div class="bar mt-2"><i id="tb"></i></div>`;
+ a.innerHTML=top+`<div class="kingdom-team-stats-grid">${st.map(item=>team(item.k)).join('')}</div>${boardK({})}`+
+  (fin?'':`<p class="c mut text-sm">Ставьте флаги рядом со своей территории · окружите ладью ♜ соперника, чтобы выиграть раунд · в конце времени побеждает команда с бо́льшим числом трофеев</p>`)+
+  participantPanel+
+  (fin?`<div class="row justify-center" style="margin-top:14px"><button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button><button onclick="newGame()">Новая игра</button></div>`:'');
 }
 function playerK(a){
  const p=S.me||{name:'',team:0,prog:0,flags:0,placed:0,correct:0,answered:0,qn:0},need=S.need;
