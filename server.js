@@ -955,6 +955,38 @@ http.createServer(async(req,res)=>{
       return json(res,{error:REPORTS_STORAGE_ERROR,storage:reportsStorageState()},500);
     }
   }
+  if(u.pathname==='/api/reports/export'){
+    const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
+    const ids=Array.isArray(b.ids)?[...new Set(b.ids.map(x=>String(x||'')))]:[];
+    if(!ids.length||ids.length>100||ids.some(id=>!/^report-[A-Za-z0-9_-]{1,140}$/.test(id)))return json(res,{error:'Выберите от 1 до 100 корректных отчётов для экспорта'},400);
+    await hydrateReportsFromGitHub();
+    const byId=new Map(REPORTS.filter(r=>r&&r.id).map(r=>[String(r.id),r]));
+    const selected=[];
+    let hydrated=false;
+    for(const id of ids){
+      let report=byId.get(id);
+      if(!report)return json(res,{error:'Один из выбранных отчётов больше не найден. Обновите список и повторите попытку.'},404);
+      if(!me.admin&&String(report.ownerId)!==String(me.id))return json(res,{error:'Нет доступа к одному из выбранных отчётов'},403);
+      if(!Array.isArray(report.questions)||!Array.isArray(report.participants)){
+        try{
+          report=await githubLoadFullReport(id);
+          if(!report)return json(res,{error:'Полный отчёт не найден в постоянном хранилище: '+id,storage:reportsStorageState()},404);
+          hydrated=true;
+          byId.set(id,report);
+        }catch(e){
+          REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=e.message||'Не удалось загрузить полный отчёт';
+          console.error('Не удалось загрузить отчёт для экспорта '+id+':',REPORTS_STORAGE_ERROR);
+          return json(res,{error:'Не удалось загрузить все выбранные отчёты. '+REPORTS_STORAGE_ERROR,storage:reportsStorageState()},503);
+        }
+      }
+      selected.push(report);
+    }
+    if(hydrated){
+      REPORTS=[...byId.values()].sort((a,b)=>Number(b.completedAt||0)-Number(a.completedAt||0)).slice(0,500);
+      writeJ('reports.json',REPORTS);
+    }
+    return json(res,{reports:selected,storage:reportsStorageState()});
+  }
   if(u.pathname==='/api/reports/get'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
     await hydrateReportsFromGitHub();
