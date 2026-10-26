@@ -439,7 +439,7 @@ function cabinetMenu(active){
  <div class="cabinet-menu-separator"></div>
  ${menuItem('home','На главную','goHomeFromNav()')}
  ${menuItem('logout','Выйти','closeCabinetMenu();logout()','site-menu-item-logout')}` : (view==='auth'?menuItem('home','На главную','goHomeFromNav()'):'');
- return `<div class="cabinet-menu-wrap ${cabinetMenuToggled?'is-open':''}" id="cabinet-menu-wrap" onmouseenter="cabinetMenuHover(true)" onmouseleave="cabinetMenuPointerLeave()">
+ return `<div class="cabinet-menu-wrap ${cabinetMenuToggled?'is-open':''}" id="cabinet-menu-wrap">
  <button type="button" id="cabinet-menu-trigger" class="cabinet-menu-trigger" aria-label="${tr('Меню')}" title="${tr('Меню')}" aria-haspopup="true" aria-expanded="${cabinetMenuToggled?'true':'false'}" aria-controls="cabinet-menu-panel" onclick="toggleCabinetMenu(event)">${navIcon('menu')}</button>
  <div class="cabinet-menu-panel" id="cabinet-menu-panel" role="menu" aria-label="${tr('Меню')}">
  ${navigation?`${navigation}<div class="cabinet-menu-separator"></div>`:``}
@@ -452,22 +452,7 @@ function captureCurrentNavigationSnapshot(){const entry=makeSiteNavEntry();if(en
 function toggleCabinetMenu(e){if(e)e.stopPropagation();cabinetMenuToggled=!cabinetMenuToggled;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.toggle('is-open',cabinetMenuToggled);if(btn)btn.setAttribute('aria-expanded',String(cabinetMenuToggled))}
 function closeCabinetMenu(){if(cabinetMenuHoverTimer){clearTimeout(cabinetMenuHoverTimer);cabinetMenuHoverTimer=null}cabinetMenuToggled=false;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.remove('is-open');if(btn)btn.setAttribute('aria-expanded','false')}
 function cabinetMenuHover(open){
- if(cabinetMenuHoverTimer){clearTimeout(cabinetMenuHoverTimer);cabinetMenuHoverTimer=null}
- const btn=$('cabinet-menu-trigger');
- if(btn&&!cabinetMenuToggled)btn.setAttribute('aria-expanded',String(!!open));
-}
-function cabinetMenuPointerLeave(){
- if(!(window.matchMedia&&window.matchMedia('(hover: hover)').matches))return;
- if(cabinetMenuHoverTimer)clearTimeout(cabinetMenuHoverTimer);
- // Keep the menu open while the pointer moves directly from the trigger into
- // the attached panel; close only after the pointer truly leaves the wrapper.
- cabinetMenuHoverTimer=setTimeout(()=>{
-  cabinetMenuHoverTimer=null;
-  const wrap=$('cabinet-menu-wrap');
-  if(!cabinetMenuToggled&&wrap&&!wrap.matches(':hover')&&!wrap.querySelector(':focus'))closeCabinetMenu();
- },220);
-}
-function openCabinetImport(e){if(e)e.stopPropagation();closeCabinetMenu();const input=$('site-menu-import');if(input)input.click()}
+ if(cabinetMenuHoverTimer){clearTimeout(cabine input=$('site-menu-import');if(input)input.click()}
 function goHomeFromNav(){closeCabinetMenu();captureCurrentNavigationSnapshot();if(view==='quiz-editor'&&!confirm(tr('Выйти из редактора без сохранения изменений?')))return;view='home';msg='';render()}
 function goBrandHome(e){if(e)e.preventDefault();goHomeFromNav();return false}
 async function restoreSiteNavEntry(entry){
