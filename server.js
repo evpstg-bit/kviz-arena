@@ -564,7 +564,7 @@ function view(g,id,R0){
     v.names=R.map(p=>p.name);
     v.rows=R.map(p=>{
       const an=p.lastQ===g.qi,answeredN=(p.log||[]).length,correctN=(p.log||[]).reduce((n,l)=>n+(l.ok?1:0),0);
-      const r={id:p.id,name:p.name,score:p.score,ans:an,team:Number.isInteger(p.team)?p.team:null,online:playerOnline(g,p.id),answeredN,correctN,accuracy:successPercent(correctN,answeredN)};
+      const r={id:p.id,name:p.name,score:p.score,ans:an,team:Number.isInteger(p.team)?p.team:null,online:playerOnline(g,p.id),answeredN,correctN,accuracy:successPercent(correctN,g.mode==='classic'?g.quiz.q.length:answeredN)};
       if(g.state==='results'&&an){r.ok=same(p.lastA,q.cs);r.pts=p.lastPts}
       return r;
     });
