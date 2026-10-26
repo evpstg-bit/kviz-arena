@@ -32,6 +32,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.27'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
+let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
 let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
 let reportSelectedIds=new Set();
@@ -1086,8 +1087,13 @@ function host(a){
 function classicRankingOverlay(){
  if(!S||S.mode!=='classic'||S.state!=='results')return '';
  const rows=(Array.isArray(S.top)?S.top:[]).slice(0,10);
- const endAt=Number(S.resultEndsAt)||Date.now()+3000;
- const remaining=Math.max(1,Math.min(3000,endAt-Date.now()));
+ const endAt=Number(S.resultEndsAt)||0;
+ const progressKey=String(S.pin||pin)+'|'+String(S.qi)+'|'+String(endAt);
+ if(progressKey!==classicRankingProgressKey){
+  classicRankingProgressKey=progressKey;
+  classicRankingProgressDuration=Math.max(1,Math.min(3000,(endAt||Date.now()+3000)-Date.now()));
+ }
+ const remaining=classicRankingProgressDuration;
  const medals=['🥇','🥈','🥉'];
  const items=rows.map((p,i)=>`<li class="classic-ranking-row"><span class="classic-ranking-place ${i<3?'is-podium':''}">${medals[i]||i+1}</span><span class="classic-ranking-name" data-user-content="true">${esc(p.name||'Участник')}</span><strong class="classic-ranking-score">${Number(p.score)||0}</strong></li>`).join('');
  return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr('Рейтинг игроков')}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr('Рейтинг игроков')}</p><h2>${tr('Топ-10 игроков')}</h2></div></header><div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div><ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr('Пока нет участников')}</li>`}</ol><p class="classic-ranking-caption">${tr('Следующий вопрос откроется автоматически')}</p></section></div>`;
@@ -1154,7 +1160,17 @@ function tick(){
 }
 function enter(){
  const k=view+'|'+(S?S.state+'|'+(S.qi||0)+'|'+(S.round||0):'');
- if(k!==lastKey){lastKey=k;const e=$('app');e.classList.remove('enter');void e.offsetWidth;e.classList.add('enter');setTimeout(()=>e.classList.remove('enter'),600)}
+ if(k!==lastKey){
+  lastKey=k;
+  const e=$('app');
+  // The Classic results overlay has its own entrance animation. Do not animate
+  // the entire game screen at the same time, otherwise the page appears to refresh twice.
+  if(view==='game'&&S&&S.mode==='classic'&&S.state==='results'){
+   e.classList.remove('enter');
+   return;
+  }
+  e.classList.remove('enter');void e.offsetWidth;e.classList.add('enter');setTimeout(()=>e.classList.remove('enter'),600);
+ }
 }
 const UI_LANG_KEY='kviz_ui_lang';
 function currentUiLanguage(){try{const l=localStorage.getItem(UI_LANG_KEY)||'ru';return ['ru','en','zh'].includes(l)?l:'ru'}catch(e){return 'ru'}}
