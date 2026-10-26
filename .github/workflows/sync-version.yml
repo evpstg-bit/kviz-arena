@@ -1,0 +1,48 @@
+name: Sync application version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+      - scripts/version-sync.js
+      - .github/workflows/sync-version.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-application-version
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Synchronize version references
+        run: node scripts/version-sync.js
+
+      - name: Commit synchronized files
+        run: |
+          if git diff --quiet; then
+            echo "Version references are already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md public/index.html
+          git commit -m "chore: sync version references to $(node -p "require('./package.json').version")"
+          git push
