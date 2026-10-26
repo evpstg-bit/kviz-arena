@@ -1586,3 +1586,64 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 /* v1.12.21 — align report selection controls to the left edge of each card */
 #app .report-session-card > .report-select-control{order:-1;align-self:center;justify-content:flex-start;margin-left:0;margin-right:0}
 @media(max-width:620px){#app .report-session-card > .report-select-control{order:-1;align-self:flex-start;margin-left:0;margin-right:0}}
+
+/* v1.12.22 — fixed report title alignment with stable grid columns */
+#app .report-session-card{
+  display:grid!important;
+  grid-template-columns:94px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:18px!important;
+}
+#app .report-session-card > .report-select-control{
+  grid-column:1;
+  grid-row:1;
+  width:94px;
+  box-sizing:border-box;
+  order:0;
+  align-self:center;
+  justify-content:flex-start;
+  margin:0;
+}
+#app .report-session-card > .report-session-main{
+  grid-column:2;
+  min-width:0;
+  width:100%;
+}
+#app .report-session-card > .btn-primary{
+  grid-column:3;
+  grid-row:1;
+  justify-self:end;
+  width:auto;
+}
+@media(max-width:680px){
+  #app .report-session-card{
+    grid-template-columns:88px minmax(0,1fr)!important;
+    align-items:start!important;
+    gap:12px!important;
+    padding:13px!important;
+    border-radius:18px!important;
+  }
+  #app .report-session-card > .report-select-control{
+    grid-column:1;
+    grid-row:1;
+    width:88px;
+    align-self:start;
+  }
+  #app .report-session-card > .report-session-main{
+    grid-column:2;
+    grid-row:1;
+    align-self:start;
+    gap:10px;
+  }
+  #app .report-session-card > .report-session-main .report-session-icon{
+    flex-basis:40px;
+    width:40px;
+    height:40px;
+  }
+  #app .report-session-card > .btn-primary{
+    grid-column:1 / -1;
+    grid-row:2;
+    justify-self:stretch;
+    width:100%!important;
+  }
+}
