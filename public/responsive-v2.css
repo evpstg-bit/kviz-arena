@@ -537,3 +537,50 @@ html.dark .classic-ranking-earned strong{background:#047857;color:#fff}
 .report-metric-duration>b{font-variant-numeric:tabular-nums;letter-spacing:.01em}
 html.dark .report-metric-duration{border-color:rgba(52,211,153,.32)!important;background:linear-gradient(145deg,rgba(16,185,129,.13),rgba(99,102,241,.09))!important}
 html.dark .report-metric-duration .report-metric-icon,html.dark .report-metric-duration .report-metric-label{color:#a7f3d0}
+
+/* Keep all seven report KPIs on a single line. Narrow viewports can scroll the row horizontally. */
+#app .report-metric-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 8px;
+}
+#app .report-metric {
+  gap: 5px;
+  padding: 11px 10px;
+  border-radius: 15px;
+}
+#app .report-metric-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: .78rem;
+}
+#app .report-metric-label {
+  min-height: 2.5em;
+  font-size: .68rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+#app .report-metric > b {
+  font-size: clamp(1rem, 1.55vw, 1.42rem);
+  line-height: 1.05;
+}
+@media (max-width: 1050px) {
+  #app .report-metric-grid {
+    grid-template-columns: repeat(7, minmax(112px, 1fr)) !important;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}
+@media (max-width: 600px) {
+  #app .report-metric-grid {
+    grid-template-columns: repeat(7, minmax(108px, 1fr)) !important;
+    gap: 7px;
+  }
+  #app .report-metric { padding: 10px 9px; }
+  #app .report-metric-label { font-size: .66rem; }
+  #app .report-metric > b { font-size: 1.12rem; }
+}
