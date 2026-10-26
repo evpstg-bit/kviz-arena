@@ -479,3 +479,42 @@ html.dark .classic-ranking-earned { color: #aeb3ca; }
   .classic-ranking-row { min-height: 45px; }
   .classic-ranking-earned { font-size: .67rem; }
 }
+
+
+/* v1.13.0: shared final Classic leaderboard with podium and full player ranking. */
+.classic-final-screen{width:min(100%,1040px);margin:clamp(12px,2.5vw,28px) auto;padding:clamp(16px,3vw,32px);border:1px solid rgba(108,99,160,.18);border-radius:26px;background:rgba(255,255,255,.92);box-shadow:0 20px 60px rgba(43,39,84,.1);color:#182033}
+html.dark .classic-final-screen{background:rgba(24,27,43,.96);border-color:rgba(255,255,255,.1);color:#f4f6ff;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.classic-final-header{text-align:center;margin:0 auto 8px;max-width:760px}
+.classic-final-kicker{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:rgba(117,98,220,.12);color:#6754ce;font-size:.78rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase}
+html.dark .classic-final-kicker{background:rgba(169,151,255,.14);color:#c7bbff}
+.classic-final-header h1{margin:12px 0 4px;font-size:clamp(1.65rem,4vw,2.5rem);font-weight:900;letter-spacing:-.035em;line-height:1.1}
+.classic-final-header p{margin:0;color:#71758a;font-weight:650;overflow-wrap:anywhere}
+html.dark .classic-final-header p{color:#adb3ca}
+.classic-final-podium{display:flex;align-items:flex-end;justify-content:center;gap:clamp(6px,2vw,18px);width:100%;max-width:760px;margin:clamp(22px,4vw,38px) auto clamp(28px,4vw,42px)}
+.classic-final-podium-item{display:flex;flex:1 1 0;flex-direction:column;align-items:center;min-width:0;max-width:220px;text-align:center}
+.classic-final-medal{font-size:clamp(1.9rem,5vw,2.9rem);line-height:1.1;filter:drop-shadow(0 4px 5px rgba(0,0,0,.12))}
+.classic-final-player-name{width:100%;margin:8px 0 10px;padding:0 2px;overflow-wrap:anywhere;font-size:clamp(.76rem,2vw,1rem);line-height:1.25;font-weight:850}
+.classic-final-podium-block{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;width:100%;padding:13px 5px 8px;border-radius:18px 18px 6px 6px;color:#fff;box-shadow:0 12px 28px rgba(42,37,83,.18),inset 0 1px 0 rgba(255,255,255,.28)}
+.classic-final-podium-block strong{font-size:clamp(1.2rem,3vw,1.8rem);line-height:1.1;font-weight:950;font-variant-numeric:tabular-nums}
+.classic-final-podium-block span{font-size:.72rem;font-weight:750;opacity:.92}
+.classic-final-podium-item[data-place="1"] .classic-final-podium-block{height:clamp(112px,18vw,158px);background:linear-gradient(155deg,#f6c84d,#d99619)}
+.classic-final-podium-item[data-place="2"] .classic-final-podium-block{height:clamp(84px,14vw,122px);background:linear-gradient(155deg,#b7c4d6,#7d8ba3)}
+.classic-final-podium-item[data-place="3"] .classic-final-podium-block{height:clamp(68px,11vw,100px);background:linear-gradient(155deg,#df9b6b,#a85a35)}
+.classic-final-empty{text-align:center;padding:25px;color:#74788d}
+.classic-final-ranking-section{max-width:780px;margin:0 auto}
+.classic-final-ranking-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid rgba(120,120,160,.18)}
+.classic-final-ranking-header h2{margin:0;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:850}
+.classic-final-ranking-header>span{display:grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:999px;background:rgba(117,98,220,.12);color:#6754ce;font-size:.84rem;font-weight:850}
+html.dark .classic-final-ranking-header>span{background:rgba(169,151,255,.15);color:#c7bbff}
+.classic-final-ranking-list{display:flex;flex-direction:column;gap:7px;list-style:none;margin:0;padding:0}
+.classic-final-ranking-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:52px;padding:8px 12px;border:1px solid rgba(104,99,148,.1);border-radius:14px;background:rgba(111,104,159,.065)}
+html.dark .classic-final-ranking-row{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.07)}
+.classic-final-rank{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:rgba(115,104,176,.13);color:#6854d6;font-weight:900;font-variant-numeric:tabular-nums}
+html.dark .classic-final-rank{background:rgba(169,151,255,.15);color:#c7bbff}
+.classic-final-name{min-width:0;overflow-wrap:anywhere;font-weight:750}
+.classic-final-score{white-space:nowrap;color:#6854d6;font-size:1rem;font-weight:900;font-variant-numeric:tabular-nums}
+html.dark .classic-final-score{color:#c7bbff}
+.classic-final-score small{margin-left:4px;font-size:.7rem;font-weight:700;color:#777b90}
+html.dark .classic-final-score small{color:#aeb3ca}
+.classic-final-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:24px}
+@media(max-width:520px){.classic-final-screen{padding:15px 11px;border-radius:20px}.classic-final-podium{gap:5px;margin:22px auto 28px}.classic-final-player-name{font-size:.74rem;margin:7px 0 8px}.classic-final-medal{font-size:1.9rem}.classic-final-podium-block{border-radius:13px 13px 5px 5px;padding:10px 3px 6px}.classic-final-podium-block span{font-size:.62rem}.classic-final-ranking-row{grid-template-columns:34px minmax(0,1fr) auto;gap:8px;padding:8px 8px;min-height:48px}.classic-final-rank{width:29px;height:29px;border-radius:9px}.classic-final-score{font-size:.9rem}.classic-final-score small{font-size:.65rem}}
