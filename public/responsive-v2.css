@@ -528,3 +528,12 @@ html.dark .classic-final-score small{color:#aeb3ca}
 html.dark .classic-ranking-earned{background:rgba(16,185,129,.16);border-color:rgba(52,211,153,.42);color:#a7f3d0}
 html.dark .classic-ranking-earned strong{background:#047857;color:#fff}
 @media(max-width:520px){.classic-ranking-earned{gap:4px;padding:4px 6px;font-size:.72rem}.classic-ranking-earned-label{font-size:.64rem}.classic-ranking-earned strong{padding:3px 6px;font-size:.84rem}.classic-ranking-earned-unit{font-size:.63rem}}
+
+
+/* v1.13.3: highlight the test completion duration in report summaries. */
+.report-metric-duration{border:1px solid rgba(16,185,129,.34)!important;background:linear-gradient(145deg,rgba(16,185,129,.13),rgba(99,102,241,.06))!important}
+.report-metric-duration .report-metric-icon{background:rgba(5,150,105,.14);color:#047857}
+.report-metric-duration .report-metric-label{color:#047857;font-weight:800}
+.report-metric-duration>b{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+html.dark .report-metric-duration{border-color:rgba(52,211,153,.32)!important;background:linear-gradient(145deg,rgba(16,185,129,.13),rgba(99,102,241,.09))!important}
+html.dark .report-metric-duration .report-metric-icon,html.dark .report-metric-duration .report-metric-label{color:#a7f3d0}
