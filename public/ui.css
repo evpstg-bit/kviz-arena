@@ -946,3 +946,10 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
 #app .qr-join-submit{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;margin-top:15px;border-radius:12px;font-size:1rem;font-weight:800}
 #app .qr-join-card .entry-footnote{justify-content:center;margin-top:18px;font-size:.79rem}
 @media(max-width:480px){#app:has(.qr-join-page){padding:16px!important}#app .qr-join-card{padding:23px 19px;border-radius:20px}#app .qr-join-brand{margin-bottom:25px}}
+
+
+/* Participant tabs never expose the platform navigation. */
+body.participant-only-active .floating-menu-anchor,
+body.participant-only-active .cabinet-menu-wrap{display:none!important}
+#app .participant-terminal-page{min-height:calc(100dvh - 32px)}
+#app .participant-terminal-card h1{overflow-wrap:anywhere}
