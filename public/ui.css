@@ -925,3 +925,24 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
 #app .report-inline-note{margin:12px 0 0!important;padding-top:11px;border-top:1px solid var(--line);font-size:.78rem;color:var(--text-soft);line-height:1.55}
 @media(max-width:850px){#app .report-inline-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#app .report-inline-detail-grid{grid-template-columns:1fr}}
 @media(max-width:520px){#app .report-inline-analytics{padding:13px;border-radius:13px}#app .report-inline-metrics{gap:8px}#app .report-inline-metrics>article{padding:11px}#app .report-inline-metrics>article>b{font-size:1.3rem}#app .report-inline-detail-card{padding:12px}#app .report-inline-legend-row{grid-template-columns:minmax(0,1fr) auto 34px;gap:7px}}
+
+
+/* QR code entry: name-only joining screen */
+#app:has(.qr-join-page){display:flex;align-items:center;justify-content:center;width:100%!important;max-width:none!important;min-height:100svh;padding:22px!important}
+#app .qr-join-page{width:min(100%,460px);margin:auto}
+#app .qr-join-card{padding:clamp(24px,6vw,38px);background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--surface-shadow)}
+#app .qr-join-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 30px;font-size:1.05rem;font-weight:850;letter-spacing:-.03em}
+#app .qr-join-brand-mark{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--accent);color:#fff;font-weight:900;font-size:1.12rem;box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 24%,transparent)}
+#app .qr-join-card>.section-kicker{display:block;text-align:center;font-size:.7rem}
+#app .qr-join-card h1{margin:8px 0 10px!important;text-align:center;font-size:clamp(1.65rem,5vw,2rem)!important;font-weight:820;letter-spacing:-.045em;line-height:1.15}
+#app .qr-join-description{margin:0 auto 25px;max-width:320px;text-align:center;color:var(--text-soft);font-size:.92rem;line-height:1.6}
+#app .qr-join-field{display:flex;flex-direction:column;gap:8px}
+#app .qr-join-field .field-label{font-size:.83rem;font-weight:750;color:var(--text-main)}
+#app .qr-join-field input{box-sizing:border-box;width:100%;min-height:52px;padding:13px 15px;border:1px solid var(--line-strong);border-radius:12px;background:var(--surface-soft);color:var(--text-main);font:inherit;font-size:1rem;outline:none;transition:border-color .18s,box-shadow .18s}
+#app .qr-join-field input::placeholder{color:var(--text-muted)}
+#app .qr-join-field input:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent)}
+#app .qr-join-card .form-error{min-height:0;margin:8px 0 0;text-align:left;font-size:.83rem;line-height:1.4}
+#app .qr-join-card .form-error:empty{display:none}
+#app .qr-join-submit{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;margin-top:15px;border-radius:12px;font-size:1rem;font-weight:800}
+#app .qr-join-card .entry-footnote{justify-content:center;margin-top:18px;font-size:.79rem}
+@media(max-width:480px){#app:has(.qr-join-page){padding:16px!important}#app .qr-join-card{padding:23px 19px;border-radius:20px}#app .qr-join-brand{margin-bottom:25px}}

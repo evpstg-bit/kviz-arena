@@ -3,16 +3,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.14">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.14">
-<link rel="shortcut icon" href="/favicon.ico?v=1.13.14">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.14">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.15">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.15">
+<link rel="shortcut icon" href="/favicon.ico?v=1.13.15">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.15">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.13.14">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.13.14">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.13.14">
-<link rel="stylesheet" href="/lobby.css?v=1.13.14">
+<link rel="stylesheet" href="/ui.css?v=1.13.15">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.13.15">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.13.15">
+<link rel="stylesheet" href="/lobby.css?v=1.13.15">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -29,8 +29,8 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.14'},
- TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.15'},
+ TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',qrJoinMode=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -163,11 +163,14 @@ async function start(selectedMode){
  launchModeDialog=false;launchModeQuizId='';gameRole='host';pin=String(r.pin);me=String(r.id);msg='';libMsg='';S=null;view='game';lastKey='';render();connect();
 }
 async function join(){
- const p=$('jp').value.trim(),n=$('jn').value.trim();prePin=p;preName=n;
- if(!/^\d{6}$/.test(p)||!n){msg='Введите 6-значный PIN и никнейм';return render()}
- const r=await api('join',{pin:p,name:n});
- if(r.error){msg=r.error;return render()}
- gameRole='player';pin=p;me=r.id;prePin='';msg='';
+ const p=(qrJoinMode?prePin:($('jp')?.value||'')).trim(),n=($('jn')?.value||'').trim();
+ if(!qrJoinMode)prePin=p;preName=n;
+ if(!/^\d{6}$/.test(p)){msg='Неверный PIN';return render()}
+ if(!n){msg='Имя обязательно';return render()}
+ let r;
+ try{r=await api('join',{pin:p,name:n})}catch(e){msg='Нет связи с сервером';return render()}
+ if(!r||r.error){msg=r&&r.error?r.error:'Нет связи с сервером';return render()}
+ gameRole='player';pin=p;me=r.id;prePin='';preName='';qrJoinMode=false;msg='';
  try{history.replaceState(null,'',location.pathname)}catch(e){}
  connect();
 }
@@ -422,7 +425,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.14')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.15')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -1315,6 +1318,10 @@ function player(a){
  a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Ваше место: ${p.rank}</p><button onclick="location.reload()">На главную</button></div>`;
 }
 function home(a){
+ if(qrJoinMode&&/^\d{6}$/.test(prePin)){
+  a.innerHTML=`<main class="qr-join-page"><section class="qr-join-card" aria-labelledby="qr-join-title"><div class="qr-join-brand"><span class="qr-join-brand-mark" aria-hidden="true">Q</span><span>Квиз-арена</span></div><span class="section-kicker">${tr('ПОДКЛЮЧЕНИЕ К ИГРЕ')}</span><h1 id="qr-join-title">${tr('Войти в игру')}</h1><p class="qr-join-description">${tr('Введите имя, чтобы присоединиться к игре.')}</p><div class="qr-join-field"><label class="field-label" for="jn">${tr('Имя в игре')}</label><input id="jn" type="text" placeholder="${tr('Ваше имя')}" maxlength="16" value="${esc(preName)}" autocomplete="nickname" autocapitalize="words" spellcheck="false" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(tr(msg))}</p><button type="button" class="btn-primary qr-join-submit" onclick="join()">${tr('Войти')} <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> ${tr('Аккаунт не нужен')}</div></section></main>`;
+  return;
+ }
  const teacher=USER?`<p class="entry-description">Вы вошли как <b data-user-content="true">${esc(USER.name||USER.login)}</b>. В кабинете доступна библиотека тестов.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button></div>`:`<p class="entry-description">Войдите, чтобы выбрать тест и запустить викторину для студентов.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей</span></div>`;
  a.innerHTML=`<header class="app-topbar home-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}<div class="site-header-right"><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div>${simpleHeaderControls(true,'home')}</div></header>
  <section class="entry-grid minimal-entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ СТУДЕНТОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код, который показал преподаватель.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код</label><input type="text" id="jp" placeholder="6 цифр" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Имя в игре</label><input type="text" id="jn" placeholder="Ваше имя" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Аккаунт не нужен</div></article>
@@ -1745,7 +1752,7 @@ if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaK
  try{INFO=await(await fetch('/api/info')).json();if(INFO.settings)CLIENT_SETTINGS=normalizeClientSettings(INFO.settings)}catch(e){}
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
  if(TOKEN){const r=await api('auth/me',{token:TOKEN});if(r.user)USER=r.user;else{TOKEN='';saveToken()}}
- const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp))prePin=qp;
+ const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp)){prePin=qp;qrJoinMode=true;}
  const sv=getSess();if(sv&&(!prePin||sv.pin===prePin)){
   const savedRole=sv.role||'';let status=null;
   try{status=await api('alive',{pin:sv.pin,id:sv.id})}catch(e){status={error:'Нет связи с сервером'}}
@@ -1764,7 +1771,9 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'И ещё':'以及','Какие вопросы вызвали трудности':'哪些问题比较难','В расчёт сложности входят только вопросы, на которые участники отвечали. Неиспользованные вопросы не считаются сложными.':'难度计算仅包含参与者实际作答的问题。未使用的问题不会被视为难题。',
  'Вопросов в этой сессии':'本场问题数','Низкая успешность':'正确率较低','Стоит повторить':'建议复习','Сложность вопросов':'问题难度','Вопросы для повторения':'需要复习的问题','Частый неверный вариант':'最常见的错误选项','Не встретились в этой игре':'本场未出现','Без зарегистрированных ответов':'没有记录到答案','Вопрос без текста':'缺少题目文本'
 });
- render();if(prePin&&$('jn'))$('jn').focus();
+Object.assign(UI_TRANSLATIONS.en,{'ПОДКЛЮЧЕНИЕ К ИГРЕ':'JOIN GAME','Введите имя, чтобы присоединиться к игре.':'Enter your name to join the game.','Имя в игре':'Name in game','Ваше имя':'Your name','Войти в игру':'Join the game','Войти':'Join','Аккаунт не нужен':'No account needed','Неверный PIN':'Invalid PIN','Имя обязательно':'Name is required','Нет связи с сервером':'Connection problem. Please try again.'});
+Object.assign(UI_TRANSLATIONS.zh,{'ПОДКЛЮЧЕНИЕ К ИГРЕ':'加入游戏','Введите имя, чтобы присоединиться к игре.':'输入姓名即可加入游戏。','Имя в игре':'游戏昵称','Ваше имя':'您的姓名','Войти в игру':'进入游戏','Войти':'进入','Аккаунт не нужен':'无需注册','Неверный PIN':'PIN 码无效','Имя обязательно':'请输入姓名','Нет связи с сервером':'连接失败，请重试。'});
+ render();if((qrJoinMode||prePin)&&$('jn'))$('jn').focus();
 })();
 
 </script></body></html>
