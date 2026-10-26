@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/ui.css?v=1.12.8">
 <link rel="stylesheet" href="/liquid-glass.css?v=1.12.8">
 <link rel="stylesheet" href="/responsive-v2.css?v=1.12.8">
+<link rel="stylesheet" href="/lobby.css?v=1.12.8">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -873,10 +874,49 @@ function host(a){
  const q=S.q,N=S.rows.length,KM=S.mode==='kingdoms';
  const dl='<button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button>';
  const mode=KM?`Color Kingdoms — ${S.lobbySettings?.kingdoms?.kingdomCount||S.kingdomCount||2} ${tr('королевства')}, ${S.dur} ${tr('мин.')}, флаг за ${S.need} ${tr('ответов')}`:'Classic';
- if(S.state==='lobby')return a.innerHTML=`<div class="c"><div class="row justify-center gap-10"><div><b>📱 Наведите камеру телефона</b>${qrBox(230)}<span class="mut">PIN подставится сам, останется ввести имя<br>🔍 Нажмите на QR-код — он откроется на весь экран</span></div>
- <div><p class="mut">или откройте в браузере:</p><div class="big" style="word-break:break-all">${esc(joinUrl())}</div><p class="mut">и введите PIN:</p><div class="pin">${S.pin}</div></div></div><h2 data-user-content="true">${esc(S.title)}</h2><div class="lobby-mode-meta"><p class="mut">Режим: ${mode}</p></div>${lobbyModeSettingsHtml()}
- <div class="chips">${S.rows.map(p=>`<span class="chip"><span data-user-content="true">${esc(p.name)}</span><button type="button" class="player-kick" title="Исключить участника" aria-label="${tr('Исключить')} ${esc(p.name)}" onclick="kick('${p.id}')">✕</button></span>`).join('')||'<span class="mut">Ожидаем участников…</span>'}</div><p class="big">${N} / 100 участников</p>
- ${msg?`<p class="bad" role="alert">${esc(msg)}</p>`:''}<button ${N?'':'disabled'} onclick="startHostedGame()">Начать</button></div>`;
+ if(S.state==='lobby')return a.innerHTML=`<div class="c lobby-screen lobby-host-screen">
+ <header class="lobby-intro">
+  <span class="lobby-status-pill"><span class="lobby-status-dot" aria-hidden="true"></span>Ожидаем участников…</span>
+  <h1 class="lobby-page-title">Подключите группу</h1>
+  <p class="lobby-intro-copy">Наведите камеру телефона</p>
+ </header>
+ <div class="lobby-invite-grid">
+  <section class="lobby-invite-card lobby-qr-card">
+   <span class="lobby-card-index">01</span>
+   <b class="lobby-invite-card-title">📱 Наведите камеру телефона</b>
+   <div class="lobby-qr-holder">${qrBox(230)}</div>
+   <span class="lobby-helper mut">🔍 Нажмите на QR-код — он откроется на весь экран</span>
+  </section>
+  <section class="lobby-invite-card lobby-link-card">
+   <span class="lobby-card-index">02</span>
+   <p class="mut lobby-link-label">или откройте в браузере:</p>
+   <div class="big lobby-join-url">${esc(joinUrl())}</div>
+   <p class="mut lobby-link-label">и введите PIN:</p>
+   <div class="pin lobby-pin-code">${S.pin}</div>
+   <p class="mut lobby-helper">PIN подставится сам, останется ввести имя</p>
+  </section>
+ </div>
+ <section class="lobby-game-info">
+  <div class="lobby-game-copy">
+   <span class="lobby-game-label">Тест</span>
+   <h2 data-user-content="true" class="lobby-game-title">${esc(S.title)}</h2>
+   <div class="lobby-mode-meta"><p class="mut">Режим: ${mode}</p></div>
+  </div>
+  ${lobbyModeSettingsHtml()}
+ </section>
+ <section class="lobby-participants-panel">
+  <div class="lobby-section-heading">
+   <div><h3>Участники</h3><p>Ожидаем участников…</p></div>
+   <div class="lobby-player-counter"><strong>${N}</strong><span>/ 100</span></div>
+  </div>
+  <div class="chips lobby-player-chips">${S.rows.map(p=>`<span class="chip"><span data-user-content="true">${esc(p.name)}</span><button type="button" class="player-kick" title="Исключить участника" aria-label="${tr('Исключить')} ${esc(p.name)}" onclick="kick('${p.id}')">✕</button></span>`).join('')||'<span class="lobby-empty-message">Ожидаем участников…</span>'}</div>
+ </section>
+ ${msg?`<p class="bad lobby-settings-error" role="alert">${esc(msg)}</p>`:''}
+ <footer class="lobby-footer">
+  <div class="lobby-start-description"><span aria-hidden="true">✓</span><span>Студенты отвечают со своих устройств</span></div>
+  <button class="lobby-start-button" ${N?'':'disabled'} onclick="startHostedGame()">Начать</button>
+ </footer>
+ </div>`;
  if(S.state==='question')return a.innerHTML=`<div class="row justify-between"><span class="mut">Вопрос ${S.qi+1} / ${S.total}</span><span id="tm" class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-3xl font-black text-white shadow-lg"></span><span class="mut">Ответили: ${S.answered} / ${N}</span></div><div class="bar"><i id="tb"></i></div>
   <h1 data-user-content="true" class="my-8 text-4xl sm:text-5xl">${esc(q.t)}</h1>${q.multi?'<p class="c mut">Несколько правильных ответов — выберите все</p>':''}<div class="grid">${q.a.map((x,j)=>`<div data-user-content="true" class="ans a${j} text-xl sm:text-2xl">${SH[j]} ${esc(x)}</div>`).join('')}</div>
   <div class="c host-question-controls" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить вопрос</button></div>
@@ -892,8 +932,8 @@ function host(a){
 }
 function player(a){
  const p=S.me||{name:'',score:0,rank:0};
- const head=`<div class="row justify-between"><b>${esc(p.name)}</b><b>${p.score} очков</b><button class="sec" style="padding:4px 12px" onclick="leave()">Выйти</button></div>`;
- if(S.state==='lobby')return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Вы в игре!</h1><p class="mut">Ваше имя на экране ведущего. Ждём начала…</p>${S.mode==='kingdoms'?'<p class="mut">Режим Color Kingdoms: команда назначится при старте</p>':''}</div>`;
+ const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} очков</b><button class="sec" style="padding:4px 12px" onclick="leave()">Выйти</button></div>`;
+ if(S.state==='lobby')return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>Вы в игре!</h1><p>Ваше имя на экране ведущего. Ждём начала…</p>${S.mode==='kingdoms'?'<p class="lobby-team-hint">Режим Color Kingdoms: команда назначится при старте</p>':''}</div></div>`;
  if(S.state==='question'){
   if(p.answered)return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Ответ принят ✓</h1><p class="mut">Ждём остальных…</p></div>`;
   const mu=S.q.multi;
