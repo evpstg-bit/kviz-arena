@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
+    "prestart": "node scripts/version-sync.js",
+    "version:sync": "node scripts/version-sync.js",
     "build:css": "tailwindcss -i src/input.css -o public/tailwind.css --minify"
   },
   "engines": {
