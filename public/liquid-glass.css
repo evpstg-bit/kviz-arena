@@ -1582,3 +1582,7 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 #app .report-delete-selected{background:#d83c56!important;border-color:#d83c56!important;color:#fff!important}
 #app .report-delete-selected:disabled{opacity:.45!important;cursor:not-allowed!important;filter:saturate(.45)}
 @media(max-width:620px){#app .report-bulk-actions{align-items:stretch;flex-direction:column}#app .report-bulk-buttons{display:grid;grid-template-columns:1fr}#app .report-bulk-buttons button{width:100%;white-space:normal}#app .report-select-control{align-self:flex-start}#app .report-session-card{flex-wrap:wrap}#app .report-select-control{margin-left:0}}
+
+/* v1.12.21 — align report selection controls to the left edge of each card */
+#app .report-session-card > .report-select-control{order:-1;align-self:center;justify-content:flex-start;margin-left:0;margin-right:0}
+@media(max-width:620px){#app .report-session-card > .report-select-control{order:-1;align-self:flex-start;margin-left:0;margin-right:0}}
