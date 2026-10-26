@@ -990,7 +990,9 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
   border-color:rgba(190,190,235,.26);
   box-shadow:0 24px 70px rgba(0,0,0,.43),inset 0 1px 0 rgba(255,255,255,.13);
 }
-#app #app .cabinet-menu-wrap.is-open .cabinet-menu-panel {
+#app .cabinet-menu-wrap:hover .cabinet-menu-panel,
+#app .cabinet-menu-wrap:focus-within .cabinet-menu-panel,
+#app .cabinet-menu-wrap.is-open .cabinet-menu-panel {
   opacity:1;
   visibility:visible;
   pointer-events:auto;
