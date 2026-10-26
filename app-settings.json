@@ -16,7 +16,8 @@
     "kingdoms": {
       "enabled": true,
       "durationMinutes": 20,
-      "correctAnswersForFlag": 1
+      "correctAnswersForFlag": 3,
+      "kingdomCount": 2
     }
   }
 }
