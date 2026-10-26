@@ -758,3 +758,32 @@ button.theme-toggle:hover { background: var(--surface-muted) !important; transfo
 #app .report-ai-footnote{margin:14px 2px 0!important;color:var(--text-muted);font-size:.7rem;line-height:1.55}
 @media(max-width:980px){#app .report-ai-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#app .report-ai-recommendations{grid-column:1/-1}}
 @media(max-width:620px){#app .report-ai-analysis{padding:14px;border-radius:14px}#app .report-ai-heading{flex-direction:column;gap:8px}#app .report-ai-overview{grid-template-columns:1fr;gap:10px;padding:12px}#app .report-ai-grid{grid-template-columns:1fr}#app .report-ai-recommendations{grid-column:auto}#app .report-ai-card{padding:13px}}
+
+
+/* Evidence-led deep report diagnostics */
+#app .report-ai-advanced{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+#app .report-ai-advanced-head{margin:0 0 12px}
+#app .report-ai-advanced-head h3{margin:5px 0 6px!important;font-size:1.05rem!important;letter-spacing:-.025em}
+#app .report-ai-advanced-head p{max-width:900px;margin:0;color:var(--text-soft);font-size:.78rem;line-height:1.6}
+#app .report-ai-advanced-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr) minmax(0,1fr);align-items:stretch;gap:12px}
+#app .report-ai-deep-card{min-width:0;padding:15px;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-radius:14px}
+#app .report-ai-deep-kicker{display:block;margin-bottom:8px;color:var(--text-muted);font-size:.64rem;font-weight:850;letter-spacing:.09em}
+#app .report-ai-deep-value{display:block;margin-bottom:9px;font-size:1rem;line-height:1.35;letter-spacing:-.02em}
+#app .report-ai-deep-card>p{margin:0 0 12px;color:var(--text-soft);font-size:.75rem;line-height:1.6;overflow-wrap:anywhere}
+#app .report-ai-deep-stat{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:.74rem}
+#app .report-ai-deep-stat span{color:var(--text-soft)}
+#app .report-ai-deep-stat b{font-variant-numeric:tabular-nums}
+#app .report-ai-deep-card h4{margin:0 0 10px;font-size:.89rem;letter-spacing:-.015em}
+#app .report-ai-deep-item{padding:10px 0;border-top:1px solid var(--line)}
+#app .report-ai-deep-item:first-of-type{padding-top:0;border-top:0}
+#app .report-ai-deep-item-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:start;font-size:.75rem}
+#app .report-ai-deep-item-head b{min-width:0;line-height:1.4;overflow-wrap:anywhere}
+#app .report-ai-deep-item-head strong{white-space:nowrap;font-size:.76rem;font-variant-numeric:tabular-nums}
+#app .report-ai-deep-labels{margin:5px 0;color:var(--accent-ink);font-size:.65rem;font-weight:800;line-height:1.5}
+#app .report-ai-deep-item p{margin:4px 0;color:var(--text-soft);font-size:.72rem;line-height:1.55;overflow-wrap:anywhere}
+#app .report-ai-deep-item small{color:var(--text-muted);font-size:.66rem}
+#app .report-ai-deep-actions ol{display:flex;flex-direction:column;gap:11px;margin:0;padding:0;list-style:none;counter-reset:deep-step}
+#app .report-ai-deep-actions li{display:grid;grid-template-columns:23px minmax(0,1fr);align-items:start;gap:8px}
+#app .report-ai-deep-actions li p{margin:1px 0 0;color:var(--text-soft);font-size:.74rem;line-height:1.6;overflow-wrap:anywhere}
+@media(max-width:980px){#app .report-ai-advanced-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#app .report-ai-deep-actions{grid-column:1/-1}}
+@media(max-width:620px){#app .report-ai-advanced-grid{grid-template-columns:1fr}#app .report-ai-deep-actions{grid-column:auto}#app .report-ai-deep-card{padding:13px}}
