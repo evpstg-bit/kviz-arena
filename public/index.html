@@ -3,16 +3,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.15">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.15">
-<link rel="shortcut icon" href="/favicon.ico?v=1.13.15">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.15">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.14.0">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.14.0">
+<link rel="shortcut icon" href="/favicon.ico?v=1.14.0">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.14.0">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.13.15">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.13.15">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.13.15">
-<link rel="stylesheet" href="/lobby.css?v=1.13.15">
+<link rel="stylesheet" href="/ui.css?v=1.14.0">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.14.0">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.14.0">
+<link rel="stylesheet" href="/lobby.css?v=1.14.0">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -29,8 +29,8 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.15'},
- TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',qrJoinMode=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.14.0'},
+ TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -67,6 +67,7 @@ async function capi(p,o){
  return r;
 }
 const getSess=()=>{try{return JSON.parse(sessionStorage.getItem('qs'))}catch(e){return null}};
+function markParticipantOnly(){participantOnly=true;try{sessionStorage.setItem('participant-only','1')}catch(e){}}
 function clearSess(){try{sessionStorage.removeItem('qs')}catch(e){}}
 function unavailableGameMessage(role){
  const lang=currentUiLanguage();
@@ -79,13 +80,13 @@ function unavailableGameMessage(role){
 }
 function connect(){
  if(es)es.close();fbSeen=-2;bnSeen=-1;fbUntil=0;banUntil=0;
- try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(e){}
+ if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(e){}
  const source=new EventSource('/api/events?pin='+encodeURIComponent(pin)+'&id='+encodeURIComponent(me));
  es=source;
  source.onmessage=e=>{
   if(es!==source)return;
   sseMissingChecks=0;
-  S=JSON.parse(e.data);gameRole=S.host?'host':'player';try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
+  S=JSON.parse(e.data);gameRole=S.host?'host':'player';if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
   if(S.host&&CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&S.reportId&&!(S.mode==='classic'&&S.state==='final')){
    if(autoReportSeen!==S.reportId){
@@ -93,7 +94,6 @@ function connect(){
     openReportDetail(reportId,true).finally(()=>{if(autoReportPending===reportId)autoReportPending=''});
    }
   }else if(!['reports','report-detail','lib','quiz-editor'].includes(view)){view='game'}
-  if(S.state==='final'&&!S.host)clearSess();
   if(S.mode==='kingdoms'){
    const fb=S.me&&S.me.fb;
    if(fbSeen===-2)fbSeen=fb?fb.id:-1;else if(fb&&fb.id!==fbSeen){fbSeen=fb.id;fbUntil=Date.now()+(fb.ok?1100:2200);setTimeout(render,fbUntil-Date.now()+40);sel=[]}
@@ -115,7 +115,7 @@ function connect(){
   // immediately throw every participant back to the home screen.
   sseMissingChecks++;
   if(sseMissingChecks<4){setTimeout(()=>{if(es===source&&source.readyState===2)connect()},700*sseMissingChecks);return}
-  const lostRole=gameRole||(S?(S.host?'host':'player'):'');clearSess();pin='';me='';S=null;view='home';msg=unavailableGameMessage(lostRole);gameRole='';sseMissingChecks=0;if(es===source)es=null;render();
+  const lostRole=gameRole||(S?(S.host?'host':'player'):'');clearSess();pin='';me='';S=null;msg=unavailableGameMessage(participantOnly?'player':lostRole);if(lostRole==='player'||participantOnly){markParticipantOnly();view='participant-end'}else view='home';gameRole='';sseMissingChecks=0;if(es===source)es=null;render();
  };
 }
 function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';render()}
@@ -170,9 +170,9 @@ async function join(){
  let r;
  try{r=await api('join',{pin:p,name:n})}catch(e){msg='Нет связи с сервером';return render()}
  if(!r||r.error){msg=r&&r.error?r.error:'Нет связи с сервером';return render()}
- gameRole='player';pin=p;me=r.id;prePin='';preName='';qrJoinMode=false;msg='';
+ gameRole='player';pin=p;me=r.id;prePin='';preName='';qrJoinMode=false;msg='';markParticipantOnly();view='game';S=null;
  try{history.replaceState(null,'',location.pathname)}catch(e){}
- connect();
+ render();connect();
 }
 async function leave(){
  if(!confirm('Выйти из игры? Ваши очки будут потеряны.'))return;
@@ -425,7 +425,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.15')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.14.0')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -1167,10 +1167,10 @@ function hostK(a){
 }
 function playerK(a){
  const p=S.me||{name:'',team:0,prog:0,flags:0,placed:0,correct:0,answered:0,qn:0},need=S.need;
- const head=`<div class="row justify-between"><b data-user-content="true">${esc(p.name)}</b><span class="chip" style="background:${(KINGDOM_PALETTE[p.team]||KINGDOM_PALETTE[0]).color}">${KINGDOM_MARKS[p.team]} ${tr(KN[p.team])}</span>${S.state==='playing'?'<b id="tm" class="tabular-nums"></b>':''}<button class="sec px-4 py-1.5 text-sm" onclick="leave()">Выйти</button></div>${S.state==='playing'?'<div class="bar mt-2"><i id="tb"></i></div>':''}<div class="mt-3">${scoreChips()}</div>`;
+ const head=`<div class="row justify-between"><b data-user-content="true">${esc(p.name)}</b><span class="chip" style="background:${(KINGDOM_PALETTE[p.team]||KINGDOM_PALETTE[0]).color}">${KINGDOM_MARKS[p.team]} ${tr(KN[p.team])}</span>${S.state==='playing'?'<b id="tm" class="tabular-nums"></b>':''}</div>${S.state==='playing'?'<div class="bar mt-2"><i id="tb"></i></div>':''}<div class="mt-3">${scoreChips()}</div>`;
  if(S.state==='final'){
   const w=S.winner;
-  return a.innerHTML=head+`<div class="c" style="margin-top:20px"><h1>${w<0?'Ничья!':w===p.team?'🏆 Ваша команда победила!':'Победили '+KS[w]}</h1><p class="mut">Ваш вклад: 🚩 ${p.placed} флагов · ✓ ${p.correct} верных из ${p.answered}</p>${boardK({small:true})}<button onclick="location.reload()">На главную</button></div>`;
+  return a.innerHTML=head+`<div class="c" style="margin-top:20px"><h1>${w<0?'Ничья!':w===p.team?'🏆 Ваша команда победила!':'Победили '+KS[w]}</h1><p class="mut">Ваш вклад: 🚩 ${p.placed} флагов · ✓ ${p.correct} верных из ${p.answered}</p>${boardK({small:true})}</div>`;
  }
  const fb=p.fb;
  if(fb&&Date.now()<fbUntil){
@@ -1303,7 +1303,7 @@ function classicRankingOverlay(){
 }
 function player(a){
  const p=S.me||{name:'',score:0,rank:0};
- const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} очков</b><button class="sec" style="padding:4px 12px" onclick="leave()">Выйти</button></div>`;
+ const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} очков</b></div>`;
  if(S.state==='lobby')return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>Вы в игре!</h1><p>Ваше имя на экране ведущего. Ждём начала…</p>${S.mode==='kingdoms'?'<p class="lobby-team-hint">Режим Color Kingdoms: команда назначится при старте</p>':''}</div></div>`;
  if(S.state==='question'){
   if(p.answered)return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Ответ принят ✓</h1><p class="mut">Ждём остальных…</p></div>`;
@@ -1314,14 +1314,20 @@ function player(a){
   const ans=p.answered,ok=ans&&p.ok;
   return a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1 class="${ok?'ok':'bad'}">${ok?'Верно! 🎉':ans?'Неверно':'Время вышло'}</h1>${ok?`<p class="big">+${p.pts}</p>`:''}<p class="mut">Вы на ${p.rank} месте</p></div>`;
  }
- if(S.state==="final"&&S.mode==="classic")return a.innerHTML=head+classicFinalResults(Array.isArray(S.finalRows)?S.finalRows:(Array.isArray(S.top)?S.top:[]),`<button class="sec" onclick="location.reload()">${tr("На главную")}</button>`);
- a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Ваше место: ${p.rank}</p><button onclick="location.reload()">На главную</button></div>`;
+ if(S.state==="final"&&S.mode==="classic")return a.innerHTML=head+classicFinalResults(Array.isArray(S.finalRows)?S.finalRows:(Array.isArray(S.top)?S.top:[]),'');
+ a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Ваше место: ${p.rank}</p></div>`;
+}
+function participantEndScreen(a,headline=''){
+ const detail=String(headline||tr('Этот экран предназначен только для игровой сессии.'));
+ a.innerHTML=`<main class="qr-join-page participant-terminal-page"><section class="qr-join-card participant-terminal-card" aria-labelledby="participant-terminal-title"><div class="qr-join-brand"><span class="qr-join-brand-mark" aria-hidden="true">Q</span><span>${tr('Квиз-арена')}</span></div><span class="section-kicker">${tr('УЧАСТНИК')}</span><h1 id="participant-terminal-title">${tr('Игра завершена')}</h1><p class="qr-join-description">${esc(tr(detail))}</p></section></main>`;
+ return a.innerHTML;
 }
 function home(a){
  if(qrJoinMode&&/^\d{6}$/.test(prePin)){
   a.innerHTML=`<main class="qr-join-page"><section class="qr-join-card" aria-labelledby="qr-join-title"><div class="qr-join-brand"><span class="qr-join-brand-mark" aria-hidden="true">Q</span><span>Квиз-арена</span></div><span class="section-kicker">${tr('ПОДКЛЮЧЕНИЕ К ИГРЕ')}</span><h1 id="qr-join-title">${tr('Войти в игру')}</h1><p class="qr-join-description">${tr('Введите имя, чтобы присоединиться к игре.')}</p><div class="qr-join-field"><label class="field-label" for="jn">${tr('Имя в игре')}</label><input id="jn" type="text" placeholder="${tr('Ваше имя')}" maxlength="16" value="${esc(preName)}" autocomplete="nickname" autocapitalize="words" spellcheck="false" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(tr(msg))}</p><button type="button" class="btn-primary qr-join-submit" onclick="join()">${tr('Войти')} <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> ${tr('Аккаунт не нужен')}</div></section></main>`;
   return;
  }
+ if(participantOnly){return participantEndScreen(a,msg||'')}
  const teacher=USER?`<p class="entry-description">Вы вошли как <b data-user-content="true">${esc(USER.name||USER.login)}</b>. В кабинете доступна библиотека тестов.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button></div>`:`<p class="entry-description">Войдите, чтобы выбрать тест и запустить викторину для студентов.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей</span></div>`;
  a.innerHTML=`<header class="app-topbar home-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}<div class="site-header-right"><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div>${simpleHeaderControls(true,'home')}</div></header>
  <section class="entry-grid minimal-entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ СТУДЕНТОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код, который показал преподаватель.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код</label><input type="text" id="jp" placeholder="6 цифр" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Имя в игре</label><input type="text" id="jn" placeholder="Ваше имя" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Аккаунт не нужен</div></article>
@@ -1332,6 +1338,7 @@ function home(a){
 function draw(){
  const a=app();
  if(view==='home')return home(a);
+ if(view==='participant-end')return participantEndScreen(a,msg||'');
  if(view==='auth')return authView(a);
  if(view==='reports')return reportListPage(a);
  if(view==='report-detail')return reportDetailPage(a);
@@ -1340,8 +1347,8 @@ function draw(){
  if(view==='edit'){view='lib';return lib();}
  if(view==='lib')return lib();
  if(!S)return a.innerHTML='<p class="c mut">Подключение…</p>';
- if(S.state==='kicked'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}
- if(S.state==='ended'){clearSess();if(es)es.close();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
+ if(S.state==='kicked'){if(es)es.close();if(gameRole==='player'||participantOnly){markParticipantOnly();return participantEndScreen(a,tr('Вас исключили из игры'))}clearSess();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}
+ if(S.state==='ended'){if(es)es.close();if(gameRole==='player'||participantOnly){markParticipantOnly();return participantEndScreen(a,tr('Игра завершена ведущим'))}clearSess();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
  if(S.mode==='kingdoms'&&S.state!=='lobby')S.host?hostK(a):playerK(a);else S.host?host(a):player(a);
  if(S.host&&qrFull)a.insertAdjacentHTML('beforeend',qrOverlay());
  if(S.host&&S.state!=='final'){
@@ -1725,7 +1732,8 @@ function render(){
   draw();
   if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());
   if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());
-  const gameScreen=view==='game';
+  const gameScreen=view==='game',participantScreen=participantOnly||qrJoinMode;
+  document.body.classList.toggle('participant-only-active',participantScreen);
   real.classList.toggle('game-view-active',gameScreen);
   document.body.classList.toggle('game-view-active',gameScreen);
   if(gameScreen){
@@ -1734,7 +1742,8 @@ function render(){
    // Never leave a floating or header menu in the markup during gameplay.
    vApp.querySelectorAll('.cabinet-menu-wrap,.floating-menu-anchor').forEach(node=>node.remove());
   }
-  if(!gameScreen&&!vApp.querySelector('.cabinet-menu-wrap'))vApp.insertAdjacentHTML('afterbegin',`<div class="floating-menu-anchor">${cabinetMenu('')}</div>`);
+  if(participantScreen)vApp.querySelectorAll('.cabinet-menu-wrap,.floating-menu-anchor').forEach(node=>node.remove());
+  if(!gameScreen&&!participantScreen&&!vApp.querySelector('.cabinet-menu-wrap'))vApp.insertAdjacentHTML('afterbegin',`<div class="floating-menu-anchor">${cabinetMenu('')}</div>`);
  }finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
  if(view==='lib')filterLibrary();
  applyUiLanguage();
@@ -1752,13 +1761,14 @@ if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaK
  try{INFO=await(await fetch('/api/info')).json();if(INFO.settings)CLIENT_SETTINGS=normalizeClientSettings(INFO.settings)}catch(e){}
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
  if(TOKEN){const r=await api('auth/me',{token:TOKEN});if(r.user)USER=r.user;else{TOKEN='';saveToken()}}
- const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp)){prePin=qp;qrJoinMode=true;}
+ try{participantOnly=sessionStorage.getItem('participant-only')==='1'}catch(e){}
+ const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp)){prePin=qp;qrJoinMode=true;markParticipantOnly();}
  const sv=getSess();if(sv&&(!prePin||sv.pin===prePin)){
-  const savedRole=sv.role||'';let status=null;
+  const savedRole=sv.role||'';if(savedRole==='player')markParticipantOnly();let status=null;
   try{status=await api('alive',{pin:sv.pin,id:sv.id})}catch(e){status={error:'Нет связи с сервером'}}
-  if(status&&status.alive||status&&status.error){pin=String(sv.pin);me=String(sv.id);gameRole=savedRole;return connect()}
-  clearSess();gameRole='';msg=unavailableGameMessage(savedRole);
- }
+  if(status&&status.alive||status&&status.error){pin=String(sv.pin);me=String(sv.id);gameRole=savedRole;if(savedRole==='player')view='game';return connect()}
+  clearSess();gameRole='';msg=unavailableGameMessage(savedRole);if(savedRole==='player'||(participantOnly&&!qrJoinMode))view='participant-end';
+ }else if(participantOnly&&!qrJoinMode){view='participant-end';msg=unavailableGameMessage('player')}
 Object.assign(UI_TRANSLATIONS.en,{
  'КРАТКАЯ АНАЛИТИКА':'QUICK ANALYSIS','Как распределились результаты':'How results are distributed','Сводка по всем участникам этой игры. Порог поддержки можно изменить в настройках платформы.':'Overview of everyone in this game. You can change the support threshold in platform settings.',
  'Средняя успешность':'Average accuracy','Медиана':'Median','Уверенно (80%+)':'Strong results (80%+)','Порог':'Threshold','Распределение результатов':'Score distribution','Кому уделить внимание':'Who may need support','По текущему порогу участников для дополнительной поддержки не выявлено.':'No participants need extra support under the current threshold.',
@@ -1773,6 +1783,8 @@ Object.assign(UI_TRANSLATIONS.zh,{
 });
 Object.assign(UI_TRANSLATIONS.en,{'ПОДКЛЮЧЕНИЕ К ИГРЕ':'JOIN GAME','Введите имя, чтобы присоединиться к игре.':'Enter your name to join the game.','Имя в игре':'Name in game','Ваше имя':'Your name','Войти в игру':'Join the game','Войти':'Join','Аккаунт не нужен':'No account needed','Неверный PIN':'Invalid PIN','Имя обязательно':'Name is required','Нет связи с сервером':'Connection problem. Please try again.'});
 Object.assign(UI_TRANSLATIONS.zh,{'ПОДКЛЮЧЕНИЕ К ИГРЕ':'加入游戏','Введите имя, чтобы присоединиться к игре.':'输入姓名即可加入游戏。','Имя в игре':'游戏昵称','Ваше имя':'您的姓名','Войти в игру':'进入游戏','Войти':'进入','Аккаунт не нужен':'无需注册','Неверный PIN':'PIN 码无效','Имя обязательно':'请输入姓名','Нет связи с сервером':'连接失败，请重试。'});
+ Object.assign(UI_TRANSLATIONS.en,{'УЧАСТНИК':'PLAYER','Игра завершена':'Game over','Этот экран предназначен только для игровой сессии.':'This screen is reserved for a game session.'});
+ Object.assign(UI_TRANSLATIONS.zh,{'УЧАСТНИК':'玩家','Игра завершена':'游戏已结束','Этот экран предназначен только для игровой сессии.':'此页面仅用于游戏会话。'});
  render();if((qrJoinMode||prePin)&&$('jn'))$('jn').focus();
 })();
 
