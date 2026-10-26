@@ -28,6 +28,7 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
 let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
+let reportSelectedIds=new Set();
 let sseMissingChecks=0,gameRole='';
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
@@ -620,10 +621,28 @@ function reportDate(ts){const lang=currentUiLanguage()==='zh'?'zh-CN':currentUiL
 function clearReportFiltersState(){
  reportSearch='';reportPeriod='all';reportSort='date-desc';reportFrom='';reportTo='';reportMode='all';reportStatus='all';
 }
+function setReportSelected(id,checked){if(checked)reportSelectedIds.add(String(id));else reportSelectedIds.delete(String(id));render()}
+function toggleVisibleReportSelection(){
+ const visible=filterReportItems(REPORT_LIST||[]),allSelected=visible.length>0&&visible.every(r=>reportSelectedIds.has(String(r.id)));
+ visible.forEach(r=>allSelected?reportSelectedIds.delete(String(r.id)):reportSelectedIds.add(String(r.id)));
+ render();
+}
+async function deleteSelectedReports(){
+ const ids=[...reportSelectedIds];if(!ids.length)return;
+ if(!confirm(tr('Удалить выбранные отчёты? Это действие нельзя отменить.')+' ('+ids.length+')'))return;
+ try{
+  const r=await capi('reports/delete',{ids});
+  if(r.error){alert(tr(r.error));return}
+  const removed=new Set(ids);REPORT_LIST=(REPORT_LIST||[]).filter(item=>!removed.has(String(item.id)));
+  reportSelectedIds.clear();ACTIVE_REPORT=null;activeReportId='';
+  alert(tr('Удалено отчётов:')+' '+Number(r.deleted||ids.length));render();
+ }catch(e){alert(tr('Не удалось удалить отчёты. Проверьте соединение и повторите попытку.'))}
+}
 async function openReports(){
  if(!USER)return goAuth();
  // Re-open the complete history by default so an old period/search cannot make every report appear deleted.
  clearReportFiltersState();
+ reportSelectedIds.clear();
  const nav=++cabinetNavSeq;
  const r=await capi('reports/list',{});
  if(nav!==cabinetNavSeq||!USER)return;
@@ -709,7 +728,7 @@ function reportResultsMarkup(){
   });
   return `<section class="report-date-group"><div class="report-date-group-head"><h2>${esc(reportDateHeading(key))}</h2><span class="report-count-pill">${rows.length} ${tr('отчётов')}</span></div><div class="report-session-list">${rows.map(r=>{
    const modeIcon=r.mode==='kingdoms'?'⚑':'◆';
-   return `<article class="report-session-card"><div class="report-session-main"><div class="report-session-icon">${modeIcon}</div><div class="report-session-copy"><b class="report-session-title" data-user-content="true">${esc(r.title||tr('Без названия'))}</b><span>${tr(r.modeName||r.mode)} · ${reportDate(reportTimestamp(r))}${r.incomplete?' · '+tr('Завершён досрочно'):''}</span><small>${Number(r.participantCount)||0} ${tr('участников')} · ${Number(r.questionCount)||0} ${tr('вопросов')} · ${tr('Точность')}: ${Number(r.accuracy)||0}%</small></div></div><button class="btn-primary btn-small" onclick="openReportDetail('${esc(r.id)}')">${tr('Открыть отчёт')} →</button></article>`;
+   return `<article class="report-session-card"><div class="report-session-main"><div class="report-session-icon">${modeIcon}</div><div class="report-session-copy"><b class="report-session-title" data-user-content="true">${esc(r.title||tr('Без названия'))}</b><span>${tr(r.modeName||r.mode)} · ${reportDate(reportTimestamp(r))}${r.incomplete?' · '+tr('Завершён досрочно'):''}</span><small>${Number(r.participantCount)||0} ${tr('участников')} · ${Number(r.questionCount)||0} ${tr('вопросов')} · ${tr('Точность')}: ${Number(r.accuracy)||0}%</small></div></div><label class="report-select-control"><input type="checkbox" aria-label="${tr('Выбрать отчёт')}" ${reportSelectedIds.has(String(r.id))?'checked':''} onchange="setReportSelected('${esc(r.id)}',this.checked)"><span>${tr('Выбрать')}</span></label><button class="btn-primary btn-small" onclick="openReportDetail('${esc(r.id)}')">${tr('Открыть отчёт')} →</button></article>`;
   }).join('')}</div></section>`;
  }).join('');
 }
@@ -732,7 +751,9 @@ function reportListPage(a){
  const items=REPORT_LIST||[],visible=filterReportItems(items);
  const customDates=reportPeriod==='custom'?`<div class="report-filter-field report-custom-date"><label for="report-from">${tr('Дата с')}</label><input id="report-from" type="date" value="${esc(reportFrom)}" onchange="setReportFilter('from',this.value)"></div><div class="report-filter-field report-custom-date"><label for="report-to">${tr('Дата по')}</label><input id="report-to" type="date" value="${esc(reportTo)}" onchange="setReportFilter('to',this.value)"></div>`:'';
  const filters=`<section class="report-filters" aria-label="${tr('Фильтры отчётов')}"><div class="report-filters-top"><label class="report-search-field"><span>${tr('Поиск')}</span><input id="report-search" type="search" placeholder="${tr('Поиск по отчётам…')}" value="${esc(reportSearch)}" oninput="updateReportSearch(this.value)"></label><div class="report-filter-actions"><div class="report-filter-count" id="report-filter-count">${reportFilterCountText(visible.length,items.length)}</div><button type="button" class="sec btn-small report-reset-button" onclick="resetReportFilters()">${tr('Сбросить фильтры')}</button></div></div><div class="report-filter-grid"><div class="report-filter-field"><label for="report-period">${tr('Период')}</label><select id="report-period" onchange="setReportFilter('period',this.value)"><option value="all" ${reportPeriod==='all'?'selected':''}>${tr('За всё время')}</option><option value="today" ${reportPeriod==='today'?'selected':''}>${tr('Сегодня')}</option><option value="7d" ${reportPeriod==='7d'?'selected':''}>${tr('Последние 7 дней')}</option><option value="30d" ${reportPeriod==='30d'?'selected':''}>${tr('Последние 30 дней')}</option><option value="custom" ${reportPeriod==='custom'?'selected':''}>${tr('Произвольный период')}</option></select></div><div class="report-filter-field"><label for="report-mode">${tr('Режим игры')}</label><select id="report-mode" onchange="setReportFilter('mode',this.value)"><option value="all" ${reportMode==='all'?'selected':''}>${tr('Все режимы')}</option><option value="classic" ${reportMode==='classic'?'selected':''}>Classic</option><option value="kingdoms" ${reportMode==='kingdoms'?'selected':''}>Color Kingdoms</option></select></div><div class="report-filter-field"><label for="report-status">${tr('Статус')}</label><select id="report-status" onchange="setReportFilter('status',this.value)"><option value="all" ${reportStatus==='all'?'selected':''}>${tr('Все отчёты')}</option><option value="complete" ${reportStatus==='complete'?'selected':''}>${tr('Обычное завершение')}</option><option value="early" ${reportStatus==='early'?'selected':''}>${tr('Завершён досрочно')}</option></select></div><div class="report-filter-field"><label for="report-sort">${tr('Сортировка')}</label><select id="report-sort" onchange="setReportFilter('sort',this.value)"><option value="date-desc" ${reportSort==='date-desc'?'selected':''}>${tr('По дате — сначала новые')}</option><option value="date-asc" ${reportSort==='date-asc'?'selected':''}>${tr('По дате — сначала старые')}</option><option value="title-asc" ${reportSort==='title-asc'?'selected':''}>${tr('По названию теста')}</option><option value="participants-desc" ${reportSort==='participants-desc'?'selected':''}>${tr('По числу участников')}</option><option value="accuracy-desc" ${reportSort==='accuracy-desc'?'selected':''}>${tr('По точности')}</option></select></div>${customDates}</div></section>`;
- const body=REPORT_LIST===null?`<div class="reports-empty"><div class="report-spinner"></div><p>${tr('Загрузка отчётов…')}</p></div>`:!items.length&&reportLoadError?`<div class="reports-empty"><div class="reports-empty-icon">⚠</div><h2>${tr('Не удалось загрузить историю отчётов')}</h2><p>${esc(tr(reportLoadError))}</p><button class="sec" onclick="openReports()">${tr('Повторить загрузку')}</button></div>`:!items.length?`<div class="reports-empty"><div class="reports-empty-icon">▤</div><h2>${tr('Пока нет отчётов')}</h2><p>${tr('После завершения игры отчёт появится здесь автоматически.')}</p><button class="btn-primary" onclick="openLib()">${tr('Перейти к библиотеке')}</button></div>`:`${filters}<div id="report-results">${reportResultsMarkup()}</div>`;
+ const selectedCount=reportSelectedIds.size;
+ const bulkActions=`<section class="report-bulk-actions"><div class="report-bulk-info"><b>${tr('Выбрано:')} ${selectedCount}</b><span>${tr('Отметьте отчёты, которые нужно удалить.')}</span></div><div class="report-bulk-buttons"><button type="button" class="sec btn-small" onclick="toggleVisibleReportSelection()">${tr('Выбрать все показанные / снять выбор')}</button><button type="button" class="btn-danger btn-small report-delete-selected" onclick="deleteSelectedReports()" ${selectedCount?'':'disabled'}>⌫ ${tr('Удалить выбранные')}</button></div></section>`;
+ const body=REPORT_LIST===null?`<div class="reports-empty"><div class="report-spinner"></div><p>${tr('Загрузка отчётов…')}</p></div>`:!items.length&&reportLoadError?`<div class="reports-empty"><div class="reports-empty-icon">⚠</div><h2>${tr('Не удалось загрузить историю отчётов')}</h2><p>${esc(tr(reportLoadError))}</p><button class="sec" onclick="openReports()">${tr('Повторить загрузку')}</button></div>`:!items.length?`<div class="reports-empty"><div class="reports-empty-icon">▤</div><h2>${tr('Пока нет отчётов')}</h2><p>${tr('После завершения игры отчёт появится здесь автоматически.')}</p><button class="btn-primary" onclick="openLib()">${tr('Перейти к библиотеке')}</button></div>`:`${filters}${bulkActions}<div id="report-results">${reportResultsMarkup()}</div>`;
  a.innerHTML=`${cabinetHeader('reports',tr('Отчёты преподавателя'))}<section class="reports-page"><div class="reports-heading"><div><span class="eyebrow"><span class="eyebrow-dot"></span>${tr('АНАЛИТИКА')}</span><h1 class="page-title">${tr('Отчёты по тестам')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('История прохождений и результаты студентов по каждому запуску.')}</p></div><div class="reports-total"><b>${items.length}</b><span>${tr('отчётов')}</span></div></div>${reportLoadError?`<div class="notice notice-error">${esc(tr(reportLoadError))}</div>`:''}${body}<footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a><span>${tr('Отчёты преподавателя')}</span></footer></section>`;
 }
 
@@ -1260,6 +1281,22 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Не удалось загрузить историю отчётов':'无法加载报告历史','Повторить загрузку':'重新加载','Сбросить фильтры':'重置筛选'
 });
 
+Object.assign(UI_TRANSLATIONS.en,{
+ 'Выбрать все показанные / снять выбор':'Select all shown / clear selection',
+ 'Выбрано:':'Selected:',
+ 'Отметьте отчёты, которые нужно удалить.':'Select the reports you want to delete.',
+ 'Выбрать отчёт':'Select report','Выбрать':'Select','Удалить выбранные':'Delete selected',
+ 'Удалить выбранные отчёты? Это действие нельзя отменить.':'Delete the selected reports? This action cannot be undone.',
+ 'Удалено отчётов:':'Reports deleted:',
+ 'Не удалось удалить отчёты. Проверьте соединение и повторите попытку.':'Could not delete reports. Check the connection and try again.'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'Выбрать все показанные / снять выбор':'选择当前显示的全部 / 取消选择','Выбрано:':'已选择：',
+ 'Отметьте отчёты, которые нужно удалить.':'勾选要删除的报告。','Выбрать отчёт':'选择报告','Выбрать':'选择',
+ 'Удалить выбранные':'删除所选','Удалить выбранные отчёты? Это действие нельзя отменить.':'确定删除所选报告吗？此操作无法撤销。',
+ 'Удалено отчётов:':'已删除报告：',
+ 'Не удалось удалить отчёты. Проверьте соединение и повторите попытку.':'无法删除报告。请检查连接后重试。'
+});
 function tr(text){
  const lang=currentUiLanguage(); if(lang==='ru')return String(text);
  const d=UI_TRANSLATIONS[lang]||{};

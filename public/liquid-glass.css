@@ -1570,3 +1570,15 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 .report-reset-button{min-height:40px;white-space:nowrap}
 .report-filter-actions .report-filter-count{margin:0}
 @media(max-width:480px){.report-filter-actions{justify-content:flex-start;gap:8px}.report-reset-button{min-height:38px}}
+
+/* v1.12.20 — selectable report history and bulk deletion */
+#app .report-bulk-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:-7px 0 20px;padding:14px 16px;border:1px solid var(--line,rgba(115,105,180,.2));border-radius:16px;background:var(--surface,rgba(255,255,255,.72))}
+#app .report-bulk-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+#app .report-bulk-info b{font-size:.9rem;font-weight:850;color:var(--fg,var(--text-main,#28263d))}
+#app .report-bulk-info span{font-size:.78rem;color:var(--mut,var(--text-muted,#77748a))}
+#app .report-bulk-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#app .report-select-control{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;padding:8px 10px;border:1px solid var(--line,rgba(115,105,180,.2));border-radius:11px;color:var(--fg,var(--text-main,#28263d));font-size:.78rem;font-weight:750;cursor:pointer;white-space:nowrap}
+#app .report-select-control input{width:17px;height:17px;margin:0;accent-color:var(--accent,#7666e8)}
+#app .report-delete-selected{background:#d83c56!important;border-color:#d83c56!important;color:#fff!important}
+#app .report-delete-selected:disabled{opacity:.45!important;cursor:not-allowed!important;filter:saturate(.45)}
+@media(max-width:620px){#app .report-bulk-actions{align-items:stretch;flex-direction:column}#app .report-bulk-buttons{display:grid;grid-template-columns:1fr}#app .report-bulk-buttons button{width:100%;white-space:normal}#app .report-select-control{align-self:flex-start}#app .report-session-card{flex-wrap:wrap}#app .report-select-control{margin-left:0}}

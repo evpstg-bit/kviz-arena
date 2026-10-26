@@ -326,6 +326,37 @@ async function githubWriteReportBatch(cfg,reports){
   }
   throw new Error('Хранилище отчётов изменилось одновременно несколько раз. Повторите действие.');
 }
+async function githubDeleteReportBatch(cfg,ids){
+  if(!cfg)throw new Error('Постоянное хранилище отчётов не настроено');
+  const wanted=new Set(ids.map(String));
+  for(let attempt=0;attempt<4;attempt++){
+    const branchRef=await githubEnsureReportsBranch(cfg),parent=branchRef.object.sha;
+    const indexState=await githubReadReportsIndexAt(cfg,parent);
+    const removed=indexState.items.filter(x=>x&&x.id&&wanted.has(String(x.id)));
+    if(!removed.length){REPORTS_REMOTE_READY=true;REPORTS_INDEX_HYDRATED=true;REPORTS_STORAGE_ERROR='';return{deletedFromRemote:0}}
+    const kept=indexState.items.filter(x=>!x||!x.id||!wanted.has(String(x.id)));
+    const indexBlobResponse=await reportsGithubFetch(cfg,'git/blobs',{method:'POST',body:{content:encryptReportPayload({version:1,items:kept},cfg),encoding:'utf-8'}});
+    const indexBlob=await reportsApiJson(indexBlobResponse,'Не удалось подготовить обновлённый индекс отчётов');
+    const treeEntries=[{path:'reports-index.enc.json',mode:'100644',type:'blob',sha:indexBlob.sha}];
+    removed.forEach(x=>treeEntries.push({path:reportPath(x.id),mode:'100644',type:'blob',sha:null}));
+    const commitRes=await reportsGithubFetch(cfg,'git/commits/'+parent);
+    const base=await reportsApiJson(commitRes,'Не удалось прочитать текущее хранилище отчётов');
+    const treeRes=await reportsGithubFetch(cfg,'git/trees',{method:'POST',body:{base_tree:base.tree.sha,tree:treeEntries}});
+    const tree=await reportsApiJson(treeRes,'Не удалось подготовить удаление отчётов');
+    const commitCreate=await reportsGithubFetch(cfg,'git/commits',{method:'POST',body:{message:'Delete encrypted quiz reports',tree:tree.sha,parents:[parent]}});
+    const newCommit=await reportsApiJson(commitCreate,'Не удалось зафиксировать удаление отчётов');
+    const update=await reportsGithubFetch(cfg,'git/refs/heads/'+encodeURIComponent(cfg.reportsBranch),{method:'PATCH',body:{sha:newCommit.sha,force:false}});
+    if(update.ok){REPORTS_REMOTE_READY=true;REPORTS_INDEX_HYDRATED=true;REPORTS_STORAGE_ERROR='';return{deletedFromRemote:removed.length}}
+    if((update.status===409||update.status===422)&&attempt<3)continue;
+    await reportsApiJson(update,'Не удалось обновить ветку хранилища отчётов');
+  }
+  throw new Error('Хранилище отчётов изменилось одновременно несколько раз. Повторите удаление.');
+}
+function queueReportsDeletion(ids){
+  const run=REPORTS_PERSIST_QUEUE.then(()=>githubDeleteReportBatch(reportsStoreConfig(),ids));
+  REPORTS_PERSIST_QUEUE=run.catch(()=>{});
+  return run;
+}
 function queueReportsPersistence(report){
   const run=REPORTS_PERSIST_QUEUE.then(()=>githubWriteReportBatch(reportsStoreConfig(),[report]));
   REPORTS_PERSIST_QUEUE=run.catch(()=>{});
@@ -856,6 +887,30 @@ http.createServer(async(req,res)=>{
     await hydrateReportsFromGitHub();
     const items=REPORTS.filter(r=>me.admin||r.ownerId===me.id).map(r=>({id:r.id,pin:r.pin,title:r.title,sourceId:r.sourceId,mode:r.mode,modeName:r.modeName,completedAt:r.completedAt,incomplete:!!r.incomplete,questionCount:r.questionCount,participantCount:r.participantCount,accuracy:r.summary&&r.summary.accuracy!==undefined?r.summary.accuracy:r.accuracy,averageScore:r.summary&&r.summary.averageScore!==undefined?r.summary.averageScore:r.averageScore}));
     return json(res,{items,storage:reportsStorageState()});
+  }
+  if(u.pathname==='/api/reports/delete'){
+    const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
+    const ids=Array.isArray(b.ids)?[...new Set(b.ids.map(x=>String(x||'')))]:[];
+    if(!ids.length||ids.length>500||ids.some(id=>!/^report-[A-Za-z0-9_-]{1,140}$/.test(id)))return json(res,{error:'Выберите от 1 до 500 корректных отчётов'},400);
+    await hydrateReportsFromGitHub();
+    if(REPORTS_STORAGE_ERROR||!REPORTS_REMOTE_READY)return json(res,{error:'Не удалось проверить постоянное хранилище. Удаление отменено, чтобы не потерять отчёты.',storage:reportsStorageState()},503);
+    const byId=new Map(REPORTS.filter(r=>r&&r.id).map(r=>[String(r.id),r]));
+    for(const id of ids){
+      const report=byId.get(id);
+      if(!report)return json(res,{error:'Один из выбранных отчётов больше не найден. Обновите список и повторите попытку.'},404);
+      if(!me.admin&&String(report.ownerId)!==String(me.id))return json(res,{error:'Нет доступа к удалению одного из выбранных отчётов'},403);
+    }
+    try{
+      const result=await queueReportsDeletion(ids);
+      REPORTS=REPORTS.filter(r=>!ids.includes(String(r&&r.id)));
+      writeJ('reports.json',REPORTS);
+      console.log('Удалено отчётов:',ids.length,'(постоянное хранилище:',result.deletedFromRemote,')');
+      return json(res,{ok:true,deleted:ids.length,deletedFromRemote:result.deletedFromRemote,storage:reportsStorageState()});
+    }catch(e){
+      REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=e.message||'Не удалось удалить отчёты из постоянного хранилища';
+      console.error('Не удалось удалить отчёты:',REPORTS_STORAGE_ERROR);
+      return json(res,{error:REPORTS_STORAGE_ERROR,storage:reportsStorageState()},500);
+    }
   }
   if(u.pathname==='/api/reports/get'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
