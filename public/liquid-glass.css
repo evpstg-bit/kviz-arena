@@ -1564,3 +1564,9 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
 .reports-filter-empty{margin-bottom:24px}
 @media(max-width:800px){.report-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-filters{padding:14px;border-radius:19px}}
 @media(max-width:480px){.report-filters-top{align-items:stretch;flex-direction:column;gap:10px}.report-filter-count{align-self:flex-start}.report-filter-grid{grid-template-columns:1fr;gap:10px}.report-custom-date{grid-column:span 1}.report-date-group-head h2{font-size:1rem}}
+
+/* v1.12.19 — report history recovery affordances */
+.report-filter-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.report-reset-button{min-height:40px;white-space:nowrap}
+.report-filter-actions .report-filter-count{margin:0}
+@media(max-width:480px){.report-filter-actions{justify-content:flex-start;gap:8px}.report-reset-button{min-height:38px}}
