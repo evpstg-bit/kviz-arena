@@ -362,9 +362,12 @@ function queueReportsPersistence(report){
   REPORTS_PERSIST_QUEUE=run.catch(()=>{});
   return run;
 }
-async function hydrateReportsFromGitHub(){
+async function hydrateReportsFromGitHub({force=false}={}){
   const cfg=reportsStoreConfig();
   if(!cfg){REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR='Постоянное хранилище не настроено: задайте GITHUB_TOKEN и GITHUB_REPOSITORY, а токену выдайте Contents: Read and write.';return}
+  // Reports history can outlive the in-memory process cache (for example after a Render restart).
+  // A user opening the history can explicitly force a fresh read of the encrypted remote index.
+  if(force){REPORTS_INDEX_HYDRATED=false;REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=''}
   if(REPORTS_INDEX_HYDRATED&&REPORTS_REMOTE_READY&&!REPORTS_STORAGE_ERROR)return;
   if(REPORTS_INDEX_HYDRATION)return REPORTS_INDEX_HYDRATION;
   REPORTS_INDEX_HYDRATION=(async()=>{
@@ -915,7 +918,7 @@ http.createServer(async(req,res)=>{
   // ---------- teacher reports history ----------
   if(u.pathname==='/api/reports/list'){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
-    await hydrateReportsFromGitHub();
+    await hydrateReportsFromGitHub({force:!!b.forceRefresh});
     const items=REPORTS.filter(r=>me.admin||r.ownerId===me.id).map(r=>({id:r.id,pin:r.pin,title:r.title,sourceId:r.sourceId,mode:r.mode,modeName:r.modeName,completedAt:r.completedAt,incomplete:!!r.incomplete,questionCount:r.questionCount,participantCount:r.participantCount,accuracy:r.summary&&r.summary.accuracy!==undefined?r.summary.accuracy:r.accuracy,averageScore:r.summary&&r.summary.averageScore!==undefined?r.summary.averageScore:r.averageScore}));
     return json(res,{items,storage:reportsStorageState()});
   }
