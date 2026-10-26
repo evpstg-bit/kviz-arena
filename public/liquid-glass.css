@@ -1543,3 +1543,24 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
   background-color:#2878d4!important;
   background-image:none!important;
 }
+
+/* v1.12.18 — date-based report grouping and controls */
+.report-filters{margin:0 0 22px;padding:18px;border:1px solid rgba(255,255,255,.58);border-radius:24px;background:rgba(255,255,255,.48);box-shadow:0 12px 30px rgba(40,32,90,.045);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.dark .report-filters{background:rgba(25,29,54,.68);border-color:rgba(255,255,255,.1)}
+.report-filters-top{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:15px}
+.report-search-field,.report-filter-field{display:flex;min-width:0;flex-direction:column;gap:7px}
+.report-search-field{flex:1}
+.report-search-field>span,.report-filter-field>label{font-size:.78rem;font-weight:750;color:var(--mut)}
+.report-search-field input,.report-filter-field input,.report-filter-field select{width:100%;min-width:0;min-height:43px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:13px;background:var(--surface);color:var(--fg);font:inherit;font-size:.88rem;outline:none}
+.report-search-field input:focus,.report-filter-field input:focus,.report-filter-field select:focus{border-color:rgba(124,108,240,.8);box-shadow:0 0 0 3px rgba(124,108,240,.12)}
+.report-filter-count{flex:0 0 auto;padding:10px 12px;border-radius:12px;background:rgba(124,108,240,.09);color:var(--accent-ink);font-size:.78rem;font-weight:800;white-space:nowrap}
+.dark .report-filter-count{color:#c3bbff;background:rgba(124,108,240,.17)}
+.report-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.report-custom-date{grid-column:span 2}
+.report-date-group{margin:0 0 28px}
+.report-date-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:0 2px}
+.report-date-group-head h2{margin:0;font-size:1.12rem;font-weight:850;letter-spacing:-.025em;text-transform:capitalize}
+.report-session-title{font-size:1rem!important;font-weight:800}
+.reports-filter-empty{margin-bottom:24px}
+@media(max-width:800px){.report-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-filters{padding:14px;border-radius:19px}}
+@media(max-width:480px){.report-filters-top{align-items:stretch;flex-direction:column;gap:10px}.report-filter-count{align-self:flex-start}.report-filter-grid{grid-template-columns:1fr;gap:10px}.report-custom-date{grid-column:span 1}.report-date-group-head h2{font-size:1rem}}

@@ -3,16 +3,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.12.17">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.12.17">
-<link rel="shortcut icon" href="/favicon.ico?v=1.12.17">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.12.17">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.12.18">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.12.18">
+<link rel="shortcut icon" href="/favicon.ico?v=1.12.18">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.12.18">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.12.17">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.12.17">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.12.17">
-<link rel="stylesheet" href="/lobby.css?v=1.12.17">
+<link rel="stylesheet" href="/ui.css?v=1.12.18">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.12.18">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.12.18">
+<link rel="stylesheet" href="/lobby.css?v=1.12.18">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -23,10 +23,11 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.17'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.18'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
+let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
 let sseMissingChecks=0,gameRole='';
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
@@ -393,7 +394,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.12.17')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.12.18')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -634,11 +635,100 @@ async function openReportDetail(id,automatic=false){
  view='report-detail';
  render();
 }
-function reportListPage(a){
- const items=REPORT_LIST||[];const groups=new Map();items.forEach(r=>{const key=r.sourceId||r.title||'untitled';if(!groups.has(key))groups.set(key,{title:r.title||tr('Без названия'),items:[]});groups.get(key).items.push(r)});
- const groupHtml=[...groups.values()].map(g=>`<section class="report-test-group"><div class="report-test-group-head"><div><span class="section-kicker">${tr('ТЕСТ')}</span><h2 data-user-content="true">${esc(g.title)}</h2></div><span class="report-count-pill">${g.items.length} ${tr('прохождений')}</span></div><div class="report-session-list">${g.items.map(r=>`<article class="report-session-card"><div class="report-session-main"><div class="report-session-icon">${r.mode==='kingdoms'?'⚑':'◆'}</div><div class="report-session-copy"><b>${tr(r.modeName||r.mode)}</b><span>${reportDate(r.completedAt)}${r.incomplete?' · '+tr('Завершён досрочно'):''}</span><small>${r.participantCount} ${tr('участников')} · ${r.questionCount} ${tr('вопросов')} · ${tr('Точность')}: ${Number(r.accuracy)||0}%</small></div></div><button class="btn-primary btn-small" onclick="openReportDetail('${esc(r.id)}')">${tr('Открыть отчёт')} →</button></article>`).join('')}</div></section>`).join('');
- a.innerHTML=`${cabinetHeader('reports',tr('Отчёты преподавателя'))}<section class="reports-page"><div class="reports-heading"><div><span class="eyebrow"><span class="eyebrow-dot"></span>${tr('АНАЛИТИКА')}</span><h1 class="page-title">${tr('Отчёты по тестам')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('История прохождений и результаты студентов по каждому запуску.')}</p></div><div class="reports-total"><b>${items.length}</b><span>${tr('отчётов')}</span></div></div>${reportLoadError?`<div class="notice notice-error">${esc(tr(reportLoadError))}</div>`:''}${REPORT_LIST===null?`<div class="reports-empty"><div class="report-spinner"></div><p>${tr('Загрузка отчётов…')}</p></div>`:!items.length?`<div class="reports-empty"><div class="reports-empty-icon">▤</div><h2>${tr('Пока нет отчётов')}</h2><p>${tr('После завершения игры отчёт появится здесь автоматически.')}</p><button class="btn-primary" onclick="openLib()">${tr('Перейти к библиотеке')}</button></div>`:groupHtml}<footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a><span>${tr('Отчёты преподавателя')}</span></footer></section>`;
+function reportTimestamp(r){
+ const raw=r&&r.completedAt;
+ let n=typeof raw==='string'&&!/^\d+(?:\.\d+)?$/.test(raw)?Date.parse(raw):Number(raw);
+ if(!Number.isFinite(n)||n<=0)return 0;
+ return n<1e12?n*1000:n;
 }
+function reportDateKey(ts){
+ const d=new Date(ts);
+ if(!Number.isFinite(d.getTime()))return 'unknown';
+ return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+}
+function reportDateHeading(key){
+ if(key==='unknown')return tr('Дата неизвестна');
+ const parts=key.split('-').map(Number),d=new Date(parts[0],parts[1]-1,parts[2]);
+ const lang=currentUiLanguage()==='zh'?'zh-CN':currentUiLanguage()==='en'?'en-US':'ru-RU';
+ try{return d.toLocaleDateString(lang,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return key}
+}
+function filterReportItems(items){
+ const query=reportSearch.trim().toLocaleLowerCase(currentUiLanguage()==='ru'?'ru-RU':currentUiLanguage()==='zh'?'zh-CN':'en-US');
+ let from=null,to=null;
+ if(reportPeriod==='today'||reportPeriod==='7d'||reportPeriod==='30d'){
+  from=new Date();from.setHours(0,0,0,0);
+  if(reportPeriod==='7d')from.setDate(from.getDate()-6);
+  if(reportPeriod==='30d')from.setDate(from.getDate()-29);
+  to=new Date();to.setHours(23,59,59,999);
+ }else if(reportPeriod==='custom'){
+  if(reportFrom){const d=new Date(reportFrom+'T00:00:00');if(Number.isFinite(d.getTime()))from=d}
+  if(reportTo){const d=new Date(reportTo+'T23:59:59.999');if(Number.isFinite(d.getTime()))to=d}
+ }
+ return items.filter(r=>{
+  const ts=reportTimestamp(r);
+  if(from&&(!ts||ts<from.getTime()))return false;
+  if(to&&(!ts||ts>to.getTime()))return false;
+  if(reportMode!=='all'&&String(r.mode||'classic')!==reportMode)return false;
+  if(reportStatus==='complete'&&r.incomplete)return false;
+  if(reportStatus==='early'&&!r.incomplete)return false;
+  if(query){
+   const hay=[r.title,r.modeName,r.mode].map(x=>String(x||'')).join(' ').toLocaleLowerCase(currentUiLanguage()==='ru'?'ru-RU':currentUiLanguage()==='zh'?'zh-CN':'en-US');
+   if(!hay.includes(query))return false;
+  }
+  return true;
+ });
+}
+function reportFilterCountText(visible,total){return tr('Показано:')+' '+visible+' / '+total}
+function reportResultsMarkup(){
+ const items=filterReportItems(REPORT_LIST||[]);
+ if(!items.length)return `<div class="reports-empty reports-filter-empty"><div class="reports-empty-icon">⌕</div><h2>${tr('Ничего не найдено')}</h2><p>${tr('Измените фильтры или поисковый запрос.')}</p><button class="sec" onclick="resetReportFilters()">${tr('Сбросить фильтры')}</button></div>`;
+ const groups=new Map();
+ items.forEach(r=>{const key=reportDateKey(reportTimestamp(r));if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r)});
+ const entries=[...groups.entries()].sort((a,b)=>{
+  if(a[0]==='unknown')return 1;if(b[0]==='unknown')return -1;
+  const cmp=a[0].localeCompare(b[0]);
+  return reportSort==='date-asc'?cmp:-cmp;
+ });
+ return entries.map(([key,rows])=>{
+  rows.sort((a,b)=>{
+   let cmp=0;
+   if(reportSort==='title-asc')cmp=String(a.title||'').localeCompare(String(b.title||''),currentUiLanguage()==='ru'?'ru-RU':currentUiLanguage()==='zh'?'zh-CN':'en-US',{sensitivity:'base'});
+   else if(reportSort==='participants-desc')cmp=(Number(b.participantCount)||0)-(Number(a.participantCount)||0);
+   else if(reportSort==='accuracy-desc')cmp=(Number(b.accuracy)||0)-(Number(a.accuracy)||0);
+   else cmp=(reportTimestamp(a)-reportTimestamp(b))*(reportSort==='date-asc'?1:-1);
+   return cmp||reportTimestamp(b)-reportTimestamp(a)||String(a.title||'').localeCompare(String(b.title||''));
+  });
+  return `<section class="report-date-group"><div class="report-date-group-head"><h2>${esc(reportDateHeading(key))}</h2><span class="report-count-pill">${rows.length} ${tr('отчётов')}</span></div><div class="report-session-list">${rows.map(r=>{
+   const modeIcon=r.mode==='kingdoms'?'⚑':'◆';
+   return `<article class="report-session-card"><div class="report-session-main"><div class="report-session-icon">${modeIcon}</div><div class="report-session-copy"><b class="report-session-title" data-user-content="true">${esc(r.title||tr('Без названия'))}</b><span>${tr(r.modeName||r.mode)} · ${reportDate(reportTimestamp(r))}${r.incomplete?' · '+tr('Завершён досрочно'):''}</span><small>${Number(r.participantCount)||0} ${tr('участников')} · ${Number(r.questionCount)||0} ${tr('вопросов')} · ${tr('Точность')}: ${Number(r.accuracy)||0}%</small></div></div><button class="btn-primary btn-small" onclick="openReportDetail('${esc(r.id)}')">${tr('Открыть отчёт')} →</button></article>`;
+  }).join('')}</div></section>`;
+ }).join('');
+}
+function updateReportSearch(value){
+ reportSearch=String(value||'');
+ const results=$('report-results');if(results)results.innerHTML=reportResultsMarkup();
+ const count=$('report-filter-count');if(count)count.textContent=reportFilterCountText(filterReportItems(REPORT_LIST||[]).length,(REPORT_LIST||[]).length);
+}
+function setReportFilter(field,value){
+ if(field==='period')reportPeriod=value;
+ else if(field==='sort')reportSort=value;
+ else if(field==='mode')reportMode=value;
+ else if(field==='status')reportStatus=value;
+ else if(field==='from')reportFrom=value;
+ else if(field==='to')reportTo=value;
+ render();
+}
+function resetReportFilters(){
+ reportSearch='';reportPeriod='all';reportSort='date-desc';reportFrom='';reportTo='';reportMode='all';reportStatus='all';render();
+}
+function reportListPage(a){
+ const items=REPORT_LIST||[],visible=filterReportItems(items);
+ const customDates=reportPeriod==='custom'?`<div class="report-filter-field report-custom-date"><label for="report-from">${tr('Дата с')}</label><input id="report-from" type="date" value="${esc(reportFrom)}" onchange="setReportFilter('from',this.value)"></div><div class="report-filter-field report-custom-date"><label for="report-to">${tr('Дата по')}</label><input id="report-to" type="date" value="${esc(reportTo)}" onchange="setReportFilter('to',this.value)"></div>`:'';
+ const filters=`<section class="report-filters" aria-label="${tr('Фильтры отчётов')}"><div class="report-filters-top"><label class="report-search-field"><span>${tr('Поиск')}</span><input id="report-search" type="search" placeholder="${tr('Поиск по отчётам…')}" value="${esc(reportSearch)}" oninput="updateReportSearch(this.value)"></label><div class="report-filter-count" id="report-filter-count">${reportFilterCountText(visible.length,items.length)}</div></div><div class="report-filter-grid"><div class="report-filter-field"><label for="report-period">${tr('Период')}</label><select id="report-period" onchange="setReportFilter('period',this.value)"><option value="all" ${reportPeriod==='all'?'selected':''}>${tr('За всё время')}</option><option value="today" ${reportPeriod==='today'?'selected':''}>${tr('Сегодня')}</option><option value="7d" ${reportPeriod==='7d'?'selected':''}>${tr('Последние 7 дней')}</option><option value="30d" ${reportPeriod==='30d'?'selected':''}>${tr('Последние 30 дней')}</option><option value="custom" ${reportPeriod==='custom'?'selected':''}>${tr('Произвольный период')}</option></select></div><div class="report-filter-field"><label for="report-mode">${tr('Режим игры')}</label><select id="report-mode" onchange="setReportFilter('mode',this.value)"><option value="all" ${reportMode==='all'?'selected':''}>${tr('Все режимы')}</option><option value="classic" ${reportMode==='classic'?'selected':''}>Classic</option><option value="kingdoms" ${reportMode==='kingdoms'?'selected':''}>Color Kingdoms</option></select></div><div class="report-filter-field"><label for="report-status">${tr('Статус')}</label><select id="report-status" onchange="setReportFilter('status',this.value)"><option value="all" ${reportStatus==='all'?'selected':''}>${tr('Все отчёты')}</option><option value="complete" ${reportStatus==='complete'?'selected':''}>${tr('Обычное завершение')}</option><option value="early" ${reportStatus==='early'?'selected':''}>${tr('Завершён досрочно')}</option></select></div><div class="report-filter-field"><label for="report-sort">${tr('Сортировка')}</label><select id="report-sort" onchange="setReportFilter('sort',this.value)"><option value="date-desc" ${reportSort==='date-desc'?'selected':''}>${tr('По дате — сначала новые')}</option><option value="date-asc" ${reportSort==='date-asc'?'selected':''}>${tr('По дате — сначала старые')}</option><option value="title-asc" ${reportSort==='title-asc'?'selected':''}>${tr('По названию теста')}</option><option value="participants-desc" ${reportSort==='participants-desc'?'selected':''}>${tr('По числу участников')}</option><option value="accuracy-desc" ${reportSort==='accuracy-desc'?'selected':''}>${tr('По точности')}</option></select></div>${customDates}</div></section>`;
+ const body=REPORT_LIST===null?`<div class="reports-empty"><div class="report-spinner"></div><p>${tr('Загрузка отчётов…')}</p></div>`:!items.length?`<div class="reports-empty"><div class="reports-empty-icon">▤</div><h2>${tr('Пока нет отчётов')}</h2><p>${tr('После завершения игры отчёт появится здесь автоматически.')}</p><button class="btn-primary" onclick="openLib()">${tr('Перейти к библиотеке')}</button></div>`:`${filters}<div id="report-results">${reportResultsMarkup()}</div>`;
+ a.innerHTML=`${cabinetHeader('reports',tr('Отчёты преподавателя'))}<section class="reports-page"><div class="reports-heading"><div><span class="eyebrow"><span class="eyebrow-dot"></span>${tr('АНАЛИТИКА')}</span><h1 class="page-title">${tr('Отчёты по тестам')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('История прохождений и результаты студентов по каждому запуску.')}</p></div><div class="reports-total"><b>${items.length}</b><span>${tr('отчётов')}</span></div></div>${reportLoadError?`<div class="notice notice-error">${esc(tr(reportLoadError))}</div>`:''}${body}<footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a><span>${tr('Отчёты преподавателя')}</span></footer></section>`;
+}
+
 function toggleReportParticipant(rank){const n=Number(rank)||0;reportParticipantDetailRank=reportParticipantDetailRank===n?0:n;render();}
 function reportDetailPage(a){
  const r=ACTIVE_REPORT;
@@ -1149,6 +1239,13 @@ Object.assign(UI_TRANSLATIONS.en,{
 Object.assign(UI_TRANSLATIONS.zh,{
  "Зелёные":"绿色","Золотые":"金色","зелёных":"绿色","золотых":"金色","Количество королевств":"王国数量","королевства":"个王国","НАСТРОЙКИ ПАРТИИ":"本局设置","Настройки игры":"游戏设置","Настройки партии":"本局设置","Закрыть настройки":"关闭设置","Изменения применяются только к этой игровой комнате и доступны до начала игры.":"这些设置仅用于当前房间，并且只能在游戏开始前修改。","Длительность матча":"比赛时长","Правильных ответов для получения флага":"获得旗帜所需的正确答案数","Максимум баллов за правильный ответ":"答对一题的最高积分","Бонус за скорость":"速度奖励","Быстрый ответ приносит больше баллов.":"回答越快，获得的积分越多。","Настройки сохраняются автоматически при изменении поля.":"字段更改后会自动保存设置。","баллов":"积分","ответов":"个答案","клеток":"格","участников":"名玩家","флагов":"旗帜","верных ответов":"正确答案","Настройки":"设置","королевство":"个王国"
 });
+Object.assign(UI_TRANSLATIONS.en,{
+ 'Фильтры отчётов':'Report filters','Поиск':'Search','Поиск по отчётам…':'Search reports…','Период':'Period','За всё время':'All time','Сегодня':'Today','Последние 7 дней':'Last 7 days','Последние 30 дней':'Last 30 days','Произвольный период':'Custom range','Дата с':'From date','Дата по':'To date','Все режимы':'All modes','Статус':'Status','Все отчёты':'All reports','Обычное завершение':'Completed normally','Сортировка':'Sort by','По дате — сначала новые':'Date — newest first','По дате — сначала старые':'Date — oldest first','По названию теста':'Quiz title (A–Z)','По числу участников':'Participants — most first','По точности':'Accuracy — highest first','Показано:':'Showing:','Измените фильтры или поисковый запрос.':'Change the filters or search query.','Дата неизвестна':'Unknown date'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'Фильтры отчётов':'报告筛选','Поиск':'搜索','Поиск по отчётам…':'搜索报告…','Период':'时间范围','За всё время':'全部时间','Сегодня':'今天','Последние 7 дней':'最近 7 天','Последние 30 дней':'最近 30 天','Произвольный период':'自定义范围','Дата с':'开始日期','Дата по':'结束日期','Все режимы':'全部模式','Статус':'状态','Все отчёты':'全部报告','Обычное завершение':'正常结束','Сортировка':'排序','По дате — сначала новые':'日期：最新优先','По дате — сначала старые':'日期：最早优先','По названию теста':'测验名称（A–Z）','По числу участников':'参与人数最多优先','По точности':'正确率最高优先','Показано:':'显示：','Измените фильтры или поисковый запрос.':'请调整筛选条件或搜索内容。','Дата неизвестна':'日期未知'
+});
+
 function tr(text){
  const lang=currentUiLanguage(); if(lang==='ru')return String(text);
  const d=UI_TRANSLATIONS[lang]||{};
