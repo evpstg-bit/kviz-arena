@@ -3,16 +3,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.6">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.6">
-<link rel="shortcut icon" href="/favicon.ico?v=1.13.6">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.6">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.13.7">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.13.7">
+<link rel="shortcut icon" href="/favicon.ico?v=1.13.7">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.13.7">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.13.6">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.13.6">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.13.6">
-<link rel="stylesheet" href="/lobby.css?v=1.13.6">
+<link rel="stylesheet" href="/ui.css?v=1.13.7">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.13.7">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.13.7">
+<link rel="stylesheet" href="/lobby.css?v=1.13.7">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -29,13 +29,13 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.6'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.13.7'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
 let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
-let reportSelectedIds=new Set();
+let reportSelectedIds=new Set(),reportExportBusy=false;
 let sseMissingChecks=0,gameRole='';
 // Navigation generation prevents stale requests from repainting a screen after the user has moved elsewhere.
 let cabinetNavSeq=0;
@@ -422,7 +422,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.6')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.13.7')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -659,6 +659,47 @@ function toggleVisibleReportSelection(){
  visible.forEach(r=>allSelected?reportSelectedIds.delete(String(r.id)):reportSelectedIds.add(String(r.id)));
  render();
 }
+async function exportSelectedReportsXlsx(){
+ const ids=[...reportSelectedIds];
+ if(!ids.length)return;
+ if(ids.length>100){alert(tr('Для экспорта можно выбрать не более 100 отчётов за раз.'));return}
+ if(typeof XLSX==='undefined'){alert(tr('Библиотека Excel не загрузилась'));return}
+ if(reportExportBusy)return;
+ reportExportBusy=true;render();
+ try{
+  const result=await capi('reports/export',{ids});
+  if(result.error){alert(tr(result.error));return}
+  const reports=Array.isArray(result.reports)?result.reports:[];
+  if(!reports.length){alert(tr('В экспортируемом файле нет данных.'));return}
+  const wb=XLSX.utils.book_new();
+  const summaryRows=[['Название отчёта','Дата','PIN','Режим','Статус','Вопросов','Участников','Время прохождения','Всего ответов','Правильные ответы','Неправильные ответы','Успешность']];
+  const participantRows=[['Название отчёта','Дата','PIN','Режим','Место','Участник','Команда','Очки','Флаги','Правильные ответы','Неправильные ответы','Пропуски','Успешность','Статус']];
+  const questionRows=[['Название отчёта','Дата','PIN','Режим','№','Вопрос','Правильный ответ','Ответов','Правильных','Неправильных','Успешность']];
+  const optionRows=[['Название отчёта','Дата','PIN','Вопрос №','Вопрос','Вариант ответа','Выбрали раз','Правильный вариант']];
+  const teamRows=[['Название отчёта','Дата','PIN','Команда','Участников','Очки','Флаги','Клетки','Правильных','Неправильных','Успешность']];
+  reports.forEach(r=>{
+   const ps=Array.isArray(r.participants)?r.participants:[],qs=Array.isArray(r.questions)?r.questions:[],teams=Array.isArray(r.teams)?r.teams:[];
+   const date=reportDate(reportTimestamp(r)),mode=tr(r.modeName||r.mode),pinValue=String(r.pin||''),title=String(r.title||tr('Без названия')),sum=r.summary||{};
+   summaryRows.push([title,date,pinValue,mode,r.incomplete?tr('Завершён досрочно'):tr('Обычное завершение'),r.questionCount??qs.length,r.participantCount??ps.length,formatReportDuration(sum.playedSeconds),sum.totalAnswers??0,sum.totalCorrect??0,sum.totalIncorrect??0,reportOverallSuccess(r,ps)+'%']);
+   ps.forEach(p=>participantRows.push([title,date,pinValue,mode,p.rank??'',p.name??'',p.team??'',p.score??0,p.placed??0,p.correctCount??0,p.incorrectCount??0,p.unansweredCount===null||p.unansweredCount===undefined?'—':p.unansweredCount,reportParticipantSuccess(p,r)+'%',p.removed?tr('Вышел или исключён'):'']));
+   qs.forEach(q=>{
+    const rate=r.mode==='classic'?reportSuccessPercent(q.correctCount,ps.length):reportSuccessPercent(q.correctCount,q.responseCount);
+    questionRows.push([title,date,pinValue,mode,q.index??'',q.t??'',Array.isArray(q.correctText)?q.correctText.join(' / '):(Array.isArray(q.correct)?q.correct.join(' / '):''),q.responseCount??0,q.correctCount??0,q.incorrectCount??0,rate+'%']);
+    (Array.isArray(q.answerCounts)?q.answerCounts:[]).forEach(opt=>optionRows.push([title,date,pinValue,q.index??'',q.t??'',opt.text??'',opt.count??0,opt.correct?tr('Да'):tr('Нет')]));
+   });
+   teams.forEach(t=>teamRows.push([title,date,pinValue,t.name??'',t.members??0,t.points??0,t.flags??0,t.tiles??0,t.correctCount??0,t.incorrectCount??0,(t.accuracy??0)+'%']));
+  });
+  const add=(name,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows.map((row,i)=>i===0?row.map(v=>typeof v==='string'?tr(v):v):row)),tr(name));
+  add('Сводка',summaryRows);add('Участники',participantRows);add('По вопросам',questionRows);add('Варианты ответов',optionRows);if(teamRows.length>1)add('Команды',teamRows);
+  XLSX.writeFile(wb,'quiz-reports-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  alert(tr('Экспортировано отчётов:')+' '+reports.length);
+ }catch(e){
+  alert(tr('Не удалось экспортировать выбранные отчёты. Проверьте соединение и повторите попытку.'));
+ }finally{
+  reportExportBusy=false;
+  render();
+ }
+}
 async function deleteSelectedReports(){
  const ids=[...reportSelectedIds];if(!ids.length)return;
  if(!confirm(tr('Удалить выбранные отчёты? Это действие нельзя отменить.')+' ('+ids.length+')'))return;
@@ -784,7 +825,7 @@ function reportListPage(a){
  const customDates=reportPeriod==='custom'?`<div class="report-filter-field report-custom-date"><label for="report-from">${tr('Дата с')}</label><input id="report-from" type="date" value="${esc(reportFrom)}" onchange="setReportFilter('from',this.value)"></div><div class="report-filter-field report-custom-date"><label for="report-to">${tr('Дата по')}</label><input id="report-to" type="date" value="${esc(reportTo)}" onchange="setReportFilter('to',this.value)"></div>`:'';
  const filters=`<section class="report-filters" aria-label="${tr('Фильтры отчётов')}"><div class="report-filters-top"><label class="report-search-field"><span>${tr('Поиск')}</span><input id="report-search" type="search" placeholder="${tr('Поиск по отчётам…')}" value="${esc(reportSearch)}" oninput="updateReportSearch(this.value)"></label><div class="report-filter-actions"><div class="report-filter-count" id="report-filter-count">${reportFilterCountText(visible.length,items.length)}</div><button type="button" class="sec btn-small report-reset-button" onclick="resetReportFilters()">${tr('Сбросить фильтры')}</button></div></div><div class="report-filter-grid"><div class="report-filter-field"><label for="report-period">${tr('Период')}</label><select id="report-period" onchange="setReportFilter('period',this.value)"><option value="all" ${reportPeriod==='all'?'selected':''}>${tr('За всё время')}</option><option value="today" ${reportPeriod==='today'?'selected':''}>${tr('Сегодня')}</option><option value="7d" ${reportPeriod==='7d'?'selected':''}>${tr('Последние 7 дней')}</option><option value="30d" ${reportPeriod==='30d'?'selected':''}>${tr('Последние 30 дней')}</option><option value="custom" ${reportPeriod==='custom'?'selected':''}>${tr('Произвольный период')}</option></select></div><div class="report-filter-field"><label for="report-mode">${tr('Режим игры')}</label><select id="report-mode" onchange="setReportFilter('mode',this.value)"><option value="all" ${reportMode==='all'?'selected':''}>${tr('Все режимы')}</option><option value="classic" ${reportMode==='classic'?'selected':''}>Classic</option><option value="kingdoms" ${reportMode==='kingdoms'?'selected':''}>Color Kingdoms</option></select></div><div class="report-filter-field"><label for="report-status">${tr('Статус')}</label><select id="report-status" onchange="setReportFilter('status',this.value)"><option value="all" ${reportStatus==='all'?'selected':''}>${tr('Все отчёты')}</option><option value="complete" ${reportStatus==='complete'?'selected':''}>${tr('Обычное завершение')}</option><option value="early" ${reportStatus==='early'?'selected':''}>${tr('Завершён досрочно')}</option></select></div><div class="report-filter-field"><label for="report-sort">${tr('Сортировка')}</label><select id="report-sort" onchange="setReportFilter('sort',this.value)"><option value="date-desc" ${reportSort==='date-desc'?'selected':''}>${tr('По дате — сначала новые')}</option><option value="date-asc" ${reportSort==='date-asc'?'selected':''}>${tr('По дате — сначала старые')}</option><option value="title-asc" ${reportSort==='title-asc'?'selected':''}>${tr('По названию теста')}</option><option value="participants-desc" ${reportSort==='participants-desc'?'selected':''}>${tr('По числу участников')}</option><option value="accuracy-desc" ${reportSort==='accuracy-desc'?'selected':''}>${tr('По точности')}</option></select></div>${customDates}</div></section>`;
  const selectedCount=reportSelectedIds.size;
- const bulkActions=`<section class="report-bulk-actions"><div class="report-bulk-info"><b>${tr('Выбрано:')} ${selectedCount}</b><span>${tr('Отметьте отчёты, которые нужно удалить.')}</span></div><div class="report-bulk-buttons"><button type="button" class="sec btn-small" onclick="toggleVisibleReportSelection()">${tr('Выбрать все показанные / снять выбор')}</button><button type="button" class="btn-danger btn-small report-delete-selected" onclick="deleteSelectedReports()" ${selectedCount?'':'disabled'}>⌫ ${tr('Удалить выбранные')}</button></div></section>`;
+ const bulkActions=`<section class="report-bulk-actions"><div class="report-bulk-info"><b>${tr('Выбрано:')} ${selectedCount}</b><span>${tr('Выберите отчёты для экспорта или удаления.')}</span></div><div class="report-bulk-buttons"><button type="button" class="sec btn-small" onclick="toggleVisibleReportSelection()">${tr('Выбрать все показанные / снять выбор')}</button><button type="button" class="btn-primary btn-small" onclick="exportSelectedReportsXlsx()" ${selectedCount&&!reportExportBusy?'':'disabled'}>${reportExportBusy?tr('Подготовка экспорта…'):tr('Экспортировать выбранные')}</button><button type="button" class="btn-danger btn-small report-delete-selected" onclick="deleteSelectedReports()" ${selectedCount?'':'disabled'}>⌫ ${tr('Удалить выбранные')}</button></div></section>`;
  const body=REPORT_LIST===null?`<div class="reports-empty"><div class="report-spinner"></div><p>${tr('Загрузка отчётов…')}</p></div>`:!items.length&&reportLoadError?`<div class="reports-empty"><div class="reports-empty-icon">⚠</div><h2>${tr('Не удалось загрузить историю отчётов')}</h2><p>${esc(tr(reportLoadError))}</p><button class="sec" onclick="openReports()">${tr('Повторить загрузку')}</button></div>`:!items.length?`<div class="reports-empty"><div class="reports-empty-icon">▤</div><h2>${tr('Пока нет отчётов')}</h2><p>${tr('После завершения игры отчёт появится здесь автоматически.')}</p><button class="btn-primary" onclick="openLib()">${tr('Перейти к библиотеке')}</button></div>`:`${filters}${bulkActions}<div id="report-results">${reportResultsMarkup()}</div>`;
  a.innerHTML=`${cabinetHeader('reports',tr('Отчёты преподавателя'))}<section class="reports-page"><div class="reports-heading"><div><span class="eyebrow"><span class="eyebrow-dot"></span>${tr('АНАЛИТИКА')}</span><h1 class="page-title">${tr('Отчёты по тестам')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('История прохождений и результаты студентов по каждому запуску.')}</p></div><div class="reports-total"><b>${items.length}</b><span>${tr('отчётов')}</span></div></div>${reportLoadError?`<div class="notice notice-error">${esc(tr(reportLoadError))}</div>`:''}${body}<footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a><span>${tr('Отчёты преподавателя')}</span></footer></section>`;
 }
@@ -1380,6 +1421,8 @@ Object.assign(UI_TRANSLATIONS.zh,{
 });
 Object.assign(UI_TRANSLATIONS.en,{'Успешность':'Success rate','Общая успешность':'Overall success rate','Средняя успешность участника':'Average participant success','Успешность по убыванию':'Success rate: high to low','Успешность по возрастанию':'Success rate: low to high','По успешности':'By success rate'});
 Object.assign(UI_TRANSLATIONS.zh,{'Успешность':'成功率','Общая успешность':'总体成功率','Средняя успешность участника':'参与者平均成功率','Успешность по убыванию':'成功率从高到低','Успешность по возрастанию':'成功率从低到高','По успешности':'按成功率排序'});
+Object.assign(UI_TRANSLATIONS.en,{'Экспортировать выбранные':'Export selected reports','Выберите отчёты для экспорта или удаления.':'Select reports to export or delete.','Для экспорта можно выбрать не более 100 отчётов за раз.':'You can export up to 100 reports at a time.','Не удалось экспортировать выбранные отчёты. Проверьте соединение и повторите попытку.':'Could not export selected reports. Check your connection and try again.','Экспортировано отчётов:':'Reports exported:','Подготовка экспорта…':'Preparing export…','Варианты ответов':'Answer options'});
+Object.assign(UI_TRANSLATIONS.zh,{'Экспортировать выбранные':'导出所选报告','Выберите отчёты для экспорта или удаления.':'选择要导出或删除的报告。','Для экспорта можно выбрать не более 100 отчётов за раз.':'每次最多可导出 100 份报告。','Не удалось экспортировать выбранные отчёты. Проверьте соединение и повторите попытку.':'无法导出所选报告。请检查网络连接并重试。','Экспортировано отчётов:':'已导出报告：','Подготовка экспорта…':'正在准备导出…','Варианты ответов':'答案选项'});
 function tr(text){
  const lang=currentUiLanguage(); if(lang==='ru')return String(text);
  const d=UI_TRANSLATIONS[lang]||{};
