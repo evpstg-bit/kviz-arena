@@ -397,3 +397,11 @@ body { width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; margin:
     width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;
   }
 }
+
+/* v1.12.24: hard guard — the hamburger is not part of any active game screen. */
+#app.game-view-active .cabinet-menu-wrap,
+#app.game-view-active .floating-menu-anchor,
+body.game-view-active #app .cabinet-menu-wrap,
+body.game-view-active #app .floating-menu-anchor {
+  display: none !important;
+}
