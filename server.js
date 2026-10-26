@@ -547,6 +547,7 @@ function view(g,id,R0){
     elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:R.slice(0,10).map(p=>({name:p.name,score:p.score,roundPts:p.lastQ===g.qi?(Number(p.lastPts)||0):0}))};
   if(host&&g.state==='lobby'){const app=g.appSettings||APP_SETTINGS;v.lobbySettings={classic:{basePoints:app.modes.classic.basePoints,speedBonus:app.modes.classic.speedBonus},kingdoms:{durationMinutes:g.quiz.dur,correctAnswersForFlag:g.quiz.need,kingdomCount:clampInt(app.modes.kingdoms.kingdomCount,2,4,2)}}}
   if(host&&g.reportId)v.reportId=g.reportId;
+  if(g.mode==='classic'&&g.state==='final')v.finalRows=R.map((p,i)=>({rank:i+1,name:p.name,score:p.score}));
   if(g.state==='question'||g.state==='results')v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1};
   if(g.state==='results'&&(host||(g.appSettings||APP_SETTINGS).general.showCorrectAnswerAfterQuestion))v.correct=q.cs;
   if(host){
