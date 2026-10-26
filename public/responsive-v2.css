@@ -518,3 +518,13 @@ html.dark .classic-final-score{color:#c7bbff}
 html.dark .classic-final-score small{color:#aeb3ca}
 .classic-final-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:24px}
 @media(max-width:520px){.classic-final-screen{padding:15px 11px;border-radius:20px}.classic-final-podium{gap:5px;margin:22px auto 28px}.classic-final-player-name{font-size:.74rem;margin:7px 0 8px}.classic-final-medal{font-size:1.9rem}.classic-final-podium-block{border-radius:13px 13px 5px 5px;padding:10px 3px 6px}.classic-final-podium-block span{font-size:.62rem}.classic-final-ranking-row{grid-template-columns:34px minmax(0,1fr) auto;gap:8px;padding:8px 8px;min-height:48px}.classic-final-rank{width:29px;height:29px;border-radius:9px}.classic-final-score{font-size:.9rem}.classic-final-score small{font-size:.65rem}}
+
+
+/* v1.13.1: make per-question Classic points prominent and readable at a glance. */
+.classic-ranking-earned{display:inline-flex;align-items:center;align-self:flex-start;gap:5px;width:max-content;max-width:100%;padding:4px 8px;margin-top:4px;border:1px solid rgba(5,150,105,.34);border-radius:999px;background:rgba(16,185,129,.13);color:#047857;font-size:.76rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
+.classic-ranking-earned-label{font-size:.7rem;font-weight:800;letter-spacing:.005em}
+.classic-ranking-earned strong{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:999px;background:#059669;color:#fff;font-size:.9rem;font-weight:950;line-height:1;box-shadow:0 1px 3px rgba(5,150,105,.22)}
+.classic-ranking-earned-unit{font-size:.68rem;font-weight:850}
+html.dark .classic-ranking-earned{background:rgba(16,185,129,.16);border-color:rgba(52,211,153,.42);color:#a7f3d0}
+html.dark .classic-ranking-earned strong{background:#047857;color:#fff}
+@media(max-width:520px){.classic-ranking-earned{gap:4px;padding:4px 6px;font-size:.72rem}.classic-ranking-earned-label{font-size:.64rem}.classic-ranking-earned strong{padding:3px 6px;font-size:.84rem}.classic-ranking-earned-unit{font-size:.63rem}}
