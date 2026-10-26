@@ -543,8 +543,8 @@ async function saveGameReport(g,options={}){
 // ---- Classic ----
 function view(g,id,R0){
   const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
-  const v={state:g.state,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
-    elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:R.slice(0,5).map(p=>({name:p.name,score:p.score}))};
+  const v={state:g.state,resultEndsAt:g.resultEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
+    elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:R.slice(0,10).map(p=>({name:p.name,score:p.score}))};
   if(host&&g.state==='lobby'){const app=g.appSettings||APP_SETTINGS;v.lobbySettings={classic:{basePoints:app.modes.classic.basePoints,speedBonus:app.modes.classic.speedBonus},kingdoms:{durationMinutes:g.quiz.dur,correctAnswersForFlag:g.quiz.need,kingdomCount:clampInt(app.modes.kingdoms.kingdomCount,2,4,2)}}}
   if(host&&g.reportId)v.reportId=g.reportId;
   if(g.state==='question'||g.state==='results')v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1};
@@ -569,10 +569,28 @@ function view(g,id,R0){
   return v;
 }
 function startQ(g){
-  g.state='question';g.qStart=Date.now();clearTimeout(g.timer);
+  g.state='question';g.resultEndsAt=0;g.qStart=Date.now();clearTimeout(g.timer);
   g.timer=setTimeout(()=>toResults(g),g.quiz.q[g.qi].T*1000+500);push(g);
 }
-function toResults(g){if(g.state!=='question')return;clearTimeout(g.timer);g.state='results';push(g)}
+function toResults(g){
+  if(g.state!=='question')return;
+  clearTimeout(g.timer);
+  g.state='results';
+  g.resultEndsAt=Date.now()+3000;
+  push(g);
+  // Keep the intermediate ranking visible for three seconds, then advance without host input.
+  g.timer=setTimeout(()=>{
+    if(g.state!=='results')return;
+    if(g.qi>=g.quiz.q.length-1){
+      const saved=saveGameReport(g);
+      g.state='final';g.resultEndsAt=0;push(g);
+      Promise.resolve(saved).then(()=>push(g)).catch(e=>console.error('Не удалось сохранить итоговый отчёт:',e.message));
+      return;
+    }
+    g.qi++;
+    startQ(g);
+  },3000);
+}
 
 // ---- Color Kingdoms: six-neighbour hex map and 2–4 kingdoms ----
 const adjN=(i,N)=>{
@@ -1023,7 +1041,8 @@ http.createServer(async(req,res)=>{
     else if(host&&b.type==='skip'){if(KM)await finishK(g);else toResults(g)}
     else if(host&&b.type==='lock'){g.locked=!g.locked;push(g)}
     else if(host&&!KM&&b.type==='next'&&g.state==='results'){
-      if(g.qi>=g.quiz.q.length-1){g.state='final';await saveGameReport(g);push(g)}else{g.qi++;startQ(g)}
+      // Kept as a no-op for stale clients: Classic advances automatically after the ranking overlay.
+      return json(res,{ok:1,autoAdvance:true});
     }else if(p&&KM&&g.state==='playing'&&b.type==='answer'){
       if(answerK(g,p,b)){pushOne(g,b.id);sched(g)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='place'){

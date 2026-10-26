@@ -405,3 +405,53 @@ body.game-view-active #app .cabinet-menu-wrap,
 body.game-view-active #app .floating-menu-anchor {
   display: none !important;
 }
+
+
+/* v1.12.27: central Classic top-10 ranking between questions. */
+.classic-ranking-backdrop {
+  position: fixed !important; inset: 0 !important; z-index: 100000 !important;
+  display: grid !important; place-items: center !important;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+  background: rgba(10, 14, 30, .66);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  animation: classic-ranking-fade-in .16s ease-out both;
+}
+.classic-ranking-card {
+  width: min(620px, 100%); max-height: min(88vh, 820px); max-height: min(88dvh, 820px);
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.22); border-radius: 26px;
+  padding: clamp(15px, 3vw, 24px); color: #182033; background: rgba(255,255,255,.98);
+  box-shadow: 0 28px 90px rgba(0,0,0,.32), 0 3px 12px rgba(0,0,0,.1);
+}
+html.dark .classic-ranking-card { color: #f4f6ff; background: rgba(24,27,43,.98); border-color: rgba(255,255,255,.13); box-shadow: 0 28px 90px rgba(0,0,0,.55), 0 3px 12px rgba(0,0,0,.25); }
+.classic-ranking-header { display: flex; align-items: center; gap: 13px; flex: 0 0 auto; padding-bottom: 14px; }
+.classic-ranking-trophy { display: grid; place-items: center; flex: 0 0 52px; width: 52px; height: 52px; border-radius: 17px; background: linear-gradient(140deg,#fff1b8,#f5c34c); box-shadow: inset 0 1px 0 rgba(255,255,255,.8),0 6px 18px rgba(186,130,21,.2); font-size: 29px; }
+.classic-ranking-header p { margin: 0 0 3px; color: #7864d9; font-size: .75rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+html.dark .classic-ranking-header p { color: #b6a8ff; }
+.classic-ranking-header h2 { margin: 0; font-size: clamp(1.25rem,4vw,1.8rem); line-height: 1.15; font-weight: 850; letter-spacing: -.025em; }
+.classic-ranking-progress { flex: 0 0 4px; width: 100%; overflow: hidden; border-radius: 999px; margin: 0 0 12px; background: rgba(117,103,183,.16); }
+.classic-ranking-progress span { display: block; width: 100%; height: 4px; border-radius: inherit; background: linear-gradient(90deg,#7464e8,#d05fce); transform-origin: left center; animation-name: classic-ranking-time; animation-timing-function: linear; animation-fill-mode: both; }
+.classic-ranking-list { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; padding: 0; margin: 0; }
+.classic-ranking-row { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: center; gap: 10px; min-height: 39px; padding: 6px 10px; border-radius: 12px; color: inherit; background: rgba(110,102,163,.075); border: 1px solid rgba(100,100,145,.07); }
+html.dark .classic-ranking-row { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.06); }
+.classic-ranking-row:first-child { background: linear-gradient(90deg,rgba(246,197,75,.22),rgba(246,197,75,.07)); border-color: rgba(230,177,47,.28); }
+.classic-ranking-place { display: inline-grid; place-items: center; min-width: 30px; height: 27px; font-weight: 850; font-size: .9rem; color: #6f6d82; }
+.classic-ranking-place.is-podium { font-size: 1.22rem; }
+.classic-ranking-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: .96rem; }
+.classic-ranking-score { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 1rem; font-weight: 850; color: #6854d6; }
+html.dark .classic-ranking-score { color: #c0b5ff; }
+.classic-ranking-caption { flex: 0 0 auto; margin: 13px 0 0; text-align: center; font-size: .78rem; color: #71758a; }
+html.dark .classic-ranking-caption { color: #aeb3ca; }
+.classic-ranking-empty { padding: 20px; text-align: center; color: #73758a; }
+@keyframes classic-ranking-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes classic-ranking-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 520px) {
+  .classic-ranking-backdrop { padding: max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom)); }
+  .classic-ranking-card { width: 100%; padding: 15px; border-radius: 21px; max-height: min(90vh,820px); max-height: min(90dvh,820px); }
+  .classic-ranking-header { gap: 10px; padding-bottom: 11px; }
+  .classic-ranking-trophy { width: 44px; height: 44px; flex-basis: 44px; border-radius: 14px; font-size: 25px; }
+  .classic-ranking-row { grid-template-columns: 31px minmax(0,1fr) auto; gap: 7px; min-height: 35px; padding: 5px 7px; }
+  .classic-ranking-name { font-size: .88rem; } .classic-ranking-score { font-size: .91rem; }
+  .classic-ranking-place { min-width: 27px; } .classic-ranking-list { gap: 5px; }
+  .classic-ranking-caption { margin-top: 10px; font-size: .73rem; }
+}

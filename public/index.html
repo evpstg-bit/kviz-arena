@@ -3,16 +3,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.12.26">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.12.26">
-<link rel="shortcut icon" href="/favicon.ico?v=1.12.26">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.12.26">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.12.27">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.12.27">
+<link rel="shortcut icon" href="/favicon.ico?v=1.12.27">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.12.27">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.12.26">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.12.26">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.12.26">
-<link rel="stylesheet" href="/lobby.css?v=1.12.26">
+<link rel="stylesheet" href="/ui.css?v=1.12.27">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.12.27">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.12.27">
+<link rel="stylesheet" href="/lobby.css?v=1.12.27">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -29,7 +29,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.26'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.12.27'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -421,7 +421,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.12.26')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.12.27')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -1075,13 +1075,22 @@ function host(a){
   <div class="c host-question-controls" style="margin-top:14px"><button class="sec" onclick="act('skip')">Пропустить вопрос</button></div>
   ${liveParticipantsPanel()}`;
  if(S.state==='results'){
-  const mx=Math.max(1,...S.counts),last=S.qi>=S.total-1,okN=S.rows.filter(p=>p.ok).length;
+  const mx=Math.max(1,...S.counts),okN=S.rows.filter(p=>p.ok).length;
   return a.innerHTML=`<h2 data-user-content="true" class="c">${esc(q.t)}</h2><div class="cnt">${S.counts.slice(0,q.a.length).map((n,j)=>`<div class="a${j}" style="height:${Math.max(16,n/mx*100)}%;${S.correct.includes(j)?'outline:4px solid var(--fg)':'opacity:.45'}">${n}<br>${SH[j]}${S.correct.includes(j)?' ✓':''}</div>`).join('')}</div>
   <p class="c ok big">Правильный ответ: <b data-user-content="true">${esc(S.correct.map(k=>q.a[k]).join(' + '))}</b></p><p class="c mut">Верно ответили: ${okN} из ${N}</p>
-  <div class="row host-results-controls" style="justify-content:center;margin-top:14px"><button onclick="act('next')">${last?'Итоги':'Следующий вопрос'}</button>${dl}</div>
+  <div class="row host-results-controls" style="justify-content:center;margin-top:14px">${dl}</div>
   ${liveParticipantsPanel()}`;
  }
  a.innerHTML=`<h1>🏆 Итоги</h1>${podium(S.rows)}<div class="max-h-96 overflow-auto">${S.rows.slice(3).map((p,i)=>`<div class="lb"><span>${i+4}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}</div><div class="row" style="justify-content:center;margin-top:14px">${dl}<button onclick="newGame()">Новая игра</button></div>`;
+}
+function classicRankingOverlay(){
+ if(!S||S.mode!=='classic'||S.state!=='results')return '';
+ const rows=(Array.isArray(S.top)?S.top:[]).slice(0,10);
+ const endAt=Number(S.resultEndsAt)||Date.now()+3000;
+ const remaining=Math.max(1,Math.min(3000,endAt-Date.now()));
+ const medals=['🥇','🥈','🥉'];
+ const items=rows.map((p,i)=>`<li class="classic-ranking-row"><span class="classic-ranking-place ${i<3?'is-podium':''}">${medals[i]||i+1}</span><span class="classic-ranking-name" data-user-content="true">${esc(p.name||'Участник')}</span><strong class="classic-ranking-score">${Number(p.score)||0}</strong></li>`).join('');
+ return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr('Рейтинг игроков')}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr('Рейтинг игроков')}</p><h2>${tr('Топ-10 игроков')}</h2></div></header><div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div><ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr('Пока нет участников')}</li>`}</ol><p class="classic-ranking-caption">${tr('Следующий вопрос откроется автоматически')}</p></section></div>`;
 }
 function player(a){
  const p=S.me||{name:'',score:0,rank:0};
@@ -1134,6 +1143,7 @@ function draw(){
   }
  }
  if(S.mode==='kingdoms'&&S.banner&&Date.now()<banUntil)a.insertAdjacentHTML('beforeend',bannerHtml());
+ if(S.mode==='classic'&&S.state==='results')a.insertAdjacentHTML('beforeend',classicRankingOverlay());
 }
 function tick(){
  if(!S)return;let left,tot;
@@ -1331,6 +1341,18 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Удалить выбранные':'删除所选','Удалить выбранные отчёты? Это действие нельзя отменить.':'确定删除所选报告吗？此操作无法撤销。',
  'Удалено отчётов:':'已删除报告：',
  'Не удалось удалить отчёты. Проверьте соединение и повторите попытку.':'无法删除报告。请检查连接后重试。'
+});
+Object.assign(UI_TRANSLATIONS.en,{
+ 'Рейтинг игроков':'Player ranking',
+ 'Топ-10 игроков':'Top 10 players',
+ 'Следующий вопрос откроется автоматически':'The next question starts automatically',
+ 'Пока нет участников':'No players yet'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'Рейтинг игроков':'玩家积分排名',
+ 'Топ-10 игроков':'前10名玩家',
+ 'Следующий вопрос откроется автоматически':'下一题将自动开始',
+ 'Пока нет участников':'暂无玩家'
 });
 function tr(text){
  const lang=currentUiLanguage(); if(lang==='ru')return String(text);
