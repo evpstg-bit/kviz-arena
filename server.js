@@ -514,9 +514,10 @@ function makeGameReport(g,{incomplete=false}={}){
   });
   const participants=roster.map(p=>{
     const logs=Array.isArray(p.log)?p.log:[],correctCount=logs.filter(l=>l.ok).length,incorrectCount=logs.length-correctCount;
-    const uniqueQuestions=new Set(logs.map(l=>Number(l.qi))).size;
+    const uniqueQuestions=new Set(logs.map(l=>Number(l.qi)).filter(qi=>Number.isInteger(qi)&&qi>=0&&qi<questions.length)).size;
     const classicUnanswered=g.mode==='classic'?Math.max(0,questions.length-uniqueQuestions):null;
-    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,accuracy:answeredAccuracy(correctCount,logs.length),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
+    const completionRate=questions.length?Math.round(uniqueQuestions/questions.length*100):0;
+    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,uniqueAnsweredCount:uniqueQuestions,completionRate,unansweredCount:classicUnanswered,accuracy:answeredAccuracy(correctCount,logs.length),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
   }).sort((a,b)=>g.mode==='kingdoms'?(b.placed-a.placed||b.correctCount-a.correctCount||a.name.localeCompare(b.name)):(b.score-a.score||b.correctCount-a.correctCount||a.name.localeCompare(b.name)));
   participants.forEach((p,i)=>p.rank=i+1);
   const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
