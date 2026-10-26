@@ -1647,3 +1647,40 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
     width:100%!important;
   }
 }
+
+/* v1.12.25 — Color Kingdoms: palette-driven tiles and support for 2–4 teams. */
+#app .kingdom-board-row > .kingdom-tile[class*="is-kingdom-"],
+#app .kingdom-board-grid > .kingdom-tile[class*="is-kingdom-"] {
+  background-color:var(--team-color)!important;
+  border-color:var(--team-color-border)!important;
+  background-image:
+    repeating-linear-gradient(122deg,rgba(255,255,255,.13) 0 1px,transparent 1px 5px),
+    repeating-linear-gradient(35deg,rgba(0,0,0,.10) 0 1px,transparent 1px 8px),
+    linear-gradient(145deg,var(--team-color-light),var(--team-color) 54%,var(--team-color-dark))!important;
+}
+#app .kingdom-board-row > .kingdom-tile[class*="is-kingdom-"] .kingdom-tile-fortress,
+#app .kingdom-board-grid > .kingdom-tile[class*="is-kingdom-"] .kingdom-tile-fortress {
+  color:var(--rook-color)!important;
+  -webkit-text-stroke:.55px var(--team-color-dark);
+  text-shadow:0 2px 2px rgba(0,0,0,.76),0 0 5px var(--team-color-dark)!important;
+}
+#app .kingdom-team-stats-grid {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+  gap:12px;width:100%;margin:14px 0;align-items:stretch;
+}
+#app .kingdom-team-card {
+  min-width:0;padding:14px 16px;border:1px solid var(--team-color-border);
+  border-radius:18px;color:#fff!important;
+  background:linear-gradient(145deg,var(--team-color),var(--team-color-dark))!important;
+  box-shadow:0 10px 24px rgba(18,24,45,.16),inset 0 1px 0 rgba(255,255,255,.24);
+}
+#app .kingdom-team-card > div {min-width:0;gap:8px}
+#app .kingdom-team-card b {color:#fff!important;overflow-wrap:anywhere}
+#app .kingdom-team-card .text-sm {line-height:1.45;color:rgba(255,255,255,.93)!important}
+@media(max-width:520px){
+  #app .kingdom-team-stats-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #app .kingdom-team-card {padding:11px;border-radius:13px}
+  #app .kingdom-team-card .text-xl {font-size:.96rem}
+  #app .kingdom-team-card .text-3xl {font-size:1.6rem}
+  #app .kingdom-team-card .text-sm {font-size:.68rem}
+}

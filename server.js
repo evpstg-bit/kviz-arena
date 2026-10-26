@@ -465,11 +465,23 @@ async function mutateBuiltinItems(mutator,message){
 // ================= игры =================
 const ranked=g=>[...g.players.entries()].map(([id,p])=>({id,...p})).sort((a,b)=>b.score-a.score);
 const playerOnline=(g,id)=>[...g.clients].some(c=>c.id===id);
+function leastPopulatedTeam(counts){
+  const min=Math.min(...counts),choices=[];
+  counts.forEach((n,i)=>{if(n===min)choices.push(i)});
+  return choices[Math.floor(Math.random()*choices.length)];
+}
+function leastPopulatedKingdom(g,count){
+  const sizes=Array(count).fill(0);
+  for(const player of g.players.values()){
+    if(Number.isInteger(player.team)&&player.team>=0&&player.team<count)sizes[player.team]++;
+  }
+  return leastPopulatedTeam(sizes);
+}
 function newPlayer(g,name){
   const p={name,score:0,lastQ:-1,lastA:[],lastPts:0,log:[]};
   if(g.mode==='kingdoms'){
     Object.assign(p,{team:0,prog:0,flags:0,placed:0,correctN:0,answeredN:0,qn:0,fb:null,queue:[],qi:0,cur:0});
-    if(g.kb){const count=g.kb.kingdomCount||2,c=Array.from({length:count},(_,t)=>[...g.players.values()].filter(x=>x.team===t).length);p.team=c.indexOf(Math.min(...c));initQ(g,p)}
+    if(g.kb){const count=clampInt(g.kb.kingdomCount,2,4,2);p.team=leastPopulatedKingdom(g,count);initQ(g,p)}
   }
   return p;
 }
@@ -602,7 +614,7 @@ function startK(g){
   const cfg=(g.appSettings||APP_SETTINGS).modes.kingdoms||APP_SETTINGS.modes.kingdoms;
   const kingdomCount=clampInt(cfg.kingdomCount,2,4,2),durationMinutes=clampInt(g.quiz.dur,5,20,cfg.durationMinutes),need=clampInt(g.quiz.need,1,5,cfg.correctAnswersForFlag);
   const kb=g.kb={N,kingdomCount,round:1,trophies:Array(kingdomCount).fill(0),need,dur:durationMinutes*60000,banner:null,winner:null};
-  resetBoard(kb);ids.forEach((id,i)=>{const p=g.players.get(id);p.team=i%kingdomCount;initQ(g,p)});
+  resetBoard(kb);const teamCounts=Array(kingdomCount).fill(0);ids.forEach(id=>{const p=g.players.get(id);p.team=leastPopulatedTeam(teamCounts);teamCounts[p.team]++;initQ(g,p)});
   kb.endsAt=Date.now()+kb.dur;g.state='playing';clearTimeout(g.timer);g.timer=setTimeout(()=>finishK(g),kb.dur+200);push(g);
 }
 async function finishK(g){
