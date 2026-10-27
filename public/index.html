@@ -133,7 +133,7 @@ async function submitAuth(){
 async function submitAuthSecondFactor(){
  msg='';
  const r=await api('auth/verify-2fa',{challenge:authChallenge,code:authCode});
- if(r.error){msg=r.error;return render()}
+ if(r.error){msg=r.error;if(r.error.includes('Сеанс подтверждения истёк')||r.error.includes('Начните вход заново'))authChallenge='';return render()}
  TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};authChallenge='';authCode='';INFO.hasUsers=true;openLib();
 }
 function cancelAuthChallenge(){authChallenge='';authCode='';msg='';AF.pass='';render()}
