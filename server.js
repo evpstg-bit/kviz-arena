@@ -545,7 +545,7 @@ async function githubLoadFullReport(id){
 
 async function githubReadAppSettings(cfg){
   const url='https://api.github.com/repos/'+cfg.repo+'/contents/app-settings.json?ref='+encodeURIComponent(cfg.branch);
-  const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'}});
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena'},signal:AbortSignal.timeout(5000)});
   if(r.status===404)return{sha:null,settings:readAppSettingsFile(),exists:false};
   if(!r.ok)throw new Error('Не удалось прочитать app-settings.json из GitHub (HTTP '+r.status+'). Проверьте GITHUB_TOKEN, репозиторий, ветку и Contents: read/write.');
   const data=await r.json();if(!data.content)throw new Error('GitHub вернул пустой app-settings.json');
@@ -914,7 +914,10 @@ http.createServer(async(req,res)=>{
     req.on('close',()=>{clearInterval(ka);g.clients.delete(c);setImmediate(()=>{if(games.get(g.pin)===g)push(g)})});return;
   }
   if(req.method==='GET'&&u.pathname==='/api/info'){
-    await hydrateAppSettingsFromGitHub();
+    // Keep the initial page load independent from GitHub availability.
+    // Use cached/local settings immediately while the remote refresh continues in the background.
+    const hydration=hydrateAppSettingsFromGitHub();
+    await Promise.race([hydration,new Promise(resolve=>setTimeout(resolve,1200))]);
     const urls=Object.values(os.networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).map(i=>'http://'+i.address+':'+PORT);
     return json(res,{urls,hasUsers:USERS.length>0,regOpen:USERS.length===0||!!INVITE,needInvite:USERS.length>0&&!!INVITE,settings:APP_SETTINGS,version:APP_VERSION});
   }
