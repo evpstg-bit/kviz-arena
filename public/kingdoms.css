@@ -238,3 +238,78 @@ body.game-view-active:has(.kingdom-score-chip)::before,body.game-view-active:has
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%) !important;
   border-radius: 0 !important;
 }
+
+
+/* v1.16.6 — joined translucent hex grid.
+   Place this final override after the legacy square-tile rules from liquid-glass.css. */
+#app .kingdom-board-grid {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  justify-content:flex-start !important;
+  width:max-content !important;
+  max-width:none !important;
+  height:auto !important;
+  aspect-ratio:auto !important;
+  gap:0 !important;
+  padding:3px 0 6px !important;
+  margin:0 auto !important;
+  overflow:visible !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+#app .kingdom-board-grid.is-small-board {
+  width:max-content !important;
+  max-width:none !important;
+  aspect-ratio:auto !important;
+}
+#app .kingdom-board-grid > .kingdom-board-row {
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:stretch !important;
+  justify-content:flex-start !important;
+  gap:0 !important;
+  width:max-content !important;
+  height:var(--hex-h) !important;
+  min-height:var(--hex-h) !important;
+  flex:0 0 var(--hex-h) !important;
+  margin-top:calc(var(--hex-h) * -.25) !important;
+  position:relative !important;
+  isolation:isolate;
+}
+#app .kingdom-board-grid > .kingdom-board-row:first-child {
+  margin-top:0 !important;
+}
+#app .kingdom-board-grid > .kingdom-board-row:nth-child(even) {
+  transform:translateX(calc(var(--hex-w) * .5)) !important;
+}
+#app .kingdom-board-grid .kingdom-board-row > .kingdom-tile {
+  box-sizing:border-box !important;
+  position:relative !important;
+  display:grid !important;
+  place-items:center !important;
+  flex:0 0 var(--hex-w) !important;
+  width:var(--hex-w) !important;
+  min-width:var(--hex-w) !important;
+  max-width:var(--hex-w) !important;
+  height:var(--hex-h) !important;
+  min-height:var(--hex-h) !important;
+  max-height:var(--hex-h) !important;
+  aspect-ratio:auto !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:1px solid rgba(20,31,22,.38) !important;
+  border-radius:0 !important;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%) !important;
+  overflow:hidden !important;
+  background-clip:padding-box;
+}
+#app .kingdom-board-grid .kingdom-board-row > .kingdom-tile::after {
+  inset:1px !important;
+  border:1px solid rgba(255,255,255,.20) !important;
+  border-radius:0 !important;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%) !important;
+  pointer-events:none !important;
+}
