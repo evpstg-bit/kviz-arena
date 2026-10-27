@@ -81,9 +81,48 @@ const api=(p,o)=>fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'applica
 const act=(type,a,x)=>api('action',{pin,id:me,type,a,...(x||{})});
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function saveToken(){try{TOKEN?localStorage.setItem('qtoken',TOKEN):localStorage.removeItem('qtoken')}catch(e){}}
+const EDITOR_DRAFT_KEY='kviz-arena:editor-draft:v1';
+function persistEditorDraft(){
+ if(view!=='quiz-editor'||!editorQuiz)return false;
+ try{
+  localStorage.setItem(EDITOR_DRAFT_KEY,JSON.stringify({version:1,ownerLogin:String(USER&&USER.login||''),editorId:String(editorId||''),editorIsNew:!!editorIsNew,editorFolderId:String(editorFolderId||''),editorQuiz,savedAt:Date.now()}));
+  return true;
+ }catch(e){return false}
+}
+function clearEditorDraft(){try{localStorage.removeItem(EDITOR_DRAFT_KEY)}catch(e){}}
+function restoreEditorDraftAfterAuth(){
+ let d=null;
+ try{d=JSON.parse(localStorage.getItem(EDITOR_DRAFT_KEY)||'null')}catch(e){}
+ if(!USER||!d||d.version!==1||!d.editorQuiz||!Array.isArray(d.editorQuiz.q)||!d.editorQuiz.q.length||d.editorQuiz.q.length>100)return false;
+ if(d.ownerLogin&&String(d.ownerLogin).toLowerCase()!==String(USER.login||'').toLowerCase())return false;
+ editorId=String(d.editorId||'');editorIsNew=!!d.editorIsNew;editorFolderId=String(d.editorFolderId||'');editorQuiz=d.editorQuiz;
+ editorMsg='Восстановлен локальный черновик. Проверьте тест и нажмите «Сохранить изменения».';
+ view='quiz-editor';render();return true;
+}
+function continueAfterAuth(){if(!restoreEditorDraftAfterAuth())openLib()}
+function configuredTokenExpiring(t){
+ if(!String(t||'').startsWith('cfg.'))return false;
+ try{
+  let payload=String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  payload+='='.repeat((4-payload.length%4)%4);
+  const decoded=JSON.parse(atob(payload));
+  return Number(decoded.exp)-Date.now()<30*864e5;
+ }catch(e){return true}
+}
+function handleCapiAuthExpired(r){
+ const draftSaved=persistEditorDraft();
+ cabinetNavSeq++;TOKEN='';USER=null;saveToken();view='auth';authTab='login';
+ msg=draftSaved?'Сессия истекла — войдите снова. Черновик редактора сохранён на этом устройстве и восстановится после входа.':'Сессия истекла — войдите снова. Не закрывайте вкладку до повторного входа.';
+ render();return r;
+}
 async function capi(p,o){
+ if(TOKEN&&configuredTokenExpiring(TOKEN)){
+  const checked=await api('auth/me',{token:TOKEN});
+  if(checked.user){USER=checked.user;if(checked.token){TOKEN=checked.token;saveToken()}}
+  else if(checked.code===401)return handleCapiAuthExpired(checked);
+ }
  const r=await api(p,{token:TOKEN,...o});
- if(r.code===401){cabinetNavSeq++;TOKEN='';USER=null;saveToken();view='auth';authTab='login';msg='Сессия истекла — войдите снова';render()}
+ if(r.code===401)return handleCapiAuthExpired(r);
  return r;
 }
 const getSess=()=>{try{return JSON.parse(sessionStorage.getItem('qs'))}catch(e){return null}};
@@ -148,13 +187,13 @@ async function submitAuth(){
  if(r.twoFactorRequired&&r.challenge){
   authChallenge=r.challenge;authCode='';AF.pass='';msg='';return render();
  }
- TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};INFO.hasUsers=true;authChallenge='';authCode='';openLib();
+ TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};INFO.hasUsers=true;authChallenge='';authCode='';continueAfterAuth();
 }
 async function submitAuthSecondFactor(){
  msg='';
  const r=await api('auth/verify-2fa',{challenge:authChallenge,code:authCode});
  if(r.error){msg=r.error;if(r.error.includes('Сеанс подтверждения истёк')||r.error.includes('Начните вход заново'))authChallenge='';return render()}
- TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};authChallenge='';authCode='';INFO.hasUsers=true;openLib();
+ TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};authChallenge='';authCode='';INFO.hasUsers=true;continueAfterAuth();
 }
 function cancelAuthChallenge(){authChallenge='';authCode='';msg='';AF.pass='';render()}
 async function logout(){cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;securityStatus=null;securitySetup=null;securityRecoveryCodes=null;view='home';render()}
@@ -479,24 +518,26 @@ async function editQ(id){
  const r=await capi('lib/get',{id});if(r.error){libMsg=r.error;render();return}
  editorId=id;editorQuiz=JSON.parse(JSON.stringify(r.quiz));editorIsNew=false;editorFolderId=String(r.folderId||'');editorMsg='';view='quiz-editor';render();
 }
-function cancelEdit(){editorQuiz=null;editorId='';editorIsNew=false;editorFolderId='';editorMsg='';view='lib';render()}
+function cancelEdit(){clearEditorDraft();editorQuiz=null;editorId='';editorIsNew=false;editorFolderId='';editorMsg='';view='lib';render()}
 function newQuiz(){if(!USER||!USER.admin)return;editorId='';editorIsNew=true;editorFolderId=selectedFolderId!=='*'&&selectedFolderId!=='__root__'?selectedFolderId:'';editorQuiz={title:'',T:CLIENT_SETTINGS.general.defaultQuestionTime,mode:'choose',dur:CLIENT_SETTINGS.modes.kingdoms.durationMinutes,need:CLIENT_SETTINGS.modes.kingdoms.correctAnswersForFlag,q:[{t:'',a:['','','',''],cs:[],T:CLIENT_SETTINGS.general.defaultQuestionTime}]};editorMsg='';view='quiz-editor';render();setTimeout(()=>$('edit-title')?.focus(),0)}
 function editorAddQuestion(){if(!editorQuiz||editorQuiz.q.length>=100)return;editorQuiz.q.push({t:'',a:['','','',''],cs:[],T:editorQuiz.T||CLIENT_SETTINGS.general.defaultQuestionTime});render()}
 function editorRemoveQuestion(i){if(!editorQuiz||editorQuiz.q.length<=1){editorMsg='В тесте должен остаться хотя бы один вопрос.';return render()}editorQuiz.q.splice(i,1);render()}
-function editorCorrect(i,j,checked){const q=editorQuiz&&editorQuiz.q[i];if(!q)return;const s=new Set(q.cs||[]);checked?s.add(j):s.delete(j);q.cs=[...s].sort((a,b)=>a-b)}
+function editorCorrect(i,j,checked){const q=editorQuiz&&editorQuiz.q[i];if(!q)return;const s=new Set(q.cs||[]);checked?s.add(j):s.delete(j);q.cs=[...s].sort((a,b)=>a-b);persistEditorDraft()}
 async function saveEditor(){
  if(!editorQuiz)return;
+ persistEditorDraft();
  if(!String(editorQuiz.title||'').trim()){editorMsg='Введите название теста.';render();$('edit-title')?.focus();return}
  const out=tidyQuiz(editorQuiz);
  if(!out){editorMsg='Проверьте тест: в каждом вопросе нужны текст, 2–4 непустых варианта и хотя бы один правильный ответ.';return render()}
  const payload=editorIsNew?{quiz:out,folderId:editorFolderId}:{id:editorId,quiz:out};
  const r=await capi(editorIsNew?'lib/create':'lib/update',payload);
  if(r.error){editorMsg=r.error;return render()}
+ clearEditorDraft();
  const wasNew=editorIsNew;libMsg='';editorMsg='';await finishLibraryMutation(r,wasNew?'Тест создан.':'Тест «'+out.title+'» обновлён.');
 }
 async function copyQ(id){const r=await capi('lib/copy',{id});await finishLibraryMutation(r,'Создана копия теста.');}
 async function deleteQ(id){const item=(LIB||[]).find(x=>x.id===id);if(!confirm('Удалить тест «'+(item?item.title:'')+'» из библиотеки проекта? Это изменение затронет весь проект.'))return;const r=await capi('lib/delete',{id});await finishLibraryMutation(r,'Тест удалён из библиотеки.');}
-function navigateCabinet(target){captureCurrentNavigationSnapshot();if(view==='quiz-editor'&&!confirm(tr('Выйти из редактора без сохранения изменений?')))return;if(target==='reports')openReports();else if(target==='settings')openSettings();else openLib()}
+function navigateCabinet(target){captureCurrentNavigationSnapshot();if(view==='quiz-editor'){if(!confirm(tr('Выйти из редактора без сохранения изменений?')))return;clearEditorDraft()}if(target==='reports')openReports();else if(target==='settings')openSettings();else openLib()}
 function navIcon(name){
  const paths={shield:'<path d="M12 3 20 7v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>',back:'<path d="M15 18l-6-6 6-6"/>',forward:'<path d="M9 18l6-6-6-6"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',library:'<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',reports:'<path d="M5 19V9M12 19V5M19 19v-7"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.78.34l-.07.06h-3.4l-.02-.08a1.7 1.7 0 0 0-1.3-1.22l-.08-.02-1.7-2.94.06-.06A1.7 1.7 0 0 0 9.4 14l-.02-.08v-3.4l.08-.02a1.7 1.7 0 0 0 1.22-1.3l.02-.08 2.94-1.7.06.06A1.7 1.7 0 0 0 15.6 7.8l.08-.02h3.4l.02.08a1.7 1.7 0 0 0 1.3 1.22l.08.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 21.8 14l.02.08v3.4l-.08.02a1.7 1.7 0 0 0-1.22 1.3z" transform="translate(-2 -2) scale(.92)"/>',export:'<path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/>',import:'<path d="M12 15V3m-5 5 5-5 5 5"/><path d="M5 17v3h14v-3"/>',home:'<path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9M9 20v-6h6v6"/>',logout:'<path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/>',file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>'};
  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;
@@ -1937,6 +1978,7 @@ function patchRenderChildren(currentParent,nextParent){
 
 function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
+ if(view==='quiz-editor'&&editorQuiz)persistEditorDraft();
  trackSiteNavigation();
  const real=$('app');vApp=document.createElement('div');
  let gameScreen=false;
@@ -1969,7 +2011,11 @@ if(typeof addEventListener==='function'){
  addEventListener('pointerup',up,true);addEventListener('pointercancel',up,true);
 }
 setInterval(tick,250);
-if(document.addEventListener)document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&qrFull){qrFull=false;render()}else if(e.key==='Escape'&&launchModeDialog&&!modeLaunchPending){closeLaunchModeDialog()}});
+if(document.addEventListener){
+ document.addEventListener('input',e=>{if(view==='quiz-editor'&&e.target&&e.target.closest&&e.target.closest('#app'))persistEditorDraft()});
+ document.addEventListener('change',e=>{if(view==='quiz-editor'&&e.target&&e.target.closest&&e.target.closest('#app'))persistEditorDraft()});
+ document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&view==='lib'){$('lib-search')?.focus();e.preventDefault()}if(e.key==='Escape'&&qrFull){qrFull=false;render()}else if(e.key==='Escape'&&launchModeDialog&&!modeLaunchPending){closeLaunchModeDialog()}});
+}
 (async()=>{
  try{INFO=await(await fetch('/api/info',{signal:AbortSignal.timeout(6000)})).json();if(INFO.settings)CLIENT_SETTINGS=normalizeClientSettings(INFO.settings)}catch(e){window.__kvizBootError=window.__kvizBootError||('Не удалось загрузить /api/info: '+String(e&&e.message||e))}
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
@@ -2049,6 +2095,7 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Управлять защитой':'管理安全设置'
 });
 
+ if(USER&&restoreEditorDraftAfterAuth())return;
  render();if((qrJoinMode||prePin)&&$('jn'))$('jn').focus();
 })();
 
