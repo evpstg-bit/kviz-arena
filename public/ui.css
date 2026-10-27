@@ -992,3 +992,14 @@ body.participant-only-active .cabinet-menu-wrap{display:none!important}
 .security-spinner{width:22px;height:22px;border:2px solid rgba(124,92,255,.18);border-top-color:#7c5cff;border-radius:50%;animation:auth-security-spin .8s linear infinite}
 @keyframes auth-security-spin{to{transform:rotate(360deg)}}
 @media(max-width:560px){.auth-security-page{width:calc(100% - 24px);margin:22px auto 42px}.auth-security-panel{padding:19px 16px;border-radius:18px}.auth-recovery-codes{grid-template-columns:1fr}.auth-security-qr{width:220px;min-height:220px}.auth-security-qr img{width:196px;height:196px}.auth-security-actions{flex-direction:column}.auth-security-actions button{width:100%}}
+
+
+/* Security controls are grouped within platform settings */
+.platform-security-setting-card{display:flex;align-items:center;gap:16px;padding:20px 22px;border:1px solid var(--border,rgba(130,130,150,.22));border-radius:18px;background:var(--surface,var(--card,rgba(255,255,255,.78)))}
+.platform-security-setting-icon{display:grid;place-items:center;flex:0 0 46px;width:46px;height:46px;border-radius:14px;background:rgba(124,92,255,.13);color:#7c5cff}
+.platform-security-setting-icon svg{width:23px;height:23px}
+.platform-security-setting-copy{min-width:0;flex:1}
+.platform-security-setting-copy h3{margin:0 0 5px;font-weight:800;font-size:1rem}
+.platform-security-setting-copy p{margin:0;color:var(--muted,var(--mut));font-size:.92rem;line-height:1.55}
+.platform-security-setting-action{white-space:nowrap;flex-shrink:0}
+@media(max-width:680px){.platform-security-setting-card{align-items:flex-start;flex-wrap:wrap;padding:16px}.platform-security-setting-copy{flex:1 1 calc(100% - 64px)}.platform-security-setting-action{width:100%}}
