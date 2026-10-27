@@ -99,7 +99,11 @@ function restoreEditorDraftAfterAuth(){
  editorMsg='Восстановлен локальный черновик. Проверьте тест и нажмите «Сохранить изменения».';
  view='quiz-editor';render();return true;
 }
-function continueAfterAuth(){if(!restoreEditorDraftAfterAuth())openLib()}
+function openTeacherDashboard(){
+ if(!USER)return goAuth();
+ closeCabinetMenu();cabinetNavSeq++;view='cabinet-home';msg='';render();
+}
+function continueAfterAuth(){if(!restoreEditorDraftAfterAuth())openTeacherDashboard()}
 function configuredTokenExpiring(t){
  if(!String(t||'').startsWith('cfg.'))return false;
  try{
@@ -543,7 +547,7 @@ function navIcon(name){
  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;
 }
 function makeSiteNavEntry(){
- const allowed=['home','auth','lib','quiz-editor','settings','security','reports','report-detail'];if(!allowed.includes(view))return null;
+ const allowed=['home','auth','cabinet-home','lib','quiz-editor','settings','security','reports','report-detail'];if(!allowed.includes(view))return null;
  const e={view,selectedFolderId,libSearch,activeReportId,reportTab,participantTab,editorId,editorIsNew,editorFolderId,authTab};
  if(view==='quiz-editor'&&editorQuiz)e.editorQuiz=JSON.parse(JSON.stringify(editorQuiz));
  e.key=[e.view,e.view==='lib'?(e.selectedFolderId||'*'):'',e.view==='report-detail'?(e.activeReportId||''):'',e.view==='quiz-editor'?(e.editorId||'new'):''].join('|');
@@ -620,6 +624,7 @@ async function restoreSiteNavEntry(entry){
  selectedFolderId=entry.selectedFolderId||'*';libSearch=entry.libSearch||'';
  if(entry.view==='home'){msg='';view='home';render();return}
  if(entry.view==='auth'){msg='';authTab=entry.authTab||'login';view='auth';render();return}
+ if(entry.view==='cabinet-home'){openTeacherDashboard();return}
  if(entry.view==='lib'){await openLib();return}
  if(entry.view==='reports'){await openReports();return}
  if(entry.view==='settings'){await openSettings();return}
@@ -1511,16 +1516,47 @@ function home(a){
   return;
  }
  if(participantOnly){return participantEndScreen(a,msg||'')}
- const teacher=USER?`<p class="entry-description">Вы вошли как <b data-user-content="true">${esc(USER.name||USER.login)}</b>. В кабинете доступна библиотека тестов.</p><div class="teacher-actions"><button class="btn-primary" onclick="openLib()">Открыть кабинет <span aria-hidden="true">→</span></button></div>`:`<p class="entry-description">Войдите, чтобы выбрать тест и запустить викторину для студентов.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей</span></div>`;
+ const teacher=USER?`<p class="entry-description">Вы вошли как <b data-user-content="true">${esc(USER.name||USER.login)}</b>. Выберите раздел кабинета для продолжения работы.</p><div class="teacher-actions"><button class="btn-primary" onclick="openTeacherDashboard()">Открыть кабинет <span aria-hidden="true">→</span></button></div>`:`<p class="entry-description">Войдите, чтобы выбрать тест и запустить викторину для студентов.</p><div class="teacher-actions"><button class="btn-primary" onclick="goAuth()">Войти в кабинет <span aria-hidden="true">→</span></button><span class="entry-footnote">Для преподавателей</span></div>`;
  a.innerHTML=`<header class="app-topbar home-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}<div class="site-header-right"><div class="topbar-tag"><span class="online-dot"></span> Онлайн-викторины</div>${simpleHeaderControls(true,'home')}</div></header>
  <section class="entry-grid minimal-entry-grid"><article class="entry-card join-card"><div class="entry-header"><div class="entry-icon join-icon">↗</div><div><span class="section-kicker">ДЛЯ СТУДЕНТОВ</span><h2>Присоединиться к игре</h2></div></div><p class="entry-description">Введите код, который показал преподаватель.</p><div class="join-fields"><label class="field-label" for="jp">PIN-код</label><input type="text" id="jp" placeholder="6 цифр" inputmode="numeric" maxlength="6" value="${esc(prePin)}" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')$('jn').focus()"><label class="field-label" for="jn">Имя в игре</label><input type="text" id="jn" placeholder="Ваше имя" maxlength="16" value="${esc(preName)}" autocomplete="nickname" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(msg)}</p><button class="btn-primary join-submit" onclick="join()">Войти в игру <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> Аккаунт не нужен</div></article>
  <article class="entry-card teacher-card minimal-teacher-card"><span class="section-kicker">ДЛЯ ПРЕПОДАВАТЕЛЕЙ</span><h2>Тесты<br>для ваших учебных групп.</h2>${teacher}</article></section>
  <section class="home-hero minimal-home-hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> ОБУЧЕНИЕ В ФОРМАТЕ ИГРЫ</div><h1 class="home-title">Знания, которые<br><span>объединяют.</span></h1><p class="home-lead">Запускайте интерактивные викторины, подключайте студентов по PIN-коду и наблюдайте за результатами в реальном времени.</p><div class="hero-benefits"><span><i>✓</i> Без регистрации для участников</span><span><i>✓</i> Два режима игры</span></div></div><aside class="home-guide"><span class="section-kicker">КАК ЭТО РАБОТАЕТ</span><div class="guide-step"><span>1</span><div><b>Выберите тест</b><small>Вопросы из библиотеки проекта</small></div></div><div class="guide-step"><span>2</span><div><b>Запустите игру</b><small>Получите PIN-код комнаты</small></div></div><div class="guide-step"><span>3</span><div><b>Подключите группу</b><small>Студенты отвечают со своих устройств</small></div></div></aside></section>
  <footer class="home-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>Меньше рутины. Больше вовлечённости.</span></footer>`;
 }
+function teacherDashboardPage(a){
+ if(!USER){view='auth';return authView(a)}
+ const name=USER.name||USER.login||'';
+ a.innerHTML=`${cabinetHeader('dashboard',tr('Кабинет преподавателя'))}
+ <main class="teacher-dashboard-page">
+  <section class="teacher-dashboard-heading">
+   <span class="section-kicker">${tr('КАБИНЕТ ПРЕПОДАВАТЕЛЯ')}</span>
+   <h1 class="page-title">${tr('Добро пожаловать')}, <span data-user-content="true">${esc(name)}</span><span class="title-period">.</span></h1>
+   <p class="page-subtitle">${tr('Выберите раздел для работы.')}</p>
+  </section>
+  <section class="teacher-dashboard-grid" aria-label="${tr('Выбор раздела')}">
+   <button type="button" class="teacher-dashboard-card" onclick="openLib()" aria-label="${tr('Библиотека')}">
+    <span class="teacher-dashboard-card-icon" aria-hidden="true">${navIcon('library')}</span>
+    <span class="teacher-dashboard-card-copy"><strong>${tr('Библиотека')}</strong><span>${tr('Управляйте тестами, вопросами и тематическими папками.')}</span></span>
+    <span class="teacher-dashboard-card-arrow" aria-hidden="true">→</span>
+   </button>
+   <button type="button" class="teacher-dashboard-card" onclick="openReports()" aria-label="${tr('Отчёты')}">
+    <span class="teacher-dashboard-card-icon reports" aria-hidden="true">${navIcon('reports')}</span>
+    <span class="teacher-dashboard-card-copy"><strong>${tr('Отчёты')}</strong><span>${tr('Анализируйте результаты игр и ответы участников.')}</span></span>
+    <span class="teacher-dashboard-card-arrow" aria-hidden="true">→</span>
+   </button>
+   <button type="button" class="teacher-dashboard-card" onclick="openSettings()" aria-label="${tr('Настройки')}">
+    <span class="teacher-dashboard-card-icon settings" aria-hidden="true">${navIcon('settings')}</span>
+    <span class="teacher-dashboard-card-copy"><strong>${tr('Настройки')}</strong><span>${tr('Настраивайте правила игровых режимов и параметры платформы.')}</span></span>
+    <span class="teacher-dashboard-card-arrow" aria-hidden="true">→</span>
+   </button>
+  </section>
+  <footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a></footer>
+ </main>`;
+}
 function draw(){
  const a=app();
  if(view==='home')return home(a);
+ if(view==='cabinet-home')return teacherDashboardPage(a);
  if(view==='participant-end')return participantEndScreen(a,msg||'');
  if(view==='auth')return authView(a);
  if(view==='reports')return reportListPage(a);
@@ -1897,6 +1933,27 @@ Object.assign(UI_TRANSLATIONS.zh,{
 Object.assign(UI_TRANSLATIONS.en,{'Время прохождения':'Time taken','ч.':'h'});
 Object.assign(UI_TRANSLATIONS.zh,{'Время прохождения':'完成用时','ч.':'小时'});
 
+Object.assign(UI_TRANSLATIONS.en,{
+ 'КАБИНЕТ ПРЕПОДАВАТЕЛЯ':'TEACHER DASHBOARD',
+ 'Добро пожаловать':'Welcome',
+ 'Выберите раздел для работы.':'Choose a section to get started.',
+ 'Выбор раздела':'Choose a section',
+ 'Управляйте тестами, вопросами и тематическими папками.':'Manage quizzes, questions, and subject folders.',
+ 'Анализируйте результаты игр и ответы участников.':'Analyze game results and participant responses.',
+ 'Настраивайте правила игровых режимов и параметры платформы.':'Configure game mode rules and platform settings.'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'КАБИНЕТ ПРЕПОДАВАТЕЛЯ':'教师控制台',
+ 'Добро пожаловать':'欢迎',
+ 'Выберите раздел для работы.':'请选择要进入的功能。',
+ 'Выбор раздела':'选择功能',
+ 'Управляйте тестами, вопросами и тематическими папками.':'管理测验、问题和主题文件夹。',
+ 'Анализируйте результаты игр и ответы участников.':'分析游戏结果和参与者答题情况。',
+ 'Настраивайте правила игровых режимов и параметры платформы.':'配置游戏模式规则和平台设置。',
+ 'Библиотека':'题库',
+ 'Отчёты':'报告',
+ 'Настройки':'设置'
+});
 function settingsHtml(){const lang=currentUiLanguage(),dark=document.documentElement.classList.contains('dark');const labels={ru:{themeTitle:'Тема оформления',status:dark?'Тёмная тема':'Светлая тема',title:dark?'Переключить на светлую тему':'Переключить на тёмную тему',aria:'Настройки отображения',language:'Язык интерфейса'},en:{themeTitle:'Appearance',status:dark?'Dark theme':'Light theme',title:dark?'Switch to light theme':'Switch to dark theme',aria:'Display settings',language:'Interface language'},zh:{themeTitle:'外观主题',status:dark?'深色主题':'浅色主题',title:dark?'切换到浅色主题':'切换到深色主题',aria:'显示设置',language:'界面语言'}}[lang];return `<div class="global-settings" aria-label="${labels.aria}"><section class="setting-card setting-language-card"><label class="setting-heading" for="ui-language">${labels.language}</label><select id="ui-language" aria-label="${labels.language}" onchange="setUiLanguage(this.value)"><option value="ru" ${lang==='ru'?'selected':''}>🇷🇺 Русский</option><option value="en" ${lang==='en'?'selected':''}>🇬🇧 English</option><option value="zh" ${lang==='zh'?'selected':''}>🇨🇳 中文</option></select></section><section class="setting-card setting-theme-card"><div class="setting-theme-copy"><span class="setting-heading">${labels.themeTitle}</span><span class="theme-toggle-status" id="theme-mode-status">${labels.status}</span></div><button id="theme-toggle" type="button" role="switch" aria-checked="${dark}" class="theme-toggle ${dark?'is-dark':''}" onclick="toggleTheme()" aria-label="${labels.title}" title="${labels.title}"><span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span></button></section></div>`}
 function applyUiLanguage(){
  const lang=currentUiLanguage();document.documentElement.lang=lang==='zh'?'zh-CN':lang==='en'?'en':'ru';
@@ -2095,7 +2152,10 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Управлять защитой':'管理安全设置'
 });
 
- if(USER&&restoreEditorDraftAfterAuth())return;
+ if(USER&&!qrJoinMode){
+  if(restoreEditorDraftAfterAuth())return;
+  openTeacherDashboard();return;
+ }
  render();if((qrJoinMode||prePin)&&$('jn'))$('jn').focus();
 })();
 
