@@ -335,3 +335,122 @@ body.game-view-active:has(.kingdom-score-chip)::before,body.game-view-active:has
   margin-left:auto !important;
   margin-right:auto !important;
 }
+
+
+/* v1.16.8 — remove green backing, contain the hex board, and use available width on mobile.
+   Keep the existing hex shape, tile order, and alternating row offsets intact. */
+#app .kingdom-map-column {
+  background:transparent !important;
+  background-image:none !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+}
+#app .kingdom-map-caption,
+#app .kingdom-map-legend {
+  position:relative !important;
+  z-index:1 !important;
+  flex:0 0 auto !important;
+}
+#app .kingdom-board-frame,
+:root.dark #app .kingdom-board-frame {
+  box-sizing:border-box !important;
+  background:transparent !important;
+  background-image:none !important;
+  border-color:transparent !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+#app .kingdom-board-frame::before,
+#app .kingdom-board-frame::after {
+  content:none !important;
+  display:none !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) {
+  position:relative !important;
+  z-index:0 !important;
+  isolation:isolate !important;
+  container-type:inline-size !important;
+  flex:0 0 auto !important;
+  box-sizing:border-box !important;
+  width:100% !important;
+  max-width:100% !important;
+  max-height:none !important;
+  min-width:0 !important;
+  margin:10px auto 12px !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) > .kingdom-board-grid:not(.is-small-board) {
+  --hex-w:clamp(16px, calc(95.5cqw / var(--board-size)), 72px) !important;
+  --hex-h:calc(var(--hex-w) * 1.1547) !important;
+  box-sizing:content-box !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  justify-content:flex-start !important;
+  position:relative !important;
+  width:max-content !important;
+  max-width:none !important;
+  min-width:0 !important;
+  height:auto !important;
+  aspect-ratio:auto !important;
+  margin:0 auto !important;
+  padding:3px 0 6px !important;
+  gap:0 !important;
+  overflow:visible !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  background-image:none !important;
+  box-shadow:none !important;
+  /* Center the complete footprint, including the half-cell row stagger. */
+  transform:translateX(calc(var(--hex-w) * -.25)) !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) > .kingdom-board-grid:not(.is-small-board) .kingdom-board-row {
+  flex:0 0 var(--hex-h) !important;
+  width:max-content !important;
+  height:var(--hex-h) !important;
+  min-height:var(--hex-h) !important;
+  gap:0 !important;
+  margin-top:calc(var(--hex-h) * -.25) !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) > .kingdom-board-grid:not(.is-small-board) .kingdom-board-row:first-child {
+  margin-top:0 !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) > .kingdom-board-grid:not(.is-small-board) .kingdom-board-row:nth-child(even) {
+  transform:translateX(calc(var(--hex-w) * .5)) !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) .kingdom-board-row > .kingdom-tile.is-neutral {
+  background:rgba(248,250,248,.24) !important;
+  background-image:none !important;
+  border-color:rgba(30,40,34,.28) !important;
+}
+:root.dark #app .kingdom-board-frame:not(.is-small-board) .kingdom-board-row > .kingdom-tile.is-neutral {
+  background:rgba(255,255,255,.045) !important;
+  background-image:none !important;
+  border-color:rgba(255,255,255,.22) !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) .kingdom-board-grid .kingdom-board-row > .kingdom-tile {
+  z-index:0;
+}
+#app .kingdom-board-frame:not(.is-small-board) .kingdom-board-grid .kingdom-board-row > .kingdom-tile.is-target,
+#app .kingdom-board-frame:not(.is-small-board) .kingdom-board-grid .kingdom-board-row > .kingdom-tile.is-hot {
+  z-index:1 !important;
+}
+@media(max-width:640px) {
+  #app .kingdom-board-frame:not(.is-small-board) {
+    width:100% !important;
+    max-width:100% !important;
+    max-height:none !important;
+    margin:7px auto 9px !important;
+    padding:0 !important;
+    overflow:hidden !important;
+  }
+  #app .kingdom-board-frame:not(.is-small-board) > .kingdom-board-grid:not(.is-small-board) {
+    --hex-w:clamp(18px, calc(95.5cqw / var(--board-size)), 54px) !important;
+  }
+  #app .kingdom-map-column {
+    padding-left:2px !important;
+    padding-right:2px !important;
+  }
+}
