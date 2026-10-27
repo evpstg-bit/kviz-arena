@@ -468,3 +468,48 @@ body.game-view-active:has(.kingdom-score-chip)::before,body.game-view-active:has
   background-image:linear-gradient(145deg,#5c8940,#4d7834) !important;
   border-color:rgba(220,245,194,.24) !important;
 }
+
+
+/* v1.16.12 — lighten Color Kingdoms rendering and let page scroll chain normally.
+   The board is clipped visually, but no longer behaves like a nested scroll container. */
+body.game-view-active:has(.kingdom-score-chip),
+body.game-view-active:has(.kingdom-host-screen) {
+  overflow-x:clip !important;
+  overflow-y:visible !important;
+  overscroll-behavior-y:auto !important;
+}
+body.game-view-active:has(.kingdom-score-chip)::before,
+body.game-view-active:has(.kingdom-host-screen)::before {
+  filter:none !important;
+  animation:none !important;
+}
+body.game-view-active:has(.kingdom-score-chip)::after,
+body.game-view-active:has(.kingdom-host-screen)::after {
+  content:none !important;
+  display:none !important;
+}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-board-frame:not(.is-small-board),
+#app.game-view-active:has(.kingdom-host-screen) .kingdom-board-frame:not(.is-small-board) {
+  overflow:clip !important;
+  overscroll-behavior:auto !important;
+}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-board-grid .kingdom-tile,
+#app.game-view-active:has(.kingdom-host-screen) .kingdom-board-grid .kingdom-tile {
+  filter:none !important;
+  will-change:auto !important;
+}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-board-grid .kingdom-tile.is-target,
+#app.game-view-active:has(.kingdom-host-screen) .kingdom-board-grid .kingdom-tile.is-target {
+  filter:none !important;
+  animation:none !important;
+  border-color:rgba(255,255,238,.9) !important;
+}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-board-grid .kingdom-tile.is-target:hover,
+#app.game-view-active:has(.kingdom-host-screen) .kingdom-board-grid .kingdom-tile.is-target:hover {
+  filter:none !important;
+  transform:scale(1.04) !important;
+}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-board-grid .kingdom-tile-fortress,
+#app.game-view-active:has(.kingdom-host-screen) .kingdom-board-grid .kingdom-tile-fortress {
+  animation:none !important;
+}
