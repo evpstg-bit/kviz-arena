@@ -1175,6 +1175,7 @@ function sendSel(){if(sel.length)act('answer',sel)}
 let kingdomBoardFx={pin:'',round:0,owners:[]};
 function boardK(o){
  const N=S.N,sm=!!o.small,valid=o.valid||[],hot=Array.isArray(S.hot)?S.hot:[],rooks=Array.isArray(S.rooks)?S.rooks:[];
+ const validSet=new Set(valid),rookSet=new Set(rooks),hotRankByTile=new Map(hot.map((tile,rank)=>[tile,rank]));
  const font=Math.max(7,Math.min(22,Math.round(225/N)));
  const matchPin=String(S.pin||pin||''),round=Number(S.round)||1;
  const sameMatch=kingdomBoardFx.pin===matchPin&&kingdomBoardFx.round===round&&kingdomBoardFx.owners.length===S.board.length;
@@ -1185,10 +1186,10 @@ function boardK(o){
  const cell=(ow,i)=>{
   const row=Math.floor(i/N);
   const checker=((row+i%N)%2===0)?'is-checker-light':'is-checker-dark';
-  const stronghold=rooks.includes(i),canPlace=valid.includes(i),ownerIndex=Number.isInteger(ow)&&ow>=0&&ow<KINGDOM_PALETTE.length?ow:-1;
+  const stronghold=rookSet.has(i),canPlace=validSet.has(i),ownerIndex=Number.isInteger(ow)&&ow>=0&&ow<KINGDOM_PALETTE.length?ow:-1;
   const palette=ownerIndex>=0?KINGDOM_PALETTE[ownerIndex]:neutralPalette;
   const fresh=changed.has(i)&&ownerIndex>=0;
-  const hotRank=hot.indexOf(i);
+  const hotRank=hotRankByTile.get(i)??-1;
   const classes=['kingdom-tile',ownerIndex<0?'is-neutral':'is-kingdom-'+ownerIndex,checker,stronghold?'is-stronghold':'',canPlace?'is-target':'',fresh?'is-captured-now':'',fresh&&hotRank>=0?'is-hot':'',sm?'is-compact-tile':''].filter(Boolean).join(' ');
   const team=(S.me&&Number.isInteger(S.me.team))?S.me.team:0;
   const label=stronghold?'Крепость королевства «'+(KN[ownerIndex]||'неизвестно')+'»':canPlace?'Поставить флаг для королевства «'+(KN[team]||KN[0])+'»':ownerIndex>=0?'Территория '+KS[ownerIndex]:'Нейтральная клетка';
