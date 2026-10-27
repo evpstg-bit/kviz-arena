@@ -1525,7 +1525,8 @@ function home(a){
 }
 function teacherDashboardPage(a){
  if(!USER){view='auth';return authView(a)}
- const name=USER.name||USER.login||'';
+ const rawName=String(USER.name||USER.login||'').trim();
+ const name=/^bntu$/i.test(rawName)?'Анна':rawName;
  a.innerHTML=`${cabinetHeader('dashboard',tr('Кабинет преподавателя'))}
  <main class="teacher-dashboard-page">
   <section class="teacher-dashboard-heading">
