@@ -75,31 +75,43 @@ if(ADMIN_CONFIG){
   if(old&&old.id!==ADMIN_ID)writeJ('sessions.json',SESS);
 }
 function configuredUserFromToken(t){
-  if(!CONFIG_ADMIN||!ADMIN_SECRET||typeof t!=='string')return null;
+  if(!AUTH_SECURITY_READY||!CONFIG_ADMIN||!ADMIN_SECRET||typeof t!=='string')return null;
   const m=/^cfg\.([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(t);if(!m)return null;
   try{
     const expected=crypto.createHmac('sha256',ADMIN_SECRET).update(m[1]).digest();
     const actual=Buffer.from(m[2],'base64url');
     if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return null;
     const p=JSON.parse(Buffer.from(m[1],'base64url').toString('utf8'));
-    return p.uid===CONFIG_ADMIN.id&&Number(p.exp)>Date.now()?CONFIG_ADMIN:null;
+    if(p.uid!==CONFIG_ADMIN.id||Number(p.exp)<=Date.now())return null;
+    const userId=String(CONFIG_ADMIN.id),protectedAccount=AUTH_SECURITY_STATE.users[userId],epoch=Number(AUTH_SECURITY_STATE.epochs[userId])||0;
+    if(epoch>0&&Number(p.av)!==epoch)return null;
+    if(protectedAccount&&p.mfa!==true)return null;
+    return CONFIG_ADMIN;
   }catch(e){return null}
 }
 function userOf(t){
+  if(!AUTH_SECURITY_READY)return null;
   const configured=configuredUserFromToken(t);if(configured)return configured;
-  const s=t&&SESS[t];if(!s)return null;if(s.exp<Date.now()){delete SESS[t];return null}return USERS.find(u=>u.id===s.uid)||null;
+  const s=t&&SESS[t];if(!s)return null;if(s.exp<Date.now()){delete SESS[t];return null}
+  const u=USERS.find(x=>x.id===s.uid);if(!u)return null;
+  const userId=String(u.id),epoch=Number(AUTH_SECURITY_STATE.epochs[userId])||0;
+  if(epoch>0&&Number(s.av)!==epoch)return null;
+  if(AUTH_SECURITY_STATE.users[userId]&&s.mfa!==true)return null;
+  return u;
 }
-function newSession(u){
+function newSession(u,mfaVerified=false){
   if(u&&u.configManaged){
-    const payload=Buffer.from(JSON.stringify({uid:u.id,exp:Date.now()+60*864e5})).toString('base64url');
+    const payload=Buffer.from(JSON.stringify({uid:u.id,exp:Date.now()+60*864e5,mfa:!!mfaVerified,av:Number(AUTH_SECURITY_STATE.epochs[String(u.id)])||0})).toString('base64url');
     const sig=crypto.createHmac('sha256',ADMIN_SECRET).update(payload).digest('base64url');
     return 'cfg.'+payload+'.'+sig;
   }
-  const t=crypto.randomBytes(24).toString('hex');SESS[t]={uid:u.id,exp:Date.now()+60*864e5};
+  const t=crypto.randomBytes(24).toString('hex');SESS[t]={uid:u.id,exp:Date.now()+60*864e5,mfa:!!mfaVerified,av:Number(AUTH_SECURITY_STATE.epochs[String(u.id)])||0};
   const mine=Object.keys(SESS).filter(k=>SESS[k].uid===u.id);if(mine.length>20)mine.slice(0,mine.length-20).forEach(k=>delete SESS[k]);
   writeJ('sessions.json',SESS);return t;
 }
 const FAILS=new Map();
+let AUTH_SECURITY_STATE={version:1,users:{},epochs:{}},AUTH_SECURITY_READY=false,AUTH_SECURITY_PERSISTENT=false,AUTH_SECURITY_PROMISE=null,AUTH_SECURITY_ERROR='';
+const TOTP_SETUP_PENDING=new Map(),TOTP_LOGIN_CHALLENGES=new Map(),TOTP_FAILS=new Map();
 
 // командная строка: node server.js --users | --reset-password ЛОГИН НОВЫЙ_ПАРОЛЬ
 if(process.argv[2]==='--users'){console.log(USERS.length?USERS.map(u=>u.login+(u.admin?' (администратор)':'')).join('\n'):'Аккаунтов пока нет.');process.exit(0)}
@@ -383,6 +395,137 @@ async function hydrateReportsFromGitHub({force=false}={}){
     if(toMigrate.length)await queueReportsPersistence(toMigrate[0]);
   })().catch(e=>{REPORTS_REMOTE_READY=false;REPORTS_STORAGE_ERROR=e.message||'Не удалось загрузить отчёты из постоянного хранилища';console.error('Не удалось синхронизировать хранилище отчётов:',REPORTS_STORAGE_ERROR)}).finally(()=>{REPORTS_INDEX_HYDRATION=null});
   return REPORTS_INDEX_HYDRATION;
+}
+
+function emptyAuthSecurityState(){return{version:1,users:{},epochs:{}}}
+function normalizeAuthSecurityState(value){
+  const out=emptyAuthSecurityState(),users=value&&typeof value==='object'&&value.users&&typeof value.users==='object'?value.users:{};
+  const epochs=value&&typeof value==='object'&&value.epochs&&typeof value.epochs==='object'?value.epochs:{};
+  Object.entries(epochs).forEach(([id,epoch])=>{if(/^[A-Za-z0-9_-]{1,100}$/.test(id)&&Number.isInteger(Number(epoch))&&Number(epoch)>=0)out.epochs[id]=Number(epoch)});
+  Object.entries(users).forEach(([id,record])=>{
+    if(!/^[A-Za-z0-9_-]{1,100}$/.test(id)||!record||typeof record!=='object')return;
+    const secret=String(record.secret||'').replace(/=+$/,'').toUpperCase();
+    if(!/^[A-Z2-7]{20,64}$/.test(secret))return;
+    const recoveryHashes=Array.isArray(record.recoveryHashes)?record.recoveryHashes.map(String).filter(x=>/^[a-f0-9]{64}$/i.test(x)).slice(0,12):[];
+    out.users[id]={secret,enabledAt:Number(record.enabledAt)||Date.now(),recoveryHashes};
+  });
+  return out;
+}
+const TOTP_BASE32='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function base32Encode(buffer){
+  let bits=0,value=0,out='';
+  for(const byte of buffer){value=(value<<8)|byte;bits+=8;while(bits>=5){out+=TOTP_BASE32[(value>>>(bits-5))&31];bits-=5;}value&=(1<<bits)-1;}
+  if(bits)out+=TOTP_BASE32[(value<<(5-bits))&31];
+  return out;
+}
+function base32Decode(input){
+  const text=String(input||'').replace(/=+$/,'').toUpperCase();
+  if(!text||!/^[A-Z2-7]+$/.test(text))throw new Error('Некорректный секрет двухфакторной аутентификации');
+  let bits=0,value=0;const out=[];
+  for(const ch of text){value=(value<<5)|TOTP_BASE32.indexOf(ch);bits+=5;if(bits>=8){out.push((value>>>(bits-8))&255);bits-=8;value&=(1<<bits)-1;}}
+  return Buffer.from(out);
+}
+function generateTotpSecret(){return base32Encode(crypto.randomBytes(20))}
+function totpAt(secret,timeMs=Date.now()){
+  const counter=BigInt(Math.floor(timeMs/30000)),msg=Buffer.alloc(8);msg.writeBigUInt64BE(counter);
+  const digest=crypto.createHmac('sha1',base32Decode(secret)).update(msg).digest(),offset=digest[digest.length-1]&15;
+  const binary=digest.readUInt32BE(offset)&0x7fffffff;
+  return String(binary%1000000).padStart(6,'0');
+}
+function verifyTotp(secret,code){
+  const candidate=String(code||'').replace(/\s+/g,'');
+  if(!/^\d{6}$/.test(candidate))return false;
+  const received=Buffer.from(candidate,'ascii');
+  for(const offset of [-1,0,1]){
+    const expected=Buffer.from(totpAt(secret,Date.now()+offset*30000),'ascii');
+    if(received.length===expected.length&&crypto.timingSafeEqual(received,expected))return true;
+  }
+  return false;
+}
+function authSecurityRecord(userId){return AUTH_SECURITY_STATE.users[String(userId)]||null}
+function totpAuthUrl(user,secret){
+  const issuer='Квиз-арена',label=encodeURIComponent(issuer+':'+String(user.login||user.name||'user'));
+  return'otpauth://totp/'+label+'?secret='+secret+'&issuer='+encodeURIComponent(issuer)+'&algorithm=SHA1&digits=6&period=30';
+}
+function normalizeRecoveryCode(code){return String(code||'').toUpperCase().replace(/[^A-F0-9]/g,'')}
+function hashRecoveryCode(code){return crypto.createHash('sha256').update(normalizeRecoveryCode(code),'utf8').digest('hex')}
+function findRecoveryCode(record,code){
+  const normalized=normalizeRecoveryCode(code);
+  if(!/^[A-F0-9]{20}$/.test(normalized)||!record||!Array.isArray(record.recoveryHashes))return null;
+  const digest=Buffer.from(hashRecoveryCode(normalized),'hex');
+  let found=-1;
+  record.recoveryHashes.forEach((hash,index)=>{try{const expected=Buffer.from(String(hash),'hex');if(expected.length===digest.length&&crypto.timingSafeEqual(expected,digest))found=index}catch(e){}});
+  return found<0?null:{index:found,hash:digest.toString('hex')};
+}
+function makeRecoveryCodes(count=8){
+  const codes=Array.from({length:count},()=>crypto.randomBytes(10).toString('hex').toUpperCase().match(/.{1,4}/g).join('-'));
+  return{codes,hashes:codes.map(hashRecoveryCode)};
+}
+async function readAuthSecurityAt(cfg,ref){
+  const r=await reportsGithubFetch(cfg,'contents/auth-security.enc.json?ref='+encodeURIComponent(ref));
+  if(r.status===404)return{state:emptyAuthSecurityState(),sha:null};
+  const data=await reportsApiJson(r,'Не удалось прочитать защищённые настройки входа');
+  if(!data.content)throw new Error('Файл защищённых настроек входа пуст');
+  const raw=Buffer.from(String(data.content).replace(/\s/g,''),'base64').toString('utf8');
+  const state=normalizeAuthSecurityState(decryptReportPayload(raw,cfg));
+  return{state,sha:data.sha||null};
+}
+async function ensureAuthSecurityLoaded(){
+  if(AUTH_SECURITY_READY)return true;
+  if(AUTH_SECURITY_PROMISE)return AUTH_SECURITY_PROMISE;
+  AUTH_SECURITY_PROMISE=(async()=>{
+    const cfg=reportsStoreConfig();
+    if(!cfg){
+      if(String(process.env.AUTH_SECURITY_REQUIRED||'').toLowerCase()==='true')throw new Error('Не настроено постоянное защищённое хранилище двухфакторной аутентификации');
+      AUTH_SECURITY_STATE=emptyAuthSecurityState();AUTH_SECURITY_PERSISTENT=false;AUTH_SECURITY_READY=true;AUTH_SECURITY_ERROR='';return true;
+    }
+    const ref=await githubEnsureReportsBranch(cfg),remote=await readAuthSecurityAt(cfg,ref.object.sha);
+    AUTH_SECURITY_STATE=remote.state;AUTH_SECURITY_PERSISTENT=true;AUTH_SECURITY_READY=true;AUTH_SECURITY_ERROR='';return true;
+  })().catch(e=>{
+    AUTH_SECURITY_READY=false;AUTH_SECURITY_PERSISTENT=false;AUTH_SECURITY_ERROR=e.message||'Не удалось загрузить защищённые настройки входа';
+    console.error('Не удалось загрузить настройки двухфакторной аутентификации:',AUTH_SECURITY_ERROR);
+    return false;
+  }).finally(()=>{AUTH_SECURITY_PROMISE=null});
+  return AUTH_SECURITY_PROMISE;
+}
+async function persistAuthSecurityMutation(mutate){
+  const cfg=reportsStoreConfig();
+  if(!cfg)throw new Error('Для двухфакторной защиты нужно настроить GITHUB_TOKEN и GITHUB_REPOSITORY. Добавьте также стабильный REPORTS_ENCRYPTION_KEY для шифрования.');
+  for(let attempt=0;attempt<4;attempt++){
+    const branchRef=await githubEnsureReportsBranch(cfg),parent=branchRef.object.sha;
+    const current=await readAuthSecurityAt(cfg,parent),next=normalizeAuthSecurityState(current.state);
+    await mutate(next);
+    const blobRes=await reportsGithubFetch(cfg,'git/blobs',{method:'POST',body:{content:encryptReportPayload(next,cfg),encoding:'utf-8'}});
+    const blob=await reportsApiJson(blobRes,'Не удалось зашифровать настройки двухфакторной защиты');
+    const commitRes=await reportsGithubFetch(cfg,'git/commits/'+parent);
+    const base=await reportsApiJson(commitRes,'Не удалось прочитать защищённое хранилище');
+    const treeRes=await reportsGithubFetch(cfg,'git/trees',{method:'POST',body:{base_tree:base.tree.sha,tree:[{path:'auth-security.enc.json',mode:'100644',type:'blob',sha:blob.sha}]}});
+    const tree=await reportsApiJson(treeRes,'Не удалось подготовить защищённые настройки');
+    const commitCreate=await reportsGithubFetch(cfg,'git/commits',{method:'POST',body:{message:'Update encrypted account security settings',tree:tree.sha,parents:[parent]}});
+    const commit=await reportsApiJson(commitCreate,'Не удалось сохранить защищённые настройки');
+    const update=await reportsGithubFetch(cfg,'git/refs/heads/'+encodeURIComponent(cfg.reportsBranch),{method:'PATCH',body:{sha:commit.sha,force:false}});
+    if(update.ok){
+      AUTH_SECURITY_STATE=next;AUTH_SECURITY_READY=true;AUTH_SECURITY_PERSISTENT=true;AUTH_SECURITY_ERROR='';return next;
+    }
+    if((update.status===409||update.status===422)&&attempt<3)continue;
+    await reportsApiJson(update,'Не удалось обновить защищённое хранилище настроек');
+  }
+  throw new Error('Настройки безопасности одновременно изменились. Повторите операцию.');
+}
+function cleanupAuthTransientMaps(){
+  const now=Date.now();
+  for(const [key,value] of TOTP_SETUP_PENDING)if(value.expires<=now)TOTP_SETUP_PENDING.delete(key);
+  for(const [key,value] of TOTP_LOGIN_CHALLENGES)if(value.expires<=now)TOTP_LOGIN_CHALLENGES.delete(key);
+  for(const [key,value] of TOTP_FAILS)if(value.until&&value.until<=now)TOTP_FAILS.delete(key);
+  while(TOTP_SETUP_PENDING.size>200)TOTP_SETUP_PENDING.delete(TOTP_SETUP_PENDING.keys().next().value);
+  while(TOTP_LOGIN_CHALLENGES.size>500)TOTP_LOGIN_CHALLENGES.delete(TOTP_LOGIN_CHALLENGES.keys().next().value);
+}
+function authRequestIp(req){return String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim().slice(0,100)}
+function passwordMatches(user,password){return !!user&&checkPw(user,String(password||''))}
+function mfaFailureKey(req,userId){return authRequestIp(req)+'|'+String(userId)}
+function recordMfaFailure(key){
+  const now=Date.now(),old=TOTP_FAILS.get(key),n=(old&&old.n||0)+1;
+  TOTP_FAILS.set(key,n>=5?{n:0,until:now+60000}:{n,until:0});
 }
 function reportsStorageState(){
   const configured=!!githubConfig();
