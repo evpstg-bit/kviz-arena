@@ -1017,14 +1017,18 @@ http.createServer(async(req,res)=>{
       if(authSecurityRecord(me.id))return json(res,{error:'Двухфакторная защита уже включена. Сначала отключите её с подтверждением.'},409);
       cleanupAuthTransientMaps();
       const secret=generateTotpSecret(),setupToken=crypto.randomBytes(24).toString('hex');
-      TOTP_SETUP_PENDING.set(setupToken,{uid:me.id,secret,expires:Date.now()+10*60000});
+      TOTP_SETUP_PENDING.set(setupToken,{uid:me.id,secret,expires:Date.now()+10*60000,tries:0});
       return json(res,{setupToken,secret,otpauthUrl:totpAuthUrl(me,secret),expiresIn:600});
     }
     if(op==='2fa/confirm'){
       const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
       const setupToken=String(b.setupToken||''),pending=TOTP_SETUP_PENDING.get(setupToken);
       if(!pending||String(pending.uid)!==String(me.id)||pending.expires<=Date.now()){TOTP_SETUP_PENDING.delete(setupToken);return json(res,{error:'Сеанс настройки истёк. Начните настройку заново.'},401)}
-      if(!verifyTotp(pending.secret,b.code))return json(res,{error:'Неверный код. Проверьте время на телефоне и попробуйте ещё раз.'},400);
+      if(!verifyTotp(pending.secret,b.code)){
+        pending.tries=(pending.tries||0)+1;
+        if(pending.tries>=5){TOTP_SETUP_PENDING.delete(setupToken);return json(res,{error:'Слишком много неверных кодов. Начните настройку заново.'},429)}
+        return json(res,{error:'Неверный код. Проверьте время на телефоне и попробуйте ещё раз.'},400);
+      }
       const recovery=makeRecoveryCodes(8),userId=String(me.id);
       try{
         await persistAuthSecurityMutation(state=>{
@@ -1041,8 +1045,11 @@ http.createServer(async(req,res)=>{
       const record=authSecurityRecord(me.id);
       if(!record)return json(res,{error:'Двухфакторная защита уже отключена.'},400);
       if(!passwordMatches(me,b.password))return json(res,{error:'Неверный пароль'},401);
+      const failureKey=mfaFailureKey(req,me.id),failure=TOTP_FAILS.get(failureKey);
+      if(failure&&failure.until>Date.now())return json(res,{error:'Слишком много неверных кодов. Подождите минуту.'},429);
       const input=String(b.code||'').trim(),totpOk=verifyTotp(record.secret,input),backup=findRecoveryCode(record,input);
-      if(!totpOk&&!backup)return json(res,{error:'Неверный код приложения или резервный код.'},401);
+      if(!totpOk&&!backup){recordMfaFailure(failureKey);return json(res,{error:'Неверный код приложения или резервный код.'},401)}
+      TOTP_FAILS.delete(failureKey);
       const userId=String(me.id);
       try{
         await persistAuthSecurityMutation(state=>{
