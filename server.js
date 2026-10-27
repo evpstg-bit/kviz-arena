@@ -516,7 +516,8 @@ function cleanupAuthTransientMaps(){
   const now=Date.now();
   for(const [key,value] of TOTP_SETUP_PENDING)if(value.expires<=now)TOTP_SETUP_PENDING.delete(key);
   for(const [key,value] of TOTP_LOGIN_CHALLENGES)if(value.expires<=now)TOTP_LOGIN_CHALLENGES.delete(key);
-  for(const [key,value] of TOTP_FAILS)if(value.until&&value.until<=now)TOTP_FAILS.delete(key);
+  for(const [key,value] of TOTP_FAILS)if((value.until&&value.until<=now)||(!value.until&&now-(value.last||0)>5*60000))TOTP_FAILS.delete(key);
+  while(TOTP_FAILS.size>2000)TOTP_FAILS.delete(TOTP_FAILS.keys().next().value);
   while(TOTP_SETUP_PENDING.size>200)TOTP_SETUP_PENDING.delete(TOTP_SETUP_PENDING.keys().next().value);
   while(TOTP_LOGIN_CHALLENGES.size>500)TOTP_LOGIN_CHALLENGES.delete(TOTP_LOGIN_CHALLENGES.keys().next().value);
 }
@@ -525,7 +526,7 @@ function passwordMatches(user,password){return !!user&&checkPw(user,String(passw
 function mfaFailureKey(req,userId){return authRequestIp(req)+'|'+String(userId)}
 function recordMfaFailure(key){
   const now=Date.now(),old=TOTP_FAILS.get(key),n=(old&&old.n||0)+1;
-  TOTP_FAILS.set(key,n>=5?{n:0,until:now+60000}:{n,until:0});
+  TOTP_FAILS.set(key,n>=5?{n:0,until:now+60000,last:now}:{n,until:0,last:now});
 }
 function reportsStorageState(){
   const configured=!!githubConfig();
