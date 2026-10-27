@@ -89,7 +89,7 @@ body {
   backdrop-filter: none !important;
 }
 #app .row { gap: 10px; }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon) {
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.teacher-dashboard-card) {
   min-height: 44px;
   padding: 11px 18px;
   color: #fff;
@@ -103,13 +103,13 @@ body {
   letter-spacing: -.01em;
   transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):hover {
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.teacher-dashboard-card):hover {
   background: var(--accent-button-hover);
   box-shadow: 0 8px 18px rgba(102, 88, 232, .22);
   transform: translateY(-1px);
   filter: none;
 }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):active { transform: translateY(0) scale(.99); }
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.teacher-dashboard-card):active { transform: translateY(0) scale(.99); }
 #app button.sec {
   min-height: 42px;
   padding: 10px 15px;
@@ -487,10 +487,10 @@ body, :root.dark body, html {
   box-shadow: var(--surface-shadow) !important;
 }
 #app .brand-icon { background: var(--accent-button) !important; border-radius: 10px !important; box-shadow: none !important; }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon) {
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.teacher-dashboard-card) {
   border-radius: 10px !important; box-shadow: none !important; font-weight: 650 !important;
 }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):hover {
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.teacher-dashboard-card):hover {
   box-shadow: none !important; transform: translateY(-1px); filter: none;
 }
 #app button.sec, #app .top-action {

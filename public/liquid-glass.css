@@ -238,7 +238,7 @@ body::after {
 }
 #app input:focus, #app textarea:focus, #app select:focus { border-color: rgba(122,109,243,.70) !important; box-shadow: 0 0 0 4px rgba(113,99,237,.13), inset 0 1px 0 rgba(255,255,255,.8) !important; }
 #app input::placeholder, #app textarea::placeholder { color: var(--text-muted) !important; }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.player-kick):not(.top-action):not(.danger-button):not(.site-history-button):not(.cabinet-menu-trigger):not(.site-menu-item) {
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.player-kick):not(.top-action):not(.danger-button):not(.site-history-button):not(.cabinet-menu-trigger):not(.site-menu-item):not(.teacher-dashboard-card) {
   background: linear-gradient(125deg, rgba(255,255,255,.18), transparent 48%), linear-gradient(135deg, #8174f1 0%, #685be3 58%, #5d51cf 100%) !important;
   border: 1px solid rgba(255,255,255,.45) !important;
   border-radius: 14px !important;
@@ -246,7 +246,7 @@ body::after {
   font-weight: 690 !important;
   transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease, filter .2s ease !important;
 }
-#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.player-kick):not(.top-action):not(.danger-button):not(.site-history-button):not(.cabinet-menu-trigger):not(.site-menu-item):hover {
+#app button:not(.sec):not(.ans):not(.filter-tab):not(.auth-tab):not(.footer-link):not(.btn-icon):not(.player-kick):not(.top-action):not(.danger-button):not(.site-history-button):not(.cabinet-menu-trigger):not(.site-menu-item):not(.teacher-dashboard-card):hover {
   filter: brightness(1.045) saturate(1.04) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 12px 24px rgba(95,79,210,.24), inset 0 1px 0 rgba(255,255,255,.55) !important;

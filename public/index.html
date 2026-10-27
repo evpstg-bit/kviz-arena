@@ -3,17 +3,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.23">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.23">
-<link rel="shortcut icon" href="/favicon.ico?v=1.16.23">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.23">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.24">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.24">
+<link rel="shortcut icon" href="/favicon.ico?v=1.16.24">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.24">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.16.23">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.16.23">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.16.23">
-<link rel="stylesheet" href="/lobby.css?v=1.16.23">
-<link rel="stylesheet" href="/kingdoms.css?v=1.16.23">
+<link rel="stylesheet" href="/ui.css?v=1.16.24">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.16.24">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.16.24">
+<link rel="stylesheet" href="/lobby.css?v=1.16.24">
+<link rel="stylesheet" href="/kingdoms.css?v=1.16.24">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script>
 /* Boot safety net: never leave users on an endless loading label. */
@@ -49,7 +49,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.23'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.24'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
@@ -543,7 +543,7 @@ async function copyQ(id){const r=await capi('lib/copy',{id});await finishLibrary
 async function deleteQ(id){const item=(LIB||[]).find(x=>x.id===id);if(!confirm('Удалить тест «'+(item?item.title:'')+'» из библиотеки проекта? Это изменение затронет весь проект.'))return;const r=await capi('lib/delete',{id});await finishLibraryMutation(r,'Тест удалён из библиотеки.');}
 function navigateCabinet(target){captureCurrentNavigationSnapshot();if(view==='quiz-editor'){if(!confirm(tr('Выйти из редактора без сохранения изменений?')))return;clearEditorDraft()}if(target==='reports')openReports();else if(target==='settings')openSettings();else openLib()}
 function navIcon(name){
- const paths={shield:'<path d="M12 3 20 7v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>',back:'<path d="M15 18l-6-6 6-6"/>',forward:'<path d="M9 18l6-6-6-6"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',library:'<path d="M4 4h5a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H4z"/><path d="M20 4h-5a3 3 0 0 0-3 3v14a3 3 0 0 1 3-3h5z"/><path d="M12 7v14"/>',reports:'<path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 6-7"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.78.34l-.07.06h-3.4l-.02-.08a1.7 1.7 0 0 0-1.3-1.22l-.08-.02-1.7-2.94.06-.06A1.7 1.7 0 0 0 9.4 14l-.02-.08v-3.4l.08-.02a1.7 1.7 0 0 0 1.22-1.3l.02-.08 2.94-1.7.06.06A1.7 1.7 0 0 0 15.6 7.8l.08-.02h3.4l.02.08a1.7 1.7 0 0 0 1.3 1.22l.08.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 21.8 14l.02.08v3.4l-.08.02a1.7 1.7 0 0 0-1.22 1.3z" transform="translate(-2 -2) scale(.92)"',export:'<path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/>',import:'<path d="M12 15V3m-5 5 5-5 5 5"/><path d="M5 17v3h14v-3"/>',home:'<path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9M9 20v-6h6v6"/>',logout:'<path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/>',file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>'};
+ const paths={shield:'<path d="M12 3 20 7v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>',back:'<path d="M15 18l-6-6 6-6"/>',forward:'<path d="M9 18l6-6-6-6"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',library:'<rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/>',reports:'<path d="M12 16v5"/><path d="M16 14.639V21"/><path d="M20 10.656V21"/><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15"/><path d="M4 18.463V21"/><path d="M8 14.656V21"/>',settings:'<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',export:'<path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/>',import:'<path d="M12 15V3m-5 5 5-5 5 5"/><path d="M5 17v3h14v-3"/>',home:'<path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9M9 20v-6h6v6"/>',logout:'<path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/>',file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>'};
  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;
 }
 function makeSiteNavEntry(){
@@ -570,7 +570,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.16.23')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.16.24')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
