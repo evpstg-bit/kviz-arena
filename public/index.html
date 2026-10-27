@@ -1928,11 +1928,12 @@ function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  trackSiteNavigation();
  const real=$('app');vApp=document.createElement('div');
+ let gameScreen=false;
  try{
   draw();
   if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());
   if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());
-  const gameScreen=view==='game',participantScreen=participantOnly||qrJoinMode;
+  gameScreen=view==='game';const participantScreen=participantOnly||qrJoinMode;
   document.body.classList.toggle('participant-only-active',participantScreen);
   real.classList.toggle('game-view-active',gameScreen);
   document.body.classList.toggle('game-view-active',gameScreen);
