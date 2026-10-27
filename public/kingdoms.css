@@ -313,3 +313,25 @@ body.game-view-active:has(.kingdom-score-chip)::before,body.game-view-active:has
   clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%) !important;
   pointer-events:none !important;
 }
+
+
+/* v1.16.7 — enlarge the existing Color Kingdoms grid to the available map-column width.
+   Keep the established hex-cell geometry and row offsets unchanged. */
+#app .kingdom-map-column {
+  container-type:inline-size;
+}
+#app .kingdom-map-column > .kingdom-board-frame:not(.is-small-board) {
+  box-sizing:border-box !important;
+  width:100% !important;
+  max-width:100% !important;
+  margin-left:0 !important;
+  margin-right:0 !important;
+}
+#app .kingdom-map-column > .kingdom-board-frame:not(.is-small-board) > .kingdom-board-grid:not(.is-small-board) {
+  --hex-w:clamp(12px, calc(89cqw / var(--board-size)), 72px) !important;
+  --hex-h:calc(var(--hex-w) * 1.1547) !important;
+  width:max-content !important;
+  max-width:none !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
