@@ -1697,3 +1697,25 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
   border-color:rgba(210,216,255,.13) !important;
   box-shadow:0 12px 30px rgba(52,58,118,.07),inset 0 1px 0 rgba(255,255,255,.8) !important;
 }
+
+
+/* v1.16.10 — keep document scrolling immediate and reduce background repaint work. */
+html,
+body {
+  scroll-behavior:auto !important;
+  overscroll-behavior-y:auto;
+}
+body::before {
+  animation:none !important;
+  will-change:auto !important;
+  filter:blur(22px) saturate(115%) !important;
+}
+@media (max-width:760px) {
+  body::before {
+    inset:0 !important;
+    filter:blur(14px) saturate(110%) !important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  html, body { scroll-behavior:auto !important; }
+}
