@@ -953,3 +953,42 @@ body.participant-only-active .floating-menu-anchor,
 body.participant-only-active .cabinet-menu-wrap{display:none!important}
 #app .participant-terminal-page{min-height:calc(100dvh - 32px)}
 #app .participant-terminal-card h1{overflow-wrap:anywhere}
+
+
+/* Account security / authenticator setup */
+.auth-security-page{width:min(920px,calc(100% - 32px));margin:38px auto 72px}
+.auth-security-heading{margin:0 auto 24px;max-width:820px}
+.auth-security-heading h1{margin:8px 0 10px;font-size:clamp(2rem,4vw,3.1rem);font-weight:850;letter-spacing:-.045em;line-height:1.05}
+.auth-security-heading p{max-width:640px;color:var(--muted,var(--mut));line-height:1.65}
+.auth-security-panel{max-width:820px;margin:0 auto;padding:clamp(20px,3.5vw,34px);border:1px solid var(--border,rgba(130,130,150,.22));border-radius:24px;background:var(--surface,var(--card,rgba(255,255,255,.78)));box-shadow:0 14px 44px rgba(30,32,60,.07);color:var(--fg,inherit)}
+.auth-security-panel h2{margin:22px 0 8px;font-size:1.18rem;font-weight:800}
+.auth-security-panel p{line-height:1.65}
+.auth-security-panel .field-label{display:block;margin:18px 0 7px}
+.auth-security-panel input{width:100%;max-width:440px}
+.auth-security-status{display:flex;gap:13px;align-items:flex-start;padding:15px 16px;border-radius:15px;border:1px solid var(--border,rgba(130,130,150,.22));background:var(--surface-muted,rgba(140,140,160,.07))}
+.auth-security-status>span{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:10px;font-size:1.15rem;font-weight:900}
+.auth-security-status b{display:block;font-weight:800}
+.auth-security-status p{margin:4px 0 0;font-size:.92rem;color:var(--muted,var(--mut))}
+.auth-security-status.is-enabled>span{background:#dcfce7;color:#166534}
+.auth-security-status.is-disabled>span{background:rgba(140,140,160,.16);color:var(--fg,inherit)}
+.auth-security-status.is-warning>span{background:#fef3c7;color:#92400e}
+.auth-security-step{display:flex;gap:12px;align-items:flex-start;margin-top:22px}
+.auth-security-step h2{margin:0 0 5px}
+.auth-security-step p{margin:0;color:var(--muted,var(--mut));font-size:.94rem}
+.auth-security-step-no{flex:0 0 29px;display:grid;place-items:center;width:29px;height:29px;border-radius:10px;background:rgba(124,92,255,.14);color:#7c5cff;font-size:.9rem;font-weight:850}
+.auth-security-qr{display:flex;justify-content:center;align-items:center;width:240px;min-height:240px;margin:18px auto;padding:12px;background:#fff;border-radius:16px;border:1px solid #e5e7eb;color:#111827}
+.auth-security-qr img,.auth-security-qr svg{display:block;width:216px;height:216px;max-width:100%;image-rendering:pixelated}
+.auth-security-secret{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 4px}
+.auth-security-secret code{display:inline-block;max-width:100%;padding:10px 12px;overflow-wrap:anywhere;background:rgba(140,140,160,.12);border-radius:9px;font-size:.9rem;letter-spacing:.06em}
+.auth-security-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.auth-security-actions button{min-height:44px}
+.auth-security-message{margin:15px 0 0;color:var(--muted,var(--mut))}
+.auth-recovery-codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:18px 0}
+.auth-recovery-codes code{display:block;padding:12px 10px;border-radius:9px;text-align:center;background:rgba(140,140,160,.12);font:700 .9rem ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.035em;overflow-wrap:anywhere}
+.auth-security-prompt{text-align:left}
+.auth-security-symbol{display:grid;place-items:center;width:46px;height:46px;margin-bottom:14px;border-radius:15px;background:rgba(124,92,255,.14);font-size:1.45rem;color:#7c5cff}
+.auth-back-button{width:100%;margin-top:10px}
+.auth-security-state{min-height:170px;display:flex;gap:12px;justify-content:center;align-items:center;color:var(--muted,var(--mut))}
+.security-spinner{width:22px;height:22px;border:2px solid rgba(124,92,255,.18);border-top-color:#7c5cff;border-radius:50%;animation:auth-security-spin .8s linear infinite}
+@keyframes auth-security-spin{to{transform:rotate(360deg)}}
+@media(max-width:560px){.auth-security-page{width:calc(100% - 24px);margin:22px auto 42px}.auth-security-panel{padding:19px 16px;border-radius:18px}.auth-recovery-codes{grid-template-columns:1fr}.auth-security-qr{width:220px;min-height:220px}.auth-security-qr img{width:196px;height:196px}.auth-security-actions{flex-direction:column}.auth-security-actions button{width:100%}}
