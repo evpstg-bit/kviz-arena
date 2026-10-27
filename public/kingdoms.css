@@ -454,3 +454,17 @@ body.game-view-active:has(.kingdom-score-chip)::before,body.game-view-active:has
     padding-right:2px !important;
   }
 }
+
+
+/* v1.16.9 — restore the alternating green shades for neutral hex cells.
+   Only cell fills change; transparent board backing and hex geometry stay untouched. */
+#app .kingdom-board-frame:not(.is-small-board) .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-light {
+  background:#79a64b !important;
+  background-image:linear-gradient(145deg,#87b654,#79a64b) !important;
+  border-color:rgba(230,255,199,.30) !important;
+}
+#app .kingdom-board-frame:not(.is-small-board) .kingdom-board-row > .kingdom-tile.is-neutral.is-checker-dark {
+  background:#4d7834 !important;
+  background-image:linear-gradient(145deg,#5c8940,#4d7834) !important;
+  border-color:rgba(220,245,194,.24) !important;
+}
