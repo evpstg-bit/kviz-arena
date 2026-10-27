@@ -977,7 +977,7 @@ body.participant-only-active .cabinet-menu-wrap{display:none!important}
 .auth-security-step p{margin:0;color:var(--muted,var(--mut));font-size:.94rem}
 .auth-security-step-no{flex:0 0 29px;display:grid;place-items:center;width:29px;height:29px;border-radius:10px;background:rgba(124,92,255,.14);color:#7c5cff;font-size:.9rem;font-weight:850}
 .auth-security-qr{display:flex;justify-content:center;align-items:center;width:240px;min-height:240px;margin:18px auto;padding:12px;background:#fff;border-radius:16px;border:1px solid #e5e7eb;color:#111827}
-.auth-security-qr img{display:block;width:216px;height:216px;max-width:100%;image-rendering:pixelated}
+.auth-security-qr img,.auth-security-qr svg{display:block;width:216px;height:216px;max-width:100%;image-rendering:pixelated}
 .auth-security-secret{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 4px}
 .auth-security-secret code{display:inline-block;max-width:100%;padding:10px 12px;overflow-wrap:anywhere;background:rgba(140,140,160,.12);border-radius:9px;font-size:.9rem;letter-spacing:.06em}
 .auth-security-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
