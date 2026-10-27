@@ -1684,3 +1684,16 @@ html.dark .settings-status-chip{background:rgba(18,22,41,.72);border-color:rgba(
   #app .kingdom-team-card .text-3xl {font-size:1.6rem}
   #app .kingdom-team-card .text-sm {font-size:.68rem}
 }
+
+
+/* Keep the live "Participant statistics" panel visually identical to "Top participants". */
+#app .host-live-panel {
+  background:linear-gradient(135deg,rgba(255,255,255,.76),rgba(237,240,255,.56)) !important;
+  border:1px solid rgba(255,255,255,.72) !important;
+  box-shadow:0 12px 30px rgba(52,58,118,.07),inset 0 1px 0 rgba(255,255,255,.8) !important;
+}
+:root.dark #app .host-live-panel {
+  background:linear-gradient(135deg,rgba(27,32,57,.90),rgba(20,25,46,.8)) !important;
+  border-color:rgba(210,216,255,.13) !important;
+  box-shadow:0 12px 30px rgba(52,58,118,.07),inset 0 1px 0 rgba(255,255,255,.8) !important;
+}
