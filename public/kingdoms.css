@@ -216,3 +216,25 @@ body.game-view-active:has(.kingdom-score-chip)::before,body.game-view-active:has
   color:var(--text-main) !important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.035) !important;
 }
+
+
+/* Force true hexagonal geometry for Color Kingdoms cells.
+   liquid-glass.css contains a broad legacy .kingdom-tile rule with clip-path:none!important
+   and square sizing; this more specific rule restores the board's intended hex layout. */
+#app .kingdom-board-grid .kingdom-board-row > .kingdom-tile {
+  flex: 0 0 var(--hex-w) !important;
+  width: var(--hex-w) !important;
+  height: var(--hex-h) !important;
+  min-width: var(--hex-w) !important;
+  min-height: var(--hex-h) !important;
+  max-width: var(--hex-w) !important;
+  max-height: var(--hex-h) !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%) !important;
+  overflow: visible !important;
+}
+#app .kingdom-board-grid .kingdom-board-row > .kingdom-tile::after {
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%) !important;
+  border-radius: 0 !important;
+}
