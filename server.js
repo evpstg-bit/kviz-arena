@@ -945,8 +945,10 @@ http.createServer(async(req,res)=>{
     return json(res,{error:'Неизвестная операция настроек'},404);
   }
 
-  // ---------- аккаунты ----------
+  // ---------- аккаунты и двухфакторная аутентификация ----------
   if(u.pathname.startsWith('/api/auth/')){
+    const loaded=await ensureAuthSecurityLoaded();
+    if(!loaded)return json(res,{error:'Не удалось загрузить настройки безопасности. Повторите попытку позже.'},503);
     const op=u.pathname.slice(10);
     if(op==='register'){
       const login=str(b.login,40).trim(),pw=String(b.pass||'');
@@ -960,18 +962,105 @@ http.createServer(async(req,res)=>{
       return json(res,{token:newSession(nu),user:pubUser(nu)});
     }
     if(op==='login'){
-      const login=str(b.login,40).trim(),ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim(),key=ip+'|'+login.toLowerCase(),now=Date.now(),f=FAILS.get(key);
+      cleanupAuthTransientMaps();
+      const login=str(b.login,40).trim(),ip=authRequestIp(req),key=ip+'|'+login.toLowerCase(),now=Date.now(),f=FAILS.get(key);
       if(f&&f.until>now)return json(res,{error:'Слишком много неудачных попыток. Подождите минуту.'},429);
       const nu=USERS.find(x=>x.login.toLowerCase()===login.toLowerCase());
       if(!nu||!checkPw(nu,b.pass)){const n=(f?f.n:0)+1;FAILS.set(key,n>=5?{n:0,until:now+60000}:{n,until:0});return json(res,{error:'Неверный логин или пароль'},401)}
       FAILS.delete(key);
-      return json(res,{token:newSession(nu),user:pubUser(nu)});
+      if(authSecurityRecord(nu.id)){
+        const challenge=crypto.randomBytes(32).toString('hex');
+        TOTP_LOGIN_CHALLENGES.set(challenge,{uid:nu.id,expires:Date.now()+5*60000,ip,tries:0});
+        return json(res,{twoFactorRequired:true,challenge});
+      }
+      return json(res,{token:newSession(nu,false),user:pubUser(nu)});
+    }
+    if(op==='verify-2fa'){
+      cleanupAuthTransientMaps();
+      const challenge=String(b.challenge||''),pending=TOTP_LOGIN_CHALLENGES.get(challenge);
+      if(!pending||pending.expires<=Date.now())return json(res,{error:'Сеанс подтверждения истёк. Войдите снова.'},401);
+      const u=USERS.find(x=>String(x.id)===String(pending.uid)),record=authSecurityRecord(pending.uid);
+      if(!u||!record){TOTP_LOGIN_CHALLENGES.delete(challenge);return json(res,{error:'Настройка двухфакторной защиты не найдена. Войдите снова.'},401)}
+      const failureKey=mfaFailureKey(req,pending.uid),failure=TOTP_FAILS.get(failureKey);
+      if(failure&&failure.until>Date.now())return json(res,{error:'Слишком много неверных кодов. Подождите минуту.'},429);
+      const input=String(b.code||'').trim();
+      let valid=verifyTotp(record.secret,input),backup=null;
+      if(!valid){backup=findRecoveryCode(record,input);valid=!!backup}
+      if(!valid){
+        recordMfaFailure(failureKey);pending.tries=(pending.tries||0)+1;
+        if(pending.tries>=5)TOTP_LOGIN_CHALLENGES.delete(challenge);
+        return json(res,{error:pending.tries>=5?'Слишком много неверных кодов. Начните вход заново.':'Неверный код приложения или резервный код.'},401);
+      }
+      if(backup){
+        try{
+          await persistAuthSecurityMutation(state=>{
+            const live=state.users[String(pending.uid)];
+            if(!live||!Array.isArray(live.recoveryHashes))throw new Error('Резервный код уже использован');
+            const index=live.recoveryHashes.indexOf(backup.hash);
+            if(index<0)throw new Error('Резервный код уже использован');
+            live.recoveryHashes.splice(index,1);
+          });
+        }catch(e){return json(res,{error:'Не удалось безопасно отметить резервный код как использованный. Повторите попытку.'},503)}
+      }
+      TOTP_LOGIN_CHALLENGES.delete(challenge);TOTP_FAILS.delete(failureKey);
+      return json(res,{token:newSession(u,true),user:pubUser(u)});
+    }
+    if(op==='2fa/status'){
+      const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
+      return json(res,{enabled:!!authSecurityRecord(me.id),persistent:AUTH_SECURITY_PERSISTENT,storageNotice:AUTH_SECURITY_PERSISTENT?'':'Для включения 2FA необходимо настроить постоянное зашифрованное хранилище GitHub (GITHUB_TOKEN и GITHUB_REPOSITORY; рекомендуется REPORTS_ENCRYPTION_KEY).'});
+    }
+    if(op==='2fa/setup'){
+      const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
+      if(!passwordMatches(me,b.password))return json(res,{error:'Неверный пароль'},401);
+      if(!AUTH_SECURITY_PERSISTENT||!reportsStoreConfig())return json(res,{error:'Для включения 2FA нужно настроить GITHUB_TOKEN и GITHUB_REPOSITORY. Добавьте также стабильный REPORTS_ENCRYPTION_KEY для шифрования.'},503);
+      if(authSecurityRecord(me.id))return json(res,{error:'Двухфакторная защита уже включена. Сначала отключите её с подтверждением.'},409);
+      cleanupAuthTransientMaps();
+      const secret=generateTotpSecret(),setupToken=crypto.randomBytes(24).toString('hex');
+      TOTP_SETUP_PENDING.set(setupToken,{uid:me.id,secret,expires:Date.now()+10*60000});
+      return json(res,{setupToken,secret,otpauthUrl:totpAuthUrl(me,secret),expiresIn:600});
+    }
+    if(op==='2fa/confirm'){
+      const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
+      const setupToken=String(b.setupToken||''),pending=TOTP_SETUP_PENDING.get(setupToken);
+      if(!pending||String(pending.uid)!==String(me.id)||pending.expires<=Date.now()){TOTP_SETUP_PENDING.delete(setupToken);return json(res,{error:'Сеанс настройки истёк. Начните настройку заново.'},401)}
+      if(!verifyTotp(pending.secret,b.code))return json(res,{error:'Неверный код. Проверьте время на телефоне и попробуйте ещё раз.'},400);
+      const recovery=makeRecoveryCodes(8),userId=String(me.id);
+      try{
+        await persistAuthSecurityMutation(state=>{
+          if(state.users[userId])throw new Error('Двухфакторная защита уже включена');
+          state.epochs[userId]=(Number(state.epochs[userId])||0)+1;
+          state.users[userId]={secret:pending.secret,enabledAt:Date.now(),recoveryHashes:recovery.hashes};
+        });
+      }catch(e){return json(res,{error:'Не удалось сохранить настройки 2FA. Проверьте постоянное хранилище и повторите попытку.'},503)}
+      TOTP_SETUP_PENDING.delete(setupToken);
+      return json(res,{ok:true,enabled:true,recoveryCodes:recovery.codes});
+    }
+    if(op==='2fa/disable'){
+      const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
+      const record=authSecurityRecord(me.id);
+      if(!record)return json(res,{error:'Двухфакторная защита уже отключена.'},400);
+      if(!passwordMatches(me,b.password))return json(res,{error:'Неверный пароль'},401);
+      const input=String(b.code||'').trim(),totpOk=verifyTotp(record.secret,input),backup=findRecoveryCode(record,input);
+      if(!totpOk&&!backup)return json(res,{error:'Неверный код приложения или резервный код.'},401);
+      const userId=String(me.id);
+      try{
+        await persistAuthSecurityMutation(state=>{
+          const live=state.users[userId];
+          if(!live)throw new Error('Двухфакторная защита уже отключена');
+          if(backup){
+            const index=Array.isArray(live.recoveryHashes)?live.recoveryHashes.indexOf(backup.hash):-1;
+            if(index<0)throw new Error('Резервный код уже использован');
+          }
+          delete state.users[userId];
+          state.epochs[userId]=(Number(state.epochs[userId])||0)+1;
+        });
+      }catch(e){return json(res,{error:'Не удалось сохранить изменение настроек безопасности. Повторите попытку.'},503)}
+      return json(res,{ok:true,enabled:false});
     }
     if(op==='me'){const me=userOf(b.token);return me?json(res,{user:pubUser(me)}):json(res,{error:'Требуется вход',code:401},401)}
     if(op==='logout'){delete SESS[b.token];writeJ('sessions.json',SESS);return json(res,{ok:1})}
     return json(res,{error:'Неизвестная операция'},404);
   }
-
   // ---------- встроенная библиотека тестов из builtin-tests.json ----------
   if(u.pathname.startsWith('/api/lib/')){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
