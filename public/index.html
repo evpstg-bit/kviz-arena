@@ -30,7 +30,7 @@ function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PL
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.14.1'},
- TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
+ TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -118,19 +118,98 @@ function connect(){
   const lostRole=gameRole||(S?(S.host?'host':'player'):'');clearSess();pin='';me='';S=null;msg=unavailableGameMessage(participantOnly?'player':lostRole);if(lostRole==='player'||participantOnly){markParticipantOnly();view='participant-end'}else view='home';gameRole='';sseMissingChecks=0;if(es===source)es=null;render();
  };
 }
-function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';render()}
+function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';authChallenge='';authCode='';render()}
 async function submitAuth(){
  const reg=false;authTab='login';msg='';
+ if(authChallenge)return submitAuthSecondFactor();
  if(reg&&AF.pass!==AF.pass2){msg='Пароли не совпадают';return render()}
  const r=await api(reg?'auth/register':'auth/login',{login:AF.login,pass:AF.pass,name:AF.name,code:AF.code});
  if(r.error){msg=r.error;return render()}
- TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};INFO.hasUsers=true;openLib();
+ if(r.twoFactorRequired&&r.challenge){
+  authChallenge=r.challenge;authCode='';AF.pass='';msg='';return render();
+ }
+ TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};INFO.hasUsers=true;authChallenge='';authCode='';openLib();
 }
-async function logout(){cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;view='home';render()}
+async function submitAuthSecondFactor(){
+ msg='';
+ const r=await api('auth/verify-2fa',{challenge:authChallenge,code:authCode});
+ if(r.error){msg=r.error;return render()}
+ TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};authChallenge='';authCode='';INFO.hasUsers=true;openLib();
+}
+function cancelAuthChallenge(){authChallenge='';authCode='';msg='';AF.pass='';render()}
+async function logout(){cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;securityStatus=null;securitySetup=null;securityRecoveryCodes=null;view='home';render()}
 function authView(a){
+ const form=authChallenge
+  ? `<div class="auth-security-prompt"><div class="auth-security-symbol" aria-hidden="true">✦</div><h2>${tr('Подтверждение входа')}</h2><p class="mut">${tr('Введите одноразовый код из Google Authenticator или резервный код.')}</p><label class="field-label" for="auth-otp-code">${tr('Код приложения или резервный код')}</label><input id="auth-otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="29" placeholder="123456" value="${esc(authCode)}" oninput="authCode=this.value" onkeydown="if(event.key==='Enter')submitAuthSecondFactor()"><p class="bad auth-error" role="alert">${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuthSecondFactor()">${tr('Подтвердить код')} <span aria-hidden="true">→</span></button><button class="sec auth-back-button" type="button" onclick="cancelAuthChallenge()">${tr('Назад ко входу')}</button></div>`
+  : `<label class="field-label" for="auth-login">${tr('Логин')}</label><input id="auth-login" type="text" placeholder="${tr('Логин')}" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">${tr('Пароль')}</label><input id="auth-password" type="password" placeholder="${tr('Пароль')}" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuth()">${tr('Войти')} <span aria-hidden="true">→</span></button>`;
  a.innerHTML=`<header class="app-topbar auth-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}${simpleHeaderControls(true,'auth')}</header>
- <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> КАБИНЕТ ПРЕПОДАВАТЕЛЯ</div><h1 class="auth-promo-title">Меньше настройки.<br><span>Больше игры.</span></h1><p class="auth-promo-copy">Запускайте готовые викторины для участников.</p><div class="minimal-auth-note"><span>01</span><span>Войдите в кабинет</span></div><div class="minimal-auth-note"><span>02</span><span>Выберите тест</span></div><div class="minimal-auth-note"><span>03</span><span>Запустите игру и поделитесь PIN-кодом</span></div></div>
- <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">ДОБРО ПОЖАЛОВАТЬ</span><h2>Вход в кабинет</h2><p class="mut">Введите логин и пароль администратора.</p></div><div class="card auth-card"><label class="field-label" for="auth-login">Логин</label><input id="auth-login" type="text" placeholder="Логин" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(msg)}</p><button class="btn-primary auth-submit" onclick="submitAuth()">Войти <span aria-hidden="true">→</span></button></div></div></section>`;
+ <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> ${tr('КАБИНЕТ ПРЕПОДАВАТЕЛЯ')}</div><h1 class="auth-promo-title">${tr('Меньше настройки.')}<br><span>${tr('Больше игры.')}</span></h1><p class="auth-promo-copy">${tr('Запускайте готовые викторины для участников.')}</p><div class="minimal-auth-note"><span>01</span><span>${tr('Войдите в кабинет')}</span></div><div class="minimal-auth-note"><span>02</span><span>${tr('Выберите тест')}</span></div><div class="minimal-auth-note"><span>03</span><span>${tr('Запустите игру и поделитесь PIN-кодом')}</span></div></div>
+ <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">${tr('ДОБРО ПОЖАЛОВАТЬ')}</span><h2>${authChallenge?tr('Подтверждение входа'):tr('Вход в кабинет')}</h2><p class="mut">${authChallenge?tr('Для завершения входа подтвердите, что это вы.'):tr('Введите логин и пароль администратора.')}</p></div><div class="card auth-card">${form}</div></div></section>`;
+}
+async function openSecurity(){
+ if(!USER)return goAuth();
+ closeCabinetMenu();captureCurrentNavigationSnapshot();
+ const nav=++cabinetNavSeq;
+ view='security';securityStatus=null;securityMsg='';securityPassword='';securityCode='';securitySetup=null;securityRecoveryCodes=null;render();
+ const r=await capi('auth/2fa/status',{});
+ if(nav!==cabinetNavSeq||!USER||view!=='security')return;
+ if(r.error){securityMsg=r.error;securityStatus={enabled:false,persistent:false,storageNotice:r.error}}
+ else securityStatus=r;
+ render();
+}
+async function beginSecuritySetup(){
+ securityMsg='';
+ const r=await capi('auth/2fa/setup',{password:securityPassword});
+ if(r.error){securityMsg=r.error;return render()}
+ securityPassword='';securityCode='';securitySetup={setupToken:r.setupToken,secret:r.secret,otpauthUrl:r.otpauthUrl};
+ render();
+}
+async function confirmSecuritySetup(){
+ securityMsg='';
+ const r=await capi('auth/2fa/confirm',{setupToken:securitySetup&&securitySetup.setupToken,code:securityCode});
+ if(r.error){securityMsg=r.error;return render()}
+ securitySetup=null;securityCode='';securityStatus={enabled:true,persistent:true};
+ securityRecoveryCodes=Array.isArray(r.recoveryCodes)?r.recoveryCodes:[];
+ securityMsg=tr('Защита включена. Сохраните резервные коды, затем выполните повторный вход.');
+ render();
+}
+async function disableSecurity(){
+ securityMsg='';
+ const r=await capi('auth/2fa/disable',{password:securityPassword,code:securityCode});
+ if(r.error){securityMsg=r.error;return render()}
+ TOKEN='';USER=null;saveToken();securityStatus=null;securitySetup=null;securityRecoveryCodes=null;securityPassword='';securityCode='';
+ view='auth';authChallenge='';AF={login:'',pass:'',pass2:'',code:'',name:''};
+ msg=tr('Двухфакторная защита отключена. Войдите снова.');render();
+}
+function cancelSecuritySetup(){securitySetup=null;securityCode='';securityPassword='';securityMsg='';render()}
+function renderSecurityQr(){
+ const el=$('security-2fa-qr');if(!el||!securitySetup)return;
+ try{
+  if(typeof qrcode!=='function')throw new Error('QR unavailable');
+  const qr=qrcode(0,'M');qr.addData(securitySetup.otpauthUrl);qr.make();el.innerHTML=qr.createImgTag(5,8);
+  const img=el.querySelector('img');if(img){img.alt=tr('QR-код для Google Authenticator');img.setAttribute('aria-label',img.alt)}
+ }catch(e){el.innerHTML='<span class="mut">'+tr('QR-код недоступен. Введите секретный ключ вручную.')+'</span>'}
+}
+async function copySecurityRecoveryCodes(){
+ const value=(securityRecoveryCodes||[]).join('\n');if(!value)return;
+ try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(value);securityMsg=tr('Резервные коды скопированы.');render();return}}catch(e){}
+ window.prompt(tr('Скопируйте и сохраните резервные коды'),value);
+}
+function finishRecoveryCodes(){
+ TOKEN='';USER=null;saveToken();securityRecoveryCodes=null;securitySetup=null;securityStatus=null;
+ AF={login:'',pass:'',pass2:'',code:'',name:''};authChallenge='';authCode='';
+ cabinetNavSeq++;view='auth';authTab='login';msg=tr('Защита включена. Теперь войдите с кодом Google Authenticator.');render();
+}
+function securityPage(a){
+ const head=cabinetHeader('security',tr('Безопасность аккаунта'));
+ let content='';
+ if(!securityStatus)content=`<div class="auth-security-state"><div class="security-spinner"></div><p>${tr('Загружаем настройки безопасности…')}</p></div>`;
+ else if(securityRecoveryCodes)content=`<section class="auth-security-panel"><div class="auth-security-status is-enabled"><span>✓</span><div><b>${tr('Двухфакторная защита включена')}</b><p>${tr('Google Authenticator подключён. Резервные коды можно использовать по одному.')}</p></div></div><h2>${tr('Резервные коды восстановления')}</h2><p>${tr('Каждый код можно использовать только один раз. Сохраните их сейчас: повторно показать эти коды нельзя.')}</p><div class="auth-recovery-codes">${securityRecoveryCodes.map(code=>`<code>${esc(code)}</code>`).join('')}</div><div class="auth-security-actions"><button class="sec" onclick="copySecurityRecoveryCodes()">${tr('Скопировать коды')}</button><button class="btn-primary" onclick="finishRecoveryCodes()">${tr('Я сохранил коды — продолжить')}</button></div>${securityMsg?`<p class="auth-security-message" role="status">${esc(tr(securityMsg))}</p>`:''}</section>`;
+ else if(securitySetup)content=`<section class="auth-security-panel"><div class="auth-security-step"><span class="auth-security-step-no">1</span><div><h2>${tr('Отсканируйте QR-код')}</h2><p>${tr('Откройте Google Authenticator, нажмите «+» и отсканируйте этот код.')}</p></div></div><div id="security-2fa-qr" class="auth-security-qr" aria-live="polite"></div><p class="mut">${tr('Если сканирование не работает, введите этот ключ вручную:')}</p><div class="auth-security-secret"><code>${esc(securitySetup.secret)}</code><button class="sec" type="button" onclick="window.prompt(tr('Скопируйте секретный ключ'),${JSON.stringify(securitySetup.secret)})">${tr('Показать ключ для копирования')}</button></div><div class="auth-security-step"><span class="auth-security-step-no">2</span><div><h2>${tr('Подтвердите настройку')}</h2><p>${tr('Введите текущий шестизначный код из приложения.')}</p></div></div><label class="field-label" for="security-totp-code">${tr('Код приложения')}</label><input id="security-totp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" value="${esc(securityCode)}" oninput="securityCode=this.value" onkeydown="if(event.key==='Enter')confirmSecuritySetup()"><div class="auth-security-actions"><button class="sec" onclick="cancelSecuritySetup()">${tr('Отмена')}</button><button class="btn-primary" onclick="confirmSecuritySetup()">${tr('Подтвердить и включить')}</button></div>${securityMsg?`<p class="bad auth-error" role="alert">${esc(tr(securityMsg))}</p>`:''}</section>`;
+ else if(!securityStatus.persistent)content=`<section class="auth-security-panel"><div class="auth-security-status is-warning"><span>!</span><div><b>${tr('Постоянное хранилище не настроено')}</b><p>${tr(securityStatus.storageNotice||'')}</p></div></div><p>${tr('Чтобы 2FA не сбрасывалась после перезапуска сервера, зашифрованные настройки должны сохраняться в постоянном хранилище.')}</p></section>`;
+ else if(securityStatus.enabled)content=`<section class="auth-security-panel"><div class="auth-security-status is-enabled"><span>✓</span><div><b>${tr('Двухфакторная защита включена')}</b><p>${tr('Для входа требуются пароль и код из Google Authenticator.')}</p></div></div><h2>${tr('Отключить двухфакторную защиту')}</h2><p>${tr('Для отключения подтвердите пароль и одноразовый код приложения или неиспользованный резервный код.')}</p><label class="field-label" for="security-disable-password">${tr('Пароль от кабинета')}</label><input id="security-disable-password" type="password" autocomplete="current-password" value="${esc(securityPassword)}" oninput="securityPassword=this.value"><label class="field-label" for="security-disable-code">${tr('Код приложения или резервный код')}</label><input id="security-disable-code" type="text" autocomplete="one-time-code" value="${esc(securityCode)}" oninput="securityCode=this.value" onkeydown="if(event.key==='Enter')disableSecurity()"><div class="auth-security-actions"><button class="btn-primary" onclick="disableSecurity()">${tr('Отключить защиту')}</button></div>${securityMsg?`<p class="bad auth-error" role="alert">${esc(tr(securityMsg))}</p>`:''}</section>`;
+ else content=`<section class="auth-security-panel"><div class="auth-security-status is-disabled"><span>○</span><div><b>${tr('Двухфакторная защита не включена')}</b><p>${tr('После настройки при каждом входе понадобится пароль и одноразовый код из приложения.')}</p></div></div><h2>${tr('Подключить Google Authenticator')}</h2><p>${tr('Для подтверждения настройки введите пароль от кабинета. Затем отсканируйте QR-код и подтвердите шестизначный код.')}</p><label class="field-label" for="security-setup-password">${tr('Пароль от кабинета')}</label><input id="security-setup-password" type="password" autocomplete="current-password" value="${esc(securityPassword)}" oninput="securityPassword=this.value" onkeydown="if(event.key==='Enter')beginSecuritySetup()"><div class="auth-security-actions"><button class="btn-primary" onclick="beginSecuritySetup()">${tr('Начать настройку')}</button></div>${securityMsg?`<p class="bad auth-error" role="alert">${esc(tr(securityMsg))}</p>`:''}</section>`;
+ a.innerHTML=`${head}<section class="auth-security-page"><div class="auth-security-heading"><span class="section-kicker">${tr('ЗАЩИТА АККАУНТА')}</span><h1>${tr('Безопасность аккаунта')}<span class="title-period">.</span></h1><p>${tr('Защитите вход в кабинет дополнительным одноразовым кодом.')}</p></div>${content}</section>`;
 }
 async function start(selectedMode){
  if(!['classic','kingdoms'].includes(selectedMode)||modeLaunchPending)return;if(!CLIENT_SETTINGS.modes[selectedMode].enabled){libMsg=tr('Этот режим отключён в общих настройках платформы.');launchModeDialog=false;render();return}
