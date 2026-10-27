@@ -234,6 +234,11 @@ async function reportsGithubFetch(cfg,endpoint,{method='GET',body,accept='applic
   if(body!==undefined){headers['Content-Type']='application/json';options.body=JSON.stringify(body)}
   return fetch(reportsApiBase()+'/repos/'+cfg.repo+'/'+endpoint,options);
 }
+const authSecurityStoreConfig=()=>{
+  const cfg=reportsStoreConfig(),secret=String(process.env.AUTH_SECURITY_ENCRYPTION_KEY||'').trim();
+  if(!cfg||secret.length<32)return null;
+  return{...cfg,secret};
+};
 function reportCryptoKey(cfg){return crypto.createHash('sha256').update('kviz-arena-encrypted-report-store-v1\0'+cfg.secret,'utf8').digest()}
 function encryptReportPayload(value,cfg){
   const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',reportCryptoKey(cfg),iv);
@@ -474,9 +479,9 @@ async function ensureAuthSecurityLoaded(){
   if(AUTH_SECURITY_READY)return true;
   if(AUTH_SECURITY_PROMISE)return AUTH_SECURITY_PROMISE;
   AUTH_SECURITY_PROMISE=(async()=>{
-    const cfg=reportsStoreConfig();
+    const cfg=authSecurityStoreConfig();
     if(!cfg){
-      if(String(process.env.AUTH_SECURITY_REQUIRED||'').toLowerCase()==='true')throw new Error('Не настроено постоянное защищённое хранилище двухфакторной аутентификации');
+      if(String(process.env.AUTH_SECURITY_REQUIRED||'').toLowerCase()==='true')throw new Error('Не настроено постоянное зашифрованное хранилище двухфакторной аутентификации. Настройте AUTH_SECURITY_ENCRYPTION_KEY, GITHUB_TOKEN и GITHUB_REPOSITORY');
       AUTH_SECURITY_STATE=emptyAuthSecurityState();AUTH_SECURITY_PERSISTENT=false;AUTH_SECURITY_READY=true;AUTH_SECURITY_ERROR='';return true;
     }
     const ref=await githubEnsureReportsBranch(cfg),remote=await readAuthSecurityAt(cfg,ref.object.sha);
@@ -489,8 +494,8 @@ async function ensureAuthSecurityLoaded(){
   return AUTH_SECURITY_PROMISE;
 }
 async function persistAuthSecurityMutation(mutate){
-  const cfg=reportsStoreConfig();
-  if(!cfg)throw new Error('Для двухфакторной защиты нужно настроить GITHUB_TOKEN и GITHUB_REPOSITORY. Добавьте также стабильный REPORTS_ENCRYPTION_KEY для шифрования.');
+  const cfg=authSecurityStoreConfig();
+  if(!cfg)throw new Error('Для двухфакторной защиты нужны GITHUB_TOKEN, GITHUB_REPOSITORY и отдельный стабильный AUTH_SECURITY_ENCRYPTION_KEY длиной не менее 32 символов.');
   for(let attempt=0;attempt<4;attempt++){
     const branchRef=await githubEnsureReportsBranch(cfg),parent=branchRef.object.sha;
     const current=await readAuthSecurityAt(cfg,parent),next=normalizeAuthSecurityState(current.state);
@@ -1013,7 +1018,7 @@ http.createServer(async(req,res)=>{
     if(op==='2fa/setup'){
       const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
       if(!passwordMatches(me,b.password))return json(res,{error:'Неверный пароль'},401);
-      if(!AUTH_SECURITY_PERSISTENT||!reportsStoreConfig())return json(res,{error:'Для включения 2FA нужно настроить GITHUB_TOKEN и GITHUB_REPOSITORY. Добавьте также стабильный REPORTS_ENCRYPTION_KEY для шифрования.'},503);
+      if(!AUTH_SECURITY_PERSISTENT||!authSecurityStoreConfig())return json(res,{error:'Для включения 2FA нужно настроить GITHUB_TOKEN, GITHUB_REPOSITORY и отдельный AUTH_SECURITY_ENCRYPTION_KEY длиной не менее 32 символов.'},503);
       if(authSecurityRecord(me.id))return json(res,{error:'Двухфакторная защита уже включена. Сначала отключите её с подтверждением.'},409);
       cleanupAuthTransientMaps();
       const secret=generateTotpSecret(),setupToken=crypto.randomBytes(24).toString('hex');
