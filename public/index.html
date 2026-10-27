@@ -515,7 +515,7 @@ function cabinetMenu(active){
  const navigation=authenticated?`<div class="cabinet-menu-caption">${tr('Навигация')}</div>
  ${menuItem('library','Библиотека',"closeCabinetMenu();navigateCabinet('lib')",section==='lib'?'is-active':'')}
  ${menuItem('reports','Отчёты',"closeCabinetMenu();navigateCabinet('reports')",section==='reports'?'is-active':'')}
- ${USER&&USER.admin?menuItem('settings','Настройки',"closeCabinetMenu();navigateCabinet('settings')",section==='settings'?'is-active':''):''}
+ ${menuItem('settings','Настройки',"closeCabinetMenu();navigateCabinet('settings')",section==='settings'?'is-active':'')}
  <div class="cabinet-menu-separator"></div>
  ${menuItem('export','Экспорт библиотеки','closeCabinetMenu();exportLib()')}
  ${USER&&USER.admin?`<input id="site-menu-import" class="site-menu-file-input" type="file" multiple accept=".xlsx,.xls,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json" onchange="importRepoTests(this)">${menuItem('import','Импорт файлов','openCabinetImport(event)')}`:''}
@@ -581,8 +581,9 @@ async function navigateSiteHistory(delta){
 }
 function simpleHeaderControls(withMenu=false,active='lib'){return `<div class="site-header-controls">${siteHistoryButtons()}${withMenu?cabinetMenu(active):''}</div>`}
 async function openSettings(){
- if(!USER)return goAuth();if(!USER.admin){libMsg=tr('Настройки платформы доступны только администратору');return openLib()}
+ if(!USER)return goAuth();
  const nav=++cabinetNavSeq;settingsMsg='';settingsNotice='';
+ if(!USER.admin){settingsSource='local';settingsNotice='';view='settings';render();return}
  const r=await capi('settings/get',{});if(nav!==cabinetNavSeq||!USER)return;
  if(r.error){settingsMsg=r.error;settingsSource='local'}else{CLIENT_SETTINGS=normalizeClientSettings(r.settings);settingsSource=r.source||'local';settingsNotice=r.notice||''}
  view='settings';render();
@@ -599,7 +600,15 @@ async function savePlatformSettings(){
  if(r.persistedToGitHub){settingsMsg=tr('Настройки сохранены в GitHub.');settingsNotice=tr('Настройки будут применены к новым игровым сессиям.')}else{dl('app-settings.json',JSON.stringify(CLIENT_SETTINGS,null,2));settingsMsg=tr('Настройки сохранены локально. Скачан файл app-settings.json для репозитория.');settingsNotice=tr('Без GitHub-синхронизации изменения могут исчезнуть после нового развёртывания Render. Добавьте GITHUB_TOKEN, GITHUB_REPOSITORY и GITHUB_BRANCH в переменные среды сервиса.')}
  render();
 }
+function accountSecuritySettingsSection(){
+ return `<section class="platform-settings-section platform-account-security-section"><div class="platform-settings-section-head"><div><span class="section-kicker">03 / ${tr('ЗАЩИТА АККАУНТА')}</span><h2>${tr('Безопасность аккаунта')}</h2><p>${tr('Защитите вход в кабинет дополнительным одноразовым кодом.')}</p></div></div><article class="platform-security-setting-card"><div class="platform-security-setting-icon" aria-hidden="true">${navIcon('shield')}</div><div class="platform-security-setting-copy"><h3>${tr('Двухфакторная аутентификация')}</h3><p>${tr('Подключите Google Authenticator, управляйте подтверждением входа и резервными кодами.')}</p></div><button type="button" class="btn-primary platform-security-setting-action" onclick="openSecurity()">${tr('Управлять защитой')}</button></article></section>`;
+}
 function settingsPage(a){
+ if(!USER)return goAuth();
+ if(!USER.admin){
+  a.innerHTML=`${cabinetHeader('settings',tr('Кабинет преподавателя'))}<section class="platform-settings-page"><div class="platform-settings-heading"><div><span class="section-kicker">${tr('НАСТРОЙКИ АККАУНТА')}</span><h1 class="page-title">${tr('Настройки')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('Управляйте параметрами безопасности своего аккаунта.')}</p></div></div>${accountSecuritySettingsSection()}</section>`;
+  return;
+ }
  const s=CLIENT_SETTINGS,g=s.general,c=s.modes.classic,k=s.modes.kingdoms;
  const toggle=(id,label,checked,handler,help='')=>`<label class="platform-setting-toggle" for="${id}"><span class="platform-setting-toggle-copy"><b>${tr(label)}</b>${help?`<small>${tr(help)}</small>`:''}</span><input id="${id}" type="checkbox" ${checked?'checked':''} onchange="${handler}"><span class="platform-switch" aria-hidden="true"></span></label>`;
  const field=(id,label,value,min,max,step,unit,handler)=>`<label class="platform-setting-field" for="${id}"><span>${tr(label)}</span><span class="platform-setting-input-wrap"><input id="${id}" type="number" min="${min}" max="${max}" step="${step||1}" value="${value}" onchange="${handler}"><small>${tr(unit||'')}</small></span></label>`;
@@ -615,7 +624,7 @@ function settingsPage(a){
  ${field('settings-max-players','Максимум участников в одной комнате',g.maxPlayers,2,100,1,'чел.',"saveSettingsField('maxPlayers',this.value)")}
  ${field('settings-support-threshold','Порог «Нуждаются в помощи»',g.supportThreshold,0,100,5,'%',"saveSettingsField('supportThreshold',this.value)")}
  </div><div class="platform-settings-toggle-list">${toggle('settings-auto-report','Открывать отчёт автоматически после игры',g.autoOpenReports,"changeSetting('general','autoOpenReports',this.checked)",'Отчёты всё равно будут доступны в разделе «Отчёты».')}${toggle('settings-show-correct','Показывать правильные ответы после каждого вопроса',g.showCorrectAnswerAfterQuestion,"changeSetting('general','showCorrectAnswerAfterQuestion',this.checked)",'Управляет показом правильных ответов в промежуточном результате.')}</div></section>
-  <section class="platform-settings-section platform-account-security-section"><div class="platform-settings-section-head"><div><span class="section-kicker">03 / ${tr('ЗАЩИТА АККАУНТА')}</span><h2>${tr('Безопасность аккаунта')}</h2><p>${tr('Защитите вход в кабинет дополнительным одноразовым кодом.')}</p></div></div><article class="platform-security-setting-card"><div class="platform-security-setting-icon" aria-hidden="true">${navIcon('shield')}</div><div class="platform-security-setting-copy"><h3>${tr('Двухфакторная аутентификация')}</h3><p>${tr('Подключите Google Authenticator, управляйте подтверждением входа и резервными кодами.')}</p></div><button type="button" class="btn-primary platform-security-setting-action" onclick="openSecurity()">${tr('Управлять защитой')}</button></article></section>
+  ${accountSecuritySettingsSection()}
  <div class="platform-settings-actions"><button type="button" class="sec" onclick="defaultSettingsForm()">${tr('Восстановить значения по умолчанию')}</button><button type="button" class="btn-primary" onclick="savePlatformSettings()" ${settingsSaving?'disabled':''}>${settingsSaving?tr('Сохранение…'):tr('Сохранить настройки')}</button></div>
  <footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a><span>${tr('Общие настройки платформы')}</span></footer></section>`;
 }
@@ -1908,6 +1917,22 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'QR-код для Google Authenticator':'Google Authenticator 二维码','QR-код недоступен. Введите секретный ключ вручную.':'二维码不可用，请手动输入密钥。','Защита включена. Теперь войдите с кодом Google Authenticator.':'保护已启用，请使用 Google Authenticator 代码重新登录。',
  'Неверный пароль':'密码错误','Неверный код приложения или резервный код.':'验证器代码或恢复代码错误。','Сеанс подтверждения истёк. Войдите снова.':'验证会话已过期，请重新登录。','Неверный код. Проверьте время на телефоне и попробуйте ещё раз.':'代码错误，请检查手机时间后重试。','Слишком много неверных кодов. Подождите минуту.':'错误代码次数过多，请等待一分钟。','Слишком много неверных кодов. Начните вход заново.':'错误代码次数过多，请重新登录。',
  'Сеанс настройки истёк. Начните настройку заново.':'设置会话已过期，请重新开始。','Настройка двухфакторной защиты не найдена. Войдите снова.':'未找到双重验证设置，请重新登录。','Двухфакторная защита уже включена. Сначала отключите её с подтверждением.':'双重验证已启用，请先验证后关闭。'
+});
+
+
+Object.assign(UI_TRANSLATIONS.en,{
+ 'НАСТРОЙКИ АККАУНТА':'ACCOUNT SETTINGS',
+ 'Управляйте параметрами безопасности своего аккаунта.':'Manage your account security settings.',
+ 'Двухфакторная аутентификация':'Two-factor authentication',
+ 'Подключите Google Authenticator, управляйте подтверждением входа и резервными кодами.':'Set up Google Authenticator, manage sign-in verification, and recovery codes.',
+ 'Управлять защитой':'Manage security'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'НАСТРОЙКИ АККАУНТА':'账户设置',
+ 'Управляйте параметрами безопасности своего аккаунта.':'管理您的账户安全设置。',
+ 'Двухфакторная аутентификация':'双重身份验证',
+ 'Подключите Google Authenticator, управляйте подтверждением входа и резервными кодами.':'设置 Google Authenticator，管理登录验证和恢复代码。',
+ 'Управлять защитой':'管理安全设置'
 });
 
  render();if((qrJoinMode||prePin)&&$('jn'))$('jn').focus();
