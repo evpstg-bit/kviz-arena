@@ -98,6 +98,9 @@ function userOf(t){
   const userId=String(u.id),epoch=Number(AUTH_SECURITY_STATE.epochs[userId])||0;
   if(epoch>0&&Number(s.av)!==epoch)return null;
   if(AUTH_SECURITY_STATE.users[userId]&&s.mfa!==true)return null;
+  // Sliding expiry: active users should not lose their session merely because the
+  // original login happened weeks ago. Persist only when less than 30 days remain.
+  if(s.exp-Date.now()<30*864e5){s.exp=Date.now()+60*864e5;writeJ('sessions.json',SESS)}
   return u;
 }
 function newSession(u,mfaVerified=false){
@@ -1117,7 +1120,18 @@ http.createServer(async(req,res)=>{
       }catch(e){return json(res,{error:'Не удалось сохранить изменение настроек безопасности. Повторите попытку.'},503)}
       return json(res,{ok:true,enabled:false});
     }
-    if(op==='me'){const me=userOf(b.token);return me?json(res,{user:pubUser(me)}):json(res,{error:'Требуется вход',code:401},401)}
+    if(op==='me'){
+      const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход',code:401},401);
+      let token;
+      // Signed administrator sessions are stateless, so rotate them before expiry.
+      if(me.configManaged){
+        try{
+          const parts=String(b.token||'').split('.'),payload=JSON.parse(Buffer.from(parts[1]||'','base64url').toString('utf8'));
+          if(Number(payload.exp)-Date.now()<30*864e5)token=newSession(me,payload.mfa===true);
+        }catch(e){}
+      }
+      return json(res,{user:pubUser(me),...(token?{token}:{})});
+    }
     if(op==='logout'){delete SESS[b.token];writeJ('sessions.json',SESS);return json(res,{ok:1})}
     return json(res,{error:'Неизвестная операция'},404);
   }
