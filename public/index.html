@@ -12,7 +12,8 @@
 <link rel="stylesheet" href="/ui.css?v=1.15.1">
 <link rel="stylesheet" href="/liquid-glass.css?v=1.15.1">
 <link rel="stylesheet" href="/responsive-v2.css?v=1.15.1">
-<link rel="stylesheet" href="/lobby.css?v=1.15.1">
+<link rel="stylesheet" href="/lobby.css?v=1.16.0">
+<link rel="stylesheet" href="/kingdoms.css?v=1.16.0">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -1152,27 +1153,41 @@ function podium(rows){const t=rows.slice(0,3),m=["🥇","🥈","🥉"];return `<
 function classicFinalResults(rows,actions=""){const data=Array.isArray(rows)?rows:[],other=data.slice(3),top=data.length?podium(data):`<p class="classic-final-empty">${tr("Пока нет участников")}</p>`,rest=other.length?`<section class="classic-final-ranking-section"><header class="classic-final-ranking-header"><h2>${tr("Остальные участники")}</h2><span>${other.length}</span></header><ol class="classic-final-ranking-list">${other.map((p,i)=>`<li class="classic-final-ranking-row"><span class="classic-final-rank">${Number(p.rank)||i+4}</span><span class="classic-final-name" data-user-content="true">${esc(p.name||"Участник")}</span><strong class="classic-final-score">${Number(p.score)||0}<small>${tr("баллов")}</small></strong></li>`).join("")}</ol></section>`:"";return `<section class="classic-final-screen"><header class="classic-final-header"><span class="classic-final-kicker">🏁 ${tr("Итоги")}</span><h1>${tr("Итоги игры")}</h1><p data-user-content="true">${esc(S.title||"")}</p></header>${top}${rest}${actions?`<div class="classic-final-actions">${actions}</div>`:""}</section>`;}
 function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
 function sendSel(){if(sel.length)act('answer',sel)}
+let kingdomBoardFx={pin:'',round:0,owners:[]};
 function boardK(o){
- const N=S.N,sm=!!o.small,valid=o.valid||[],hot=S.hot||[],rooks=Array.isArray(S.rooks)?S.rooks:[];
+ const N=S.N,sm=!!o.small,valid=o.valid||[],hot=Array.isArray(S.hot)?S.hot:[],rooks=Array.isArray(S.rooks)?S.rooks:[];
  const font=Math.max(7,Math.min(22,Math.round(225/N)));
- const neutralPalette={color:'#46505f',light:'#687382',dark:'#353e4a',border:'#6f7b8b',rook:'#ffffff'};
+ const matchPin=String(S.pin||pin||''),round=Number(S.round)||1;
+ const sameMatch=kingdomBoardFx.pin===matchPin&&kingdomBoardFx.round===round&&kingdomBoardFx.owners.length===S.board.length;
+ const changed=new Set();
+ if(sameMatch)S.board.forEach((owner,i)=>{if(owner!==kingdomBoardFx.owners[i]&&owner>=0)changed.add(i)});
+ kingdomBoardFx={pin:matchPin,round:round,owners:[...S.board]};
+ const neutralPalette={color:'#b7cf80',light:'#d8eca4',dark:'#9bb966',border:'#eef9c9',rook:'#ffffff'};
  const cell=(ow,i)=>{
   const row=Math.floor(i/N);
   const checker=((row+i%N)%2===0)?'is-checker-light':'is-checker-dark';
-  const stronghold=rooks.includes(i),canPlace=valid.includes(i),isHot=hot.includes(i);
-  const team=(S.me&&Number.isInteger(S.me.team))?S.me.team:0;
-  const ownerIndex=Number.isInteger(ow)&&ow>=0&&ow<KINGDOM_PALETTE.length?ow:-1;
+  const stronghold=rooks.includes(i),canPlace=valid.includes(i),ownerIndex=Number.isInteger(ow)&&ow>=0&&ow<KINGDOM_PALETTE.length?ow:-1;
   const palette=ownerIndex>=0?KINGDOM_PALETTE[ownerIndex]:neutralPalette;
-  const classes=['kingdom-tile',ownerIndex<0?'is-neutral':`is-kingdom-${ownerIndex}`,checker,stronghold?'is-stronghold':'',canPlace?'is-target':'',isHot&&!canPlace?'is-hot':'',sm?'is-compact-tile':''].filter(Boolean).join(' ');
-  const label=stronghold?`Крепость королевства «${KN[ownerIndex]||'неизвестно'}»`:canPlace?`Поставить флаг для королевства «${KN[team]||KN[0]}»`:ownerIndex>=0?`Территория ${KS[ownerIndex]}`:'Нейтральная клетка';
-  return `<div ${canPlace?`role="button" tabindex="0" onclick="placeAt(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();placeAt(${i})}"`:''} class="${classes}" aria-label="${label}" style="--team-color:${palette.color};--team-color-light:${palette.light};--team-color-dark:${palette.dark};--team-color-border:${palette.border};--rook-color:${palette.rook};--tile-color:${palette.color};--tile-team:var(--c${canPlace?team:(ownerIndex<0?team:ownerIndex)});--tile-font:${font}px">${stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':(canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'')}</div>`;
+  const fresh=changed.has(i)&&ownerIndex>=0;
+  const hotRank=hot.indexOf(i);
+  const classes=['kingdom-tile',ownerIndex<0?'is-neutral':'is-kingdom-'+ownerIndex,checker,stronghold?'is-stronghold':'',canPlace?'is-target':'',fresh?'is-captured-now':'',fresh&&hotRank>=0?'is-hot':'',sm?'is-compact-tile':''].filter(Boolean).join(' ');
+  const team=(S.me&&Number.isInteger(S.me.team))?S.me.team:0;
+  const label=stronghold?'Крепость королевства «'+(KN[ownerIndex]||'неизвестно')+'»':canPlace?'Поставить флаг для королевства «'+(KN[team]||KN[0])+'»':ownerIndex>=0?'Территория '+KS[ownerIndex]:'Нейтральная клетка';
+  const delay=fresh&&hotRank>=0?Math.min(640,hotRank*32):0;
+  const tileStyle='--team-color:'+palette.color+';--team-color-light:'+palette.light+';--team-color-dark:'+palette.dark+';--team-color-border:'+palette.border+';--rook-color:'+palette.rook+';--tile-font:'+font+'px;--capture-delay:'+delay+'ms';
+  const inner=stronghold?'<span class="kingdom-tile-fortress" aria-hidden="true">♜</span>':canPlace?'<span class="kingdom-tile-flag" aria-hidden="true">⚑</span>':'';
+  return '<div '+(canPlace?'role="button" tabindex="0" onclick="placeAt('+i+')" onkeydown="if(event.keyCode===13||event.keyCode===32){event.preventDefault();placeAt('+i+')}"':'')+' class="'+classes+'" data-tile="'+i+'" data-owner="'+ownerIndex+'" aria-label="'+esc(label)+'" style="'+tileStyle+'">'+inner+'</div>';
  };
- const rows=Array.from({length:N},(_,row)=>`<div class="kingdom-board-row" style="--board-size:${N}">${S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')}</div>`).join('');
- return `<div class="kingdom-board-frame ${sm?'is-small-board':''}" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid ${sm?'is-small-board':''}" style="--board-size:${N}">${rows}</div></div>`;
+ const rows=Array.from({length:N},(_,row)=>'<div class="kingdom-board-row '+(row%2?'is-offset':'')+'" data-row="'+row+'">'+S.board.slice(row*N,(row+1)*N).map((owner,column)=>cell(owner,row*N+column)).join('')+'</div>').join('');
+ return '<div class="kingdom-board-frame '+(sm?'is-small-board':'')+'" aria-label="Игровое поле Color Kingdoms"><div class="kingdom-board-grid '+(sm?'is-small-board':'')+'" style="--board-size:'+N+'">'+rows+'</div></div>';
 }
 async function placeAt(i){const r=await act('place',undefined,{tile:i});if(r.error){msg=r.error;render()}}
 function scoreChips(){return `<div class="row justify-center gap-2 text-sm font-bold">${S.stats.map(t=>{const palette=KINGDOM_PALETTE[t.k]||KINGDOM_PALETTE[0];return `<span class="chip kingdom-score-chip" style="--team-color:${palette.color};background-color:${palette.color};border:1px solid ${palette.border}">${KINGDOM_MARKS[t.k]} ${tr(t.name||KN[t.k])} · ${t.tiles} · 🏆${t.trophies}</span>`}).join('')}</div>`}
-function bannerHtml(){const t=S.banner.team,palette=KINGDOM_PALETTE[t]||KINGDOM_PALETTE[0];return `<div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"><div class="card animate-pop bg-white text-center dark:bg-slate-800"><div class="text-6xl">🏆</div><h1 style="color:${palette.color}">${tr(KN[t])} захватили крепость!</h1><p class="mut">Команда получает трофей. Начинается раунд ${S.round}.</p></div></div>`}
+function bannerHtml(){
+ const t=S.banner.team,palette=KINGDOM_PALETTE[t]||KINGDOM_PALETTE[0];
+ const confetti=Array.from({length:18},(_,i)=>'<i class="kingdom-confetti c'+(i%6)+'" style="--confetti-i:'+i+'"></i>').join('');
+ return '<div class="kingdom-capture-overlay" role="status" aria-live="polite"><div class="kingdom-capture-confetti">'+confetti+'</div><div class="kingdom-capture-card" style="--team-color:'+palette.color+';--team-color-light:'+palette.light+'"><div class="kingdom-capture-emblem">🏆</div><div class="kingdom-capture-kicker">'+tr('Крепость захвачена')+'</div><h1>'+tr(KN[t])+'!</h1><p>'+tr('Команда получает трофей.')+'</p><div class="kingdom-capture-round">'+tr('Начинается раунд')+' <b>'+S.round+'</b></div><div class="kingdom-capture-sparkles"><i>✦</i><i>✧</i><i>✦</i><i>✧</i><i>✦</i></div></div></div>';
+}
 function liveParticipantsPanel(){
  const rows=S.rows||[],kingdoms=S.mode==='kingdoms';
  const online=rows.filter(p=>p.online).length;
@@ -1244,23 +1259,32 @@ function kingdomRoundOutcomeHtml(){
  const team=S.roundWinner<0?'':` <b>${esc(tr(KN[S.roundWinner]||''))}</b>`;
  return `<p class="c mut text-sm" style="margin:8px auto 16px;max-width:760px;line-height:1.6">${message}${team}</p>`;
 }
+function kingdomRosterSide(team,stat){
+ const palette=KINGDOM_PALETTE[team]||KINGDOM_PALETTE[0];
+ const members=(S.rows||[]).filter(p=>Number(p.team)===team).sort((a,b)=>(Number(b.placed)||0)-(Number(a.placed)||0)||(Number(b.correctN)||0)-(Number(a.correctN)||0));
+ const memberRows=members.map((p,i)=>{
+  const name=(p.name||'?').trim(),initial=esc(name.slice(0,1).toUpperCase());
+  return '<div class="kingdom-roster-player '+(p.online?'is-online':'is-offline')+'"><span class="kingdom-roster-avatar">'+initial+'</span><span class="kingdom-roster-name" data-user-content="true">'+esc(name)+'</span>'+(i===0&&Number(p.placed)>0?'<span class="kingdom-roster-crown" title="Больше всего флагов">♛</span>':'')+'<span class="kingdom-roster-flags">⚑ '+(Number(p.placed)||0)+'</span></div>';
+ }).join('');
+ const trophyText=Number(stat.trophies)>0?'🏆 '.repeat(Math.min(5,Number(stat.trophies))):'—';
+ return '<section class="kingdom-side-team" style="--team-color:'+palette.color+';--team-color-light:'+palette.light+';--team-color-dark:'+palette.dark+';--team-color-border:'+palette.border+'"><header class="kingdom-side-team-head"><span class="kingdom-side-crest">'+KINGDOM_MARKS[team]+'</span><div class="kingdom-side-team-title"><b>'+tr(KN[team]||'Команда')+'</b><small>'+members.length+' / '+(Number(stat.members)||members.length)+' '+tr('участников')+'</small></div><span class="kingdom-side-trophies" title="'+tr('Трофеи')+'">'+trophyText+'</span></header><div class="kingdom-side-territory"><b>'+((Number(stat.tiles)||0))+'</b><span>'+tr('клеток')+'</span><i>⚑ '+(Number(stat.flags)||0)+'</i></div><div class="kingdom-roster-list">'+(memberRows||'<div class="kingdom-roster-empty">'+tr('Игроки не подключены')+'</div>')+'</div></section>';
+}
 function hostK(a){
- const fin=S.state==='final',st=S.stats||[];
- const team=t=>{
-  const stat=st[t]||{tiles:0,trophies:0,members:0,flags:0,correct:0},palette=KINGDOM_PALETTE[t]||KINGDOM_PALETTE[0];
-  return `<div class="kingdom-team-card" style="--team-color:${palette.color};--team-color-light:${palette.light};--team-color-dark:${palette.dark};--team-color-border:${palette.border}"><div class="flex items-center justify-between"><b class="text-xl">♜ ${tr(KN[t])}</b><span class="text-2xl">${stat.trophies?'🏆'.repeat(stat.trophies):'<span class="text-sm opacity-70">без трофеев</span>'}</span></div><div class="mt-1 text-3xl font-black">${stat.tiles} <span class="text-base font-semibold opacity-90">клеток</span></div><div class="text-sm opacity-90">${stat.members} участников · флагов ${stat.flags} · верных ответов ${stat.correct}</div></div>`;
- };
+ const fin=S.state==='final',st=S.stats||[],teamCount=Math.max(2,st.length||2);
+ const teamStat=t=>st.find(x=>Number(x.k)===t)||{k:t,tiles:0,trophies:0,members:0,flags:0,correct:0};
+ const leftTeams=Array.from({length:teamCount},(_,t)=>t).filter(t=>t===0||t===2);
+ const rightTeams=Array.from({length:teamCount},(_,t)=>t).filter(t=>t===1||t===3);
+ const sides=arr=>arr.map(t=>kingdomRosterSide(t,teamStat(t))).join('');
  const participantPanel=fin?'':liveParticipantsPanel();
- const winnerHeading=S.winner<0
-  ? '<h2 class="c text-3xl">Ничья!</h2>'
-  : `<h2 class="c text-3xl" style="color:${(KINGDOM_PALETTE[S.winner]||KINGDOM_PALETTE[0]).color}">${KINGDOM_MARKS[S.winner]} Победили ${KS[S.winner]}!</h2>`;
+ const winnerHeading=S.winner<0?'<h2 class="kingdom-final-winner">Ничья!</h2>':'<h2 class="kingdom-final-winner" style="--winner-color:'+(KINGDOM_PALETTE[S.winner]||KINGDOM_PALETTE[0]).color+'">'+KINGDOM_MARKS[S.winner]+' '+tr('Победили')+' '+tr(KS[S.winner]||'')+'!</h2>';
  const top=fin
-  ? `<h1>🏁 Игра окончена</h1>${winnerHeading}${kingdomRoundOutcomeHtml()}`
-  : `<div class="row justify-between"><span class="mut">Раунд ${S.round}</span><span id="tm" class="flex h-16 min-w-[6rem] items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 px-4 text-3xl font-black tabular-nums text-white shadow-lg"></span><span data-user-content="true" class="mut">${esc(S.title)}</span></div><div class="bar mt-2"><i id="tb"></i></div>`;
- a.innerHTML=top+`<div class="kingdom-team-stats-grid">${st.map(item=>team(item.k)).join('')}</div>${boardK({})}`+
-  (fin?'':`<p class="c mut text-sm">${tr('Ставьте флаги рядом со своей территорией · окружите ладью ♜ соперника, чтобы выиграть раунд · если башня не захвачена до конца времени, победа в последнем раунде определяется по числу занятых клеток; победа в матче — по числу трофеев')}</p>`)+
-  participantPanel+
-  (fin?`<div class="row justify-center" style="margin-top:14px"><button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button><button onclick="newGame()">Новая игра</button></div>`:'');
+  ?'<header class="kingdom-game-header is-final"><div class="kingdom-brand-mark">♜</div><div class="kingdom-game-brand"><b>Color Kingdoms</b><small>'+tr('Игра окончена')+'</small></div><div class="kingdom-final-title"><span>🏁</span><div><b>'+tr('Игра окончена')+'</b>'+winnerHeading+'</div></div></header>'+kingdomRoundOutcomeHtml()
+  :'<header class="kingdom-game-header"><div class="kingdom-brand-mark">♜</div><div class="kingdom-game-brand"><b>Color Kingdoms</b><small>'+esc(S.title||'')+' · '+tr('АРЕНА КОРОЛЕВСТВ')+'</small></div><div class="kingdom-round-pill"><span>'+tr('Раунд')+'</span><b>'+S.round+'</b></div><div class="kingdom-clock-wrap"><span>'+tr('Время раунда')+'</span><b id="tm" class="kingdom-clock tabular-nums"></b></div></header><div class="kingdom-time-track"><i id="tb"></i></div>';
+ const scores=st.map(item=>{
+  const p=KINGDOM_PALETTE[item.k]||KINGDOM_PALETTE[0];
+  return '<div class="kingdom-mini-score" style="--team-color:'+p.color+';--team-color-light:'+p.light+'"><span class="kingdom-mini-mark">'+KINGDOM_MARKS[item.k]+'</span><b>'+tr(item.name||KN[item.k])+'</b><strong>'+item.tiles+'</strong><small>'+tr('клеток')+'</small><span class="kingdom-mini-trophies">🏆 '+item.trophies+'</span></div>';
+ }).join('');
+ a.innerHTML='<section class="kingdom-host-screen '+(fin?'is-final':'')+'">'+top+'<div class="kingdom-score-strip">'+scores+'</div><div class="kingdom-battle-layout"><aside class="kingdom-side-stack is-left">'+sides(leftTeams)+'</aside><main class="kingdom-map-column"><div class="kingdom-map-caption"><span class="kingdom-map-caption-icon">✦</span><div><b>'+tr('Битва за территорию')+'</b><small>'+tr('Ставьте флаги рядом со своей территорией')+'</small></div><span class="kingdom-map-live"><i></i>'+tr('В игре')+'</span></div>'+boardK({})+'<div class="kingdom-map-legend"><span><i class="legend-neutral"></i>'+tr('Свободная территория')+'</span><span><i class="legend-captured"></i>'+tr('Захваченные клетки')+'</span><span>♜ '+tr('Крепость')+'</span></div></main><aside class="kingdom-side-stack is-right">'+sides(rightTeams)+'</aside></div><div class="kingdom-objective-line"><span>⚔</span><p>'+tr('Окружите крепость соперника')+' · '+tr('в конце времени побеждает команда с бо́льшим числом трофеев')+'</p></div></section>'+(fin?'':'<div class="kingdom-host-details">'+participantPanel+'</div>')+(fin?'<div class="row justify-center kingdom-final-actions"><button class="sec" onclick="report()">📊 '+tr('Скачать результаты (Excel)')+'</button><button onclick="newGame()">'+tr('Новая игра')+'</button></div>':'');
 }
 function playerK(a){
  const p=S.me||{name:'',team:0,prog:0,flags:0,placed:0,correct:0,answered:0,qn:0},need=S.need;
@@ -1466,7 +1490,7 @@ function draw(){
 }
 function tick(){
  if(!S)return;let left,tot;
- if(S.mode==='kingdoms'&&S.state==='playing'){left=Math.max(0,tEnd-Date.now());tot=S.dur;if($('tm'))$('tm').textContent=fmt(left)}
+ if(S.mode==='kingdoms'&&S.state==='playing'){left=Math.max(0,tEnd-Date.now());tot=S.dur;if($('tm')){$('tm').textContent=fmt(left);$('tm').classList.toggle('is-urgent',left<=10000)}}
  else if(S.state==='question'){left=Math.max(0,S.T*1000-(Date.now()-t0));tot=S.T*1000;if($('tm'))$('tm').textContent=Math.ceil(left/1000)}
  else return;
  if($('tb'))$('tb').style.width=(left/tot*100)+'%';
@@ -1687,6 +1711,9 @@ Object.assign(UI_TRANSLATIONS.en,{'Успешность':'Success rate','Общ�
 Object.assign(UI_TRANSLATIONS.zh,{'Успешность':'成功率','Общая успешность':'总体成功率','Средняя успешность участника':'参与者平均成功率','Успешность по убыванию':'成功率从高到低','Успешность по возрастанию':'成功率从低到高','По успешности':'按成功率排序'});
 Object.assign(UI_TRANSLATIONS.en,{'Экспортировать выбранные':'Export selected reports','Выберите отчёты для экспорта или удаления.':'Select reports to export or delete.','Для экспорта можно выбрать не более 100 отчётов за раз.':'You can export up to 100 reports at a time.','Не удалось экспортировать выбранные отчёты. Проверьте соединение и повторите попытку.':'Could not export selected reports. Check your connection and try again.','Экспортировано отчётов:':'Reports exported:','Подготовка экспорта…':'Preparing export…','Варианты ответов':'Answer options'});
 Object.assign(UI_TRANSLATIONS.zh,{'Экспортировать выбранные':'导出所选报告','Выберите отчёты для экспорта или удаления.':'选择要导出或删除的报告。','Для экспорта можно выбрать не более 100 отчётов за раз.':'每次最多可导出 100 份报告。','Не удалось экспортировать выбранные отчёты. Проверьте соединение и повторите попытку.':'无法导出所选报告。请检查网络连接并重试。','Экспортировано отчётов:':'已导出报告：','Подготовка экспорта…':'正在准备导出…','Варианты ответов':'答案选项'});
+Object.assign(UI_TRANSLATIONS.en,{'АРЕНА КОРОЛЕВСТВ':'KINGDOM ARENA','Время раунда':'ROUND TIME','Битва за территорию':'Battle for territory','Ставьте флаги рядом со своей территорией':'Place flags beside your territory','Окружите крепость соперника':'Surround the enemy stronghold','Крепость захвачена':'STRONGHOLD CAPTURED','Команда получает трофей.':'Your team earns a trophy.','Начинается раунд':'Round begins','Свободная территория':'Neutral territory','Захваченные клетки':'Captured tiles','Крепость':'Stronghold','Игроки не подключены':'No players connected','Трофеи':'Trophies','Игра окончена':'Game over','Битва за территорию':'Battle for territory','клеток':'tiles','участников':'players','Победили':'Winners:','Свободная территория':'Neutral territory','В игре':'LIVE','Новая игра':'New game','Скачать результаты (Excel)':'Download results (Excel)'});
+Object.assign(UI_TRANSLATIONS.zh,{'АРЕНА КОРОЛЕВСТВ':'王国竞技场','Время раунда':'回合时间','Битва за территорию':'领土争夺战','Ставьте флаги рядом со своей территорией':'在己方领土旁放置旗帜','Окружите крепость соперника':'包围对手的城堡','Крепость захвачена':'城堡已被攻占','Команда получает трофей.':'队伍获得一座奖杯。','Начинается раунд':'即将开始回合','Свободная территория':'中立领土','Захваченные клетки':'已占领格子','Крепость':'城堡','Игроки не подключены':'暂无玩家连接','Трофеи':'奖杯','Игра окончена':'游戏结束','клеток':'格子','участников':'名队员','Победили':'获胜队伍：','В игре':'进行中','Новая игра':'新游戏','Скачать результаты (Excel)':'下载结果（Excel）'});
+
 function tr(text){
  const lang=currentUiLanguage(); if(lang==='ru')return String(text);
  const d=UI_TRANSLATIONS[lang]||{};
