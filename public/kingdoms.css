@@ -1,0 +1,178 @@
+/* Color Kingdoms — animated hex arena, inspired by live team strategy games */
+:root{--kingdom-grass:#d0ed8a;--kingdom-grass-dark:#b9df70;--kingdom-ink:#24361a;--kingdom-panel:#233b22;--kingdom-panel-soft:#30492b}
+body.game-view-active:has(.kingdom-score-chip){background:#c9e982!important;background-image:none!important;color:var(--kingdom-ink)!important;overflow-x:hidden}
+body.game-view-active:has(.kingdom-score-chip)::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 14% 22%,rgba(244,255,182,.45),transparent 30%),radial-gradient(ellipse at 80% 14%,rgba(154,211,82,.22),transparent 35%),radial-gradient(ellipse at 44% 78%,rgba(235,255,163,.3),transparent 38%),repeating-linear-gradient(132deg,rgba(87,151,45,.035) 0 20px,transparent 20px 62px)}
+#app.game-view-active:has(.kingdom-score-chip){width:100%!important;max-width:1540px!important;padding:18px clamp(10px,2vw,28px) 32px!important;margin:0 auto!important;color:var(--kingdom-ink)!important}
+#app.game-view-active:has(.kingdom-host-screen){max-width:1600px!important}
+.kingdom-host-screen{position:relative;isolation:isolate;padding:clamp(12px,2vw,24px);border:1px solid rgba(91,136,43,.28);border-radius:25px;background:linear-gradient(145deg,rgba(235,255,177,.45),rgba(183,223,111,.28));box-shadow:0 24px 65px rgba(59,94,24,.12);overflow:hidden}
+.kingdom-host-screen:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.4;background-image:radial-gradient(circle at 20% 25%,rgba(255,255,255,.26) 0 2px,transparent 2.6px),radial-gradient(circle at 72% 61%,rgba(103,160,42,.1) 0 1.4px,transparent 2px);background-size:93px 73px,61px 49px}
+.kingdom-game-header{display:flex;align-items:center;gap:14px;min-width:0;padding:0 2px 13px}
+.kingdom-brand-mark{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#426d32,#284c27);color:#f5ffcd;font-size:30px;box-shadow:inset 0 1px 0 rgba(255,255,255,.23),0 7px 16px rgba(36,70,25,.2)}
+.kingdom-game-brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.kingdom-game-brand b{color:#29451f;font-size:clamp(18px,2vw,27px);font-weight:900;line-height:1.1;letter-spacing:-.045em}
+.kingdom-game-brand small{margin-top:5px;color:#56723d;font-size:10px;font-weight:900;letter-spacing:.16em}
+.kingdom-round-pill{display:flex;align-items:center;gap:9px;padding:9px 14px;border:1px solid rgba(79,119,43,.2);border-radius:15px;background:rgba(255,255,227,.67);box-shadow:0 4px 12px rgba(57,90,27,.06)}
+.kingdom-round-pill span,.kingdom-clock-wrap>span{font-size:10px;line-height:1.1;color:#627c49;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.kingdom-round-pill b{display:grid;place-items:center;width:31px;height:31px;border-radius:10px;background:#4e7a35;color:white;font-size:17px}
+.kingdom-clock-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.kingdom-clock{display:flex;align-items:center;justify-content:center;min-width:115px;padding:7px 15px;border-radius:999px;background:linear-gradient(135deg,#376f32,#28552a);color:#fff!important;font-size:clamp(24px,3.2vw,34px);font-weight:950;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.05em;box-shadow:0 7px 18px rgba(32,79,26,.21);transition:background .2s,transform .2s}
+.kingdom-clock.is-urgent{background:linear-gradient(135deg,#d34b41,#a92429);animation:kingdom-clock-pulse .85s ease-in-out infinite}
+.kingdom-time-track{height:7px;margin:-1px 1px 17px;overflow:hidden;border-radius:99px;background:rgba(59,97,34,.18);box-shadow:inset 0 1px 2px rgba(39,70,23,.12)}
+.kingdom-time-track i{display:block;width:100%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#76a83f,#d4e95a);box-shadow:0 0 12px rgba(164,211,72,.55);transition:width .24s linear}
+.kingdom-score-strip{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:0 auto 14px;max-width:880px}
+.kingdom-mini-score{display:flex;align-items:center;gap:7px;min-height:37px;padding:6px 10px;border:1px solid color-mix(in srgb,var(--team-color) 28%,white);border-radius:13px;background:linear-gradient(120deg,rgba(255,255,239,.83),rgba(255,255,255,.55));box-shadow:0 4px 10px rgba(58,85,35,.06);color:#2d431e;font-size:11px}
+.kingdom-mini-mark{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--team-color);color:white;font-size:17px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.kingdom-mini-score b{font-size:12px;font-weight:850}
+.kingdom-mini-score strong{margin-left:3px;color:var(--team-color);font-size:18px;font-weight:950}
+.kingdom-mini-score small{color:#69814e;font-size:10px;font-weight:700}
+.kingdom-mini-trophies{padding-left:5px;border-left:1px solid rgba(68,98,39,.16);font-weight:800;white-space:nowrap}
+.kingdom-battle-layout{display:grid;grid-template-columns:minmax(142px,190px) minmax(0,1fr) minmax(142px,190px);gap:clamp(9px,1.5vw,22px);align-items:center;max-width:1370px;margin:0 auto}
+.kingdom-side-stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+.kingdom-side-team{position:relative;overflow:hidden;min-width:0;border-radius:13px;background:linear-gradient(145deg,rgba(39,62,27,.94),rgba(37,58,25,.91));border:1px solid rgba(244,255,201,.2);box-shadow:0 9px 22px rgba(48,80,22,.2);color:#f5ffdf;animation:kingdom-side-arrive .48s cubic-bezier(.2,.9,.3,1) both}
+.kingdom-side-team:before{content:"";display:block;height:4px;background:linear-gradient(90deg,var(--team-color-dark),var(--team-color-light),var(--team-color))}
+.kingdom-side-team-head{display:flex;align-items:center;gap:8px;padding:11px 10px 9px;border-bottom:1px solid rgba(237,255,208,.12)}
+.kingdom-side-crest{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:10px;background:var(--team-color);color:#fff;font-size:22px;box-shadow:inset 0 1px 1px rgba(255,255,255,.28)}
+.kingdom-side-team-title{display:flex;flex-direction:column;flex:1;min-width:0}
+.kingdom-side-team-title b{font-size:13px;font-weight:900;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kingdom-side-team-title small{margin-top:3px;color:#c6d9ac;font-size:9px;font-weight:650}
+.kingdom-side-trophies{font-size:12px;letter-spacing:-3px;white-space:nowrap}
+.kingdom-side-territory{display:flex;align-items:baseline;gap:5px;padding:8px 11px 5px}
+.kingdom-side-territory>b{font-size:24px;font-weight:950;line-height:1;color:#fff}
+.kingdom-side-territory>span{font-size:10px;color:#c6d9ac}
+.kingdom-side-territory>i{margin-left:auto;color:#f5d980;font-size:10px;font-style:normal;font-weight:850;white-space:nowrap}
+.kingdom-roster-list{display:flex;flex-direction:column;gap:2px;padding:3px 7px 9px}
+.kingdom-roster-player{display:flex;align-items:center;gap:6px;min-width:0;padding:5px 5px;border-radius:8px;color:#f6ffe9;transition:background .18s,transform .18s}
+.kingdom-roster-player.is-online{background:rgba(245,255,221,.075)}
+.kingdom-roster-player.is-offline{opacity:.55}
+.kingdom-roster-avatar{display:grid;place-items:center;flex:0 0 19px;height:19px;border-radius:6px;background:linear-gradient(145deg,var(--team-color-light),var(--team-color));color:white;font-size:10px;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.23)}
+.kingdom-roster-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:750}
+.kingdom-roster-crown{margin-left:auto;color:#ffdd6b;font-size:12px}
+.kingdom-roster-flags{margin-left:auto;color:#d9eac1;font-size:9px;white-space:nowrap}
+.kingdom-roster-empty{padding:9px 5px;color:#c6d9ac;font-size:10px;text-align:center}
+.kingdom-map-column{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:12px 4px 10px;border:1px solid rgba(239,255,190,.29);border-radius:18px;background:radial-gradient(ellipse at 48% 42%,rgba(224,248,157,.58),rgba(195,232,123,.29) 58%,rgba(168,212,99,.12));box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 11px 30px rgba(65,97,27,.08);overflow:hidden}
+.kingdom-map-caption{width:100%;display:flex;align-items:center;gap:8px;padding:0 8px 7px}
+.kingdom-map-caption-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:rgba(255,255,226,.78);color:#5b8738;font-size:17px}
+.kingdom-map-caption>div{display:flex;flex-direction:column;flex:1;min-width:0}
+.kingdom-map-caption b{font-size:12px;font-weight:900;color:#2c4b22}
+.kingdom-map-caption small{margin-top:2px;color:#638449;font-size:10px}
+.kingdom-map-live{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:900;color:#577b38;letter-spacing:.08em}
+.kingdom-map-live i{width:6px;height:6px;border-radius:50%;background:#69a63c;box-shadow:0 0 0 3px rgba(105,166,60,.14);animation:kingdom-live-pulse 1.8s ease-in-out infinite}
+.kingdom-board-frame{position:relative;max-width:100%;max-height:min(69vh,760px);overflow:auto;overscroll-behavior:contain;padding:4px 8px 9px;scrollbar-width:thin;scrollbar-color:rgba(72,120,43,.36) transparent;isolation:isolate}
+.kingdom-board-grid{--hex-w:clamp(18px,calc(680px / var(--board-size)),34px);--hex-h:calc(var(--hex-w)*1.1547);display:flex;flex-direction:column;align-items:flex-start;width:max-content;max-width:none;padding:3px 0 6px;margin:0 auto;position:relative}
+.kingdom-board-grid.is-small-board{--hex-w:clamp(13px,calc(84vw / var(--board-size)),25px)}
+.kingdom-board-row{display:flex;gap:1px;width:max-content;height:var(--hex-h);flex:0 0 var(--hex-h);position:relative;margin-top:calc(var(--hex-h)*-.25);isolation:isolate}
+.kingdom-board-row:first-child{margin-top:0}
+.kingdom-board-row:nth-child(even){transform:translateX(calc(var(--hex-w)*.5))}
+.kingdom-tile{position:relative;display:grid;place-items:center;flex:0 0 var(--hex-w);width:var(--hex-w);height:var(--hex-h);min-width:var(--hex-w);padding:0;border:0;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:linear-gradient(145deg,#d6eca0,#b8d87a);color:white;cursor:default;filter:drop-shadow(0 1px 1px rgba(54,91,24,.21));transition:filter .2s,transform .2s,background .22s;will-change:transform}
+.kingdom-tile:after{content:"";position:absolute;inset:2px;z-index:0;clip-path:inherit;border:1px solid rgba(242,255,202,.5);background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(38,77,21,.02));pointer-events:none}
+.kingdom-tile.is-checker-light.is-neutral{background:linear-gradient(145deg,#e1f1af,#cbe69a)}
+.kingdom-tile.is-checker-dark.is-neutral{background:linear-gradient(145deg,#c7e58b,#b7d777)}
+.kingdom-tile.is-kingdom-0{background:linear-gradient(145deg,#ef6c79,var(--team-color) 56%,var(--team-color-dark));filter:drop-shadow(0 1px 2px rgba(146,30,36,.3))}
+.kingdom-tile.is-kingdom-1{background:linear-gradient(145deg,#78b8f8,var(--team-color) 56%,var(--team-color-dark));filter:drop-shadow(0 1px 2px rgba(22,76,141,.3))}
+.kingdom-tile.is-kingdom-2{background:linear-gradient(145deg,#7be39b,var(--team-color) 56%,var(--team-color-dark));filter:drop-shadow(0 1px 2px rgba(27,105,49,.3))}
+.kingdom-tile.is-kingdom-3{background:linear-gradient(145deg,#ffdf76,var(--team-color) 56%,var(--team-color-dark));filter:drop-shadow(0 1px 2px rgba(126,81,5,.32))}
+.kingdom-tile.is-target{cursor:pointer;outline:none;filter:drop-shadow(0 0 5px rgba(246,255,191,.9));animation:kingdom-target-breathe 1.8s ease-in-out infinite;z-index:3}
+.kingdom-tile.is-target:before{content:"+";position:absolute;z-index:2;display:grid;place-items:center;width:46%;height:46%;border:1px solid rgba(255,255,255,.9);border-radius:50%;background:rgba(255,255,255,.55);color:#375a28;font-size:calc(var(--hex-w)*.34);font-weight:950;opacity:.82;transition:transform .18s}
+.kingdom-tile.is-target:hover{filter:drop-shadow(0 0 7px rgba(255,255,220,.98));transform:scale(1.1);z-index:5;animation:none}
+.kingdom-tile.is-target:active{transform:scale(.88)}
+.kingdom-tile:focus-visible{filter:drop-shadow(0 0 5px #fff);outline:2px solid #fff;outline-offset:2px}
+.kingdom-tile-fortress{position:relative;z-index:2;display:grid;place-items:center;width:66%;height:64%;border:1.5px solid rgba(255,255,255,.84);border-radius:28% 28% 32% 32%;background:linear-gradient(145deg,rgba(255,255,255,.58),rgba(27,54,21,.25));box-shadow:0 3px 6px rgba(25,51,20,.22),inset 0 1px 1px rgba(255,255,255,.5);font-size:calc(var(--hex-w)*.57);line-height:1;text-shadow:0 2px 2px rgba(26,46,20,.3);animation:kingdom-fortress-idle 2.7s ease-in-out infinite}
+.kingdom-tile-flag{position:relative;z-index:2;font-size:calc(var(--hex-w)*.52);line-height:1;text-shadow:0 2px 4px rgba(32,67,20,.3)}
+.kingdom-tile.is-captured-now{z-index:5;animation:kingdom-tile-capture .62s cubic-bezier(.16,.9,.28,1.22) var(--capture-delay,0ms) both}
+.kingdom-tile.is-hot:before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(255,255,213,.42);filter:blur(5px);animation:kingdom-capture-glow .65s ease-out var(--capture-delay,0ms) both}
+.kingdom-board-legend{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:8px 3px 0;color:#617d46;font-size:10px}
+.kingdom-map-legend{display:flex;justify-content:center;gap:11px;flex-wrap:wrap;margin-top:5px;color:#66814b;font-size:10px}
+.kingdom-map-legend>span{display:inline-flex;align-items:center;gap:4px}
+.kingdom-map-legend i{display:inline-block;width:7px;height:7px;border-radius:50%}
+.kingdom-map-legend .legend-neutral{background:#c4df82;border:1px solid #94b65e}
+.kingdom-map-legend .legend-captured{background:#c92f40}
+.kingdom-objective-line{display:flex;align-items:center;justify-content:center;gap:9px;margin:14px 0 0;color:#55773b;text-align:center}
+.kingdom-objective-line>span{display:grid;place-items:center;width:29px;height:29px;border-radius:10px;background:rgba(255,255,227,.62);color:#597b3f}
+.kingdom-objective-line p{max-width:850px;margin:0!important;font-size:11px;line-height:1.45;color:#587842!important}
+.kingdom-host-details{margin-top:16px}
+.kingdom-final-winner{margin:5px 0 0!important;color:var(--winner-color,#315a28)!important;font-size:clamp(18px,2vw,27px)!important;font-weight:950!important}
+.kingdom-final-title{display:flex;align-items:center;gap:10px;margin-left:auto;text-align:right}
+.kingdom-final-title>span{font-size:34px}
+.kingdom-final-title>div{display:flex;flex-direction:column}
+.kingdom-final-title>div>b{font-size:12px;color:#567b3d}
+.kingdom-host-screen.is-final .kingdom-battle-layout{margin-top:7px}
+.kingdom-final-actions{margin:16px 0}
+.kingdom-capture-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;overflow:hidden;padding:20px;background:rgba(19,39,20,.68);backdrop-filter:blur(9px);animation:kingdom-overlay-in .28s ease-out both}
+.kingdom-capture-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.kingdom-confetti{position:absolute;top:-14%;left:calc((var(--confetti-i)*5.7%) + 1%);width:8px;height:15px;border-radius:2px;background:var(--team-color,#f3d75d);background:#f7d66d;opacity:.95;animation:kingdom-confetti-fall calc(2.5s + (var(--confetti-i)*.07s)) linear infinite;animation-delay:calc(var(--confetti-i)*-.16s);transform:rotate(calc(var(--confetti-i)*13deg))}
+.kingdom-confetti.c1{background:#f06b75}.kingdom-confetti.c2{background:#9dd96b}.kingdom-confetti.c3{background:#82c5ff}.kingdom-confetti.c4{background:#f7d66d}.kingdom-confetti.c5{background:#c2a0ff}
+.kingdom-capture-card{position:relative;width:min(480px,94vw);padding:32px 28px 27px;border:1px solid rgba(255,255,255,.66);border-radius:28px;background:linear-gradient(145deg,#fffde5,#e7f5c7);color:#284321;text-align:center;box-shadow:0 25px 100px rgba(0,0,0,.32);animation:kingdom-capture-card-in .55s cubic-bezier(.18,.92,.28,1.25) both}
+.kingdom-capture-emblem{display:grid;place-items:center;width:88px;height:88px;margin:-69px auto 16px;border:5px solid #edf8d5;border-radius:28px;background:linear-gradient(145deg,#ffe9a0,#f5bd4a);box-shadow:0 9px 28px rgba(90,103,29,.24);font-size:47px;animation:kingdom-trophy-bounce .95s ease-out both}
+.kingdom-capture-kicker{color:#66804a;font-size:10px;font-weight:950;letter-spacing:.19em}
+.kingdom-capture-card h1{margin:9px 0 4px!important;color:var(--team-color)!important;font-size:clamp(28px,5vw,44px)!important;font-weight:950!important}
+.kingdom-capture-card p{margin:6px 0 20px!important;color:#5a7343!important;font-size:15px}
+.kingdom-capture-round{display:inline-flex;gap:7px;align-items:center;padding:9px 15px;border-radius:13px;background:rgba(85,132,54,.1);color:#526f39;font-size:12px;font-weight:750}
+.kingdom-capture-round b{font-size:20px;color:#31562b}
+.kingdom-capture-sparkles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.kingdom-capture-sparkles i{position:absolute;color:#e3b544;font-size:24px;font-style:normal;animation:kingdom-sparkle 1.7s ease-in-out infinite}
+.kingdom-capture-sparkles i:nth-child(1){top:19%;left:9%}.kingdom-capture-sparkles i:nth-child(2){top:20%;right:12%;animation-delay:.2s}.kingdom-capture-sparkles i:nth-child(3){bottom:20%;left:13%;animation-delay:.5s}.kingdom-capture-sparkles i:nth-child(4){bottom:20%;right:10%;animation-delay:.7s}.kingdom-capture-sparkles i:nth-child(5){top:45%;right:5%;animation-delay:.3s}
+#app.game-view-active:has(.kingdom-host-screen) .host-participant-panel{background:rgba(35,58,30,.94)!important;border:1px solid rgba(246,255,217,.18)!important;box-shadow:0 12px 34px rgba(42,72,24,.18)!important;color:#f4ffe8!important}
+#app.game-view-active:has(.kingdom-host-screen) .host-participant-panel h2,#app.game-view-active:has(.kingdom-host-screen) .host-participant-panel p,#app.game-view-active:has(.kingdom-host-screen) .host-participant-panel .mut{color:#f4ffe8!important}
+#app.game-view-active:has(.kingdom-host-screen) .host-live-player{background:rgba(247,255,230,.07)!important;border-color:rgba(247,255,230,.13)!important;color:#f4ffe8!important}
+#app.game-view-active:has(.kingdom-host-screen) .host-live-player b,#app.game-view-active:has(.kingdom-host-screen) .host-live-player span{color:inherit}
+#app.game-view-active:has(.kingdom-host-screen) .host-live-stat{background:rgba(247,255,230,.07)!important;color:#f4ffe8!important}
+#app.game-view-active:has(.kingdom-host-screen) .host-controls-block{padding:12px;border:1px solid rgba(81,122,48,.2);border-radius:16px;background:rgba(243,255,212,.72);margin:12px 0}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-score-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 11px!important;border-radius:999px!important;background:var(--team-color)!important;color:#fff!important;font-size:11px!important;font-weight:850!important;box-shadow:0 4px 9px rgba(48,78,25,.12)}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-score-chip *{color:#fff!important}
+#app.game-view-active:has(.kingdom-score-chip) .kingdom-score-chip{border-color:var(--team-color-border)!important}
+#app.game-view-active:has(.kingdom-score-chip) .bar{height:7px;border-radius:99px;background:rgba(67,107,36,.16);overflow:hidden}
+#app.game-view-active:has(.kingdom-score-chip) .bar i{height:100%;border-radius:inherit;background:linear-gradient(90deg,#74a840,#d8ef5f)!important;transition:width .2s linear}
+#app.game-view-active:has(.kingdom-score-chip) .ans{border-radius:16px!important;box-shadow:0 6px 16px rgba(56,83,31,.1)!important;transition:transform .18s,box-shadow .18s}
+#app.game-view-active:has(.kingdom-score-chip) .ans:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(56,83,31,.17)!important}
+@keyframes kingdom-tile-capture{0%{transform:scale(.55) rotate(-7deg);filter:brightness(1.8) saturate(1.4) drop-shadow(0 0 10px rgba(255,255,206,.95))}38%{transform:scale(1.16) rotate(3deg)}65%{transform:scale(.94) rotate(-1deg)}100%{transform:scale(1);filter:none}}
+@keyframes kingdom-capture-glow{0%{opacity:.9;transform:scale(.1)}100%{opacity:0;transform:scale(1.8)}}
+@keyframes kingdom-target-breathe{0%,100%{filter:drop-shadow(0 0 2px rgba(255,255,220,.5));opacity:.88}50%{filter:drop-shadow(0 0 8px rgba(255,255,223,.95));opacity:1}}
+@keyframes kingdom-fortress-idle{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.06)}}
+@keyframes kingdom-live-pulse{0%,100%{box-shadow:0 0 0 2px rgba(105,166,60,.12)}50%{box-shadow:0 0 0 5px rgba(105,166,60,0)}}
+@keyframes kingdom-clock-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes kingdom-side-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kingdom-overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes kingdom-capture-card-in{from{opacity:0;transform:translateY(18px) scale(.84)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes kingdom-trophy-bounce{0%{transform:scale(.2) rotate(-20deg)}65%{transform:scale(1.14) rotate(5deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes kingdom-confetti-fall{0%{transform:translate3d(0,-5vh,0) rotate(0)}100%{transform:translate3d(26px,115vh,0) rotate(780deg)}}
+@keyframes kingdom-sparkle{0%,100%{opacity:.45;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.24) rotate(20deg)}}
+@media(max-width:900px){
+ #app.game-view-active:has(.kingdom-score-chip){padding:10px 8px 22px!important}
+ .kingdom-host-screen{padding:12px;border-radius:20px}
+ .kingdom-battle-layout{grid-template-columns:minmax(112px,160px) minmax(0,1fr) minmax(112px,160px);gap:7px}
+ .kingdom-side-team-head{padding:8px 7px}.kingdom-side-crest{width:28px;flex-basis:28px;height:28px}
+ .kingdom-side-territory{padding:7px}.kingdom-side-territory>b{font-size:20px}
+ .kingdom-roster-list{padding:2px 5px 6px}
+ .kingdom-map-column{padding:8px 2px}
+ .kingdom-board-grid{--hex-w:clamp(14px,calc(610px / var(--board-size)),29px)}
+ .kingdom-board-grid.is-small-board{--hex-w:clamp(12px,calc(84vw / var(--board-size)),22px)}
+ .kingdom-mini-score{gap:5px;padding:5px 7px}
+ .kingdom-mini-score b{font-size:10px}.kingdom-mini-score small{font-size:9px}
+ .kingdom-roster-name{font-size:9px}.kingdom-roster-flags{font-size:8px}
+}
+@media(max-width:640px){
+ .kingdom-game-header{gap:8px;padding-bottom:10px}.kingdom-brand-mark{flex-basis:35px;width:35px;height:35px;border-radius:11px;font-size:23px}
+ .kingdom-game-brand b{font-size:17px}.kingdom-game-brand small{font-size:8px;letter-spacing:.1em}
+ .kingdom-round-pill{gap:6px;padding:6px 8px;border-radius:11px}.kingdom-round-pill span{font-size:8px}.kingdom-round-pill b{width:24px;height:24px;font-size:13px}
+ .kingdom-clock-wrap>span{font-size:8px}.kingdom-clock{min-width:77px;padding:6px 9px;font-size:23px}
+ .kingdom-battle-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;align-items:stretch}
+ .kingdom-map-column{grid-column:1/-1;grid-row:1;order:0;padding:8px 3px}
+ .kingdom-side-stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));align-items:start;gap:6px}
+ .kingdom-side-stack.is-left{grid-column:1;grid-row:2}.kingdom-side-stack.is-right{grid-column:2;grid-row:2}
+ .kingdom-side-team{border-radius:10px}.kingdom-side-team-head{gap:5px;padding:7px 5px}.kingdom-side-crest{flex-basis:24px;height:24px;font-size:17px}
+ .kingdom-side-team-title b{font-size:10px}.kingdom-side-team-title small{font-size:8px}.kingdom-side-trophies{font-size:9px;letter-spacing:-2px}
+ .kingdom-side-territory{gap:4px;padding:6px 6px 4px}.kingdom-side-territory>b{font-size:19px}.kingdom-side-territory>span,.kingdom-side-territory>i{font-size:8px}
+ .kingdom-roster-list{gap:1px;padding:2px 4px 5px}.kingdom-roster-player{gap:4px;padding:3px 2px}.kingdom-roster-avatar{flex-basis:16px;height:16px;font-size:8px}.kingdom-roster-name{font-size:9px}.kingdom-roster-flags{font-size:8px}
+ .kingdom-map-caption{padding:0 4px 5px}.kingdom-map-caption b{font-size:11px}.kingdom-map-caption small{font-size:9px}.kingdom-map-live{font-size:8px}
+ .kingdom-board-frame{max-width:100%;max-height:62vh;padding:2px 2px 6px}
+ .kingdom-board-grid{--hex-w:clamp(13px,calc(91vw / var(--board-size)),24px)}
+ .kingdom-board-grid.is-small-board{--hex-w:clamp(11px,calc(86vw / var(--board-size)),21px)}
+ .kingdom-board-row{gap:0;height:var(--hex-h);flex-basis:var(--hex-h);margin-top:calc(var(--hex-h)*-.25)}
+ .kingdom-map-legend{gap:7px;font-size:8px}.kingdom-objective-line{align-items:flex-start;margin-top:10px}.kingdom-objective-line p{font-size:10px}
+ .kingdom-final-title>span{font-size:23px}.kingdom-final-title>div>b{font-size:10px}.kingdom-final-winner{font-size:18px!important}
+ .kingdom-capture-card{padding:27px 18px 20px;border-radius:22px}.kingdom-capture-emblem{width:70px;height:70px;margin-top:-57px;font-size:38px}
+ .kingdom-host-details .host-live-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+ .kingdom-tile,.kingdom-side-team,.kingdom-clock,.kingdom-confetti,.kingdom-capture-card,.kingdom-capture-emblem,.kingdom-tile-fortress,.kingdom-map-live i{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}
+}
