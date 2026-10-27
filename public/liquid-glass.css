@@ -1719,3 +1719,31 @@ body::before {
 @media (prefers-reduced-motion:reduce) {
   html, body { scroll-behavior:auto !important; }
 }
+
+
+/* v1.16.11 — explicitly keep vertical scrolling on the document, not a nested layer.
+   Do not lock body overflow or let a visual wrapper become a scroll container. */
+html {
+  height:auto !important;
+  min-height:100% !important;
+  overflow-x:clip !important;
+  overflow-y:auto !important;
+  scroll-behavior:auto !important;
+  overscroll-behavior-y:auto !important;
+}
+body {
+  height:auto !important;
+  min-height:100vh !important;
+  min-height:100dvh !important;
+  overflow-x:clip !important;
+  overflow-y:visible !important;
+  overscroll-behavior-y:auto !important;
+  touch-action:auto !important;
+}
+#app {
+  height:auto !important;
+  min-height:100vh !important;
+  min-height:100dvh !important;
+  overflow:visible !important;
+  touch-action:auto !important;
+}
