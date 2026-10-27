@@ -3,17 +3,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.1">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.1">
-<link rel="shortcut icon" href="/favicon.ico?v=1.16.1">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.2">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.2">
+<link rel="shortcut icon" href="/favicon.ico?v=1.16.2">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.2">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.16.1">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.16.1">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.16.1">
-<link rel="stylesheet" href="/lobby.css?v=1.16.1">
-<link rel="stylesheet" href="/kingdoms.css?v=1.16.1">
+<link rel="stylesheet" href="/ui.css?v=1.16.2">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.16.2">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.16.2">
+<link rel="stylesheet" href="/lobby.css?v=1.16.2">
+<link rel="stylesheet" href="/kingdoms.css?v=1.16.2">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script src="/xlsx.js"></script>
 <script src="/qr.js"></script>
@@ -30,7 +30,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.1'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.2'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
@@ -1233,7 +1233,7 @@ function liveParticipantsPanel(){
   }else if(pAnswered){stateLabel='Ответ отправлен';stateClass='is-done'};
   const team=kingdoms&&Number.isInteger(p.team)?`<span class="host-live-team" style="--team-color:${(KINGDOM_PALETTE[p.team]||KINGDOM_PALETTE[0]).color}">${KINGDOM_MARKS[p.team]} ${tr(KN[p.team])}</span>`:'';
   const extra=kingdoms?`<span class="host-live-points-primary">${tr('Флаги')}: <b>${Number(p.placed)||0}</b></span>`:`<span class="host-live-points-primary">${tr('Баллы')}: <b>${Number(p.score)||0}</b></span>${S.state==='results'&&p.ans?`<span class="host-live-round-earned">${tr('За вопрос')}: <b>+${Number(p.pts)||0}</b></span>`:''}`;
-  return `<article class="host-live-player"><div class="host-live-player-top"><div class="host-live-identity"><span class="host-live-avatar">${esc((p.name||'?').trim().slice(0,1).toUpperCase())}</span><div class="host-live-name"><b data-user-content="true">${esc(p.name)}</b><span class="host-live-presence ${p.online?'is-online':'is-offline'}"><i></i>${tr(p.online?'В сети':'Не в сети')}</span></div></div>${team}<button type="button" class="player-kick host-live-kick" title="${tr('Исключить игрока')}" aria-label="${tr('Исключить игрока')} ${esc(p.name)}" onclick="kick('${p.id}')">×</button></div><div class="host-live-player-stats">${extra}<span>${tr('Правильные ответы')}: <b>${pCorrect}/${pAnswered}</b></span><span>${tr('Успешность')}: <b>${pAccuracy}%</b></span></div><div class="host-live-player-bottom"><span class="host-live-state ${stateClass}">${tr(stateLabel)}</span></div></article>`;
+  return `<article class="host-live-player" data-player-id="${esc(p.id)}"><div class="host-live-player-top"><div class="host-live-identity"><span class="host-live-avatar">${esc((p.name||'?').trim().slice(0,1).toUpperCase())}</span><div class="host-live-name"><b data-user-content="true">${esc(p.name)}</b><span class="host-live-presence ${p.online?'is-online':'is-offline'}"><i></i>${tr(p.online?'В сети':'Не в сети')}</span></div></div>${team}<button type="button" class="player-kick host-live-kick" title="${tr('Исключить игрока')}" aria-label="${tr('Исключить игрока')} ${esc(p.name)}" onclick="kick('${p.id}')">×</button></div><div class="host-live-player-stats">${extra}<span>${tr('Правильные ответы')}: <b>${pCorrect}/${pAnswered}</b></span><span>${tr('Успешность')}: <b>${pAccuracy}%</b></span></div><div class="host-live-player-bottom"><span class="host-live-state ${stateClass}">${tr(stateLabel)}</span></div></article>`;
  }).join('');
  return `<section class="card host-participant-panel host-live-panel" aria-live="polite"><div class="host-participant-heading"><div><span class="section-kicker">${tr('Статистика участников')}</span><h2>${tr('Игроки в игре')} <span class="host-live-total">${rows.length}</span></h2></div><div class="host-live-question-progress">${kingdoms?tr('Статистика обновляется автоматически'):`${tr('Ответили на текущий вопрос')}: <b>${currentAnswered}/${rows.length}</b>`}</div></div><div class="host-live-summary">${summary}</div><div class="host-live-player-list">${players||`<div class="host-live-empty">${tr('Пока нет ответов')}</div>`}</div></section>`;
 }
@@ -1249,7 +1249,7 @@ function liveBestParticipantsPanel(){
   const rank=`<span class="classic-best-rank ${i===0?'is-first':i===1?'is-second':i===2?'is-third':''}">${i+1}</span>`;
   const team=kingdoms&&Number.isInteger(p.team)?`<span class="classic-best-team" style="color:${(KINGDOM_PALETTE[p.team]||KINGDOM_PALETTE[0]).color}" title="${tr(KN[p.team]||'')}">${KINGDOM_MARKS[p.team]}</span>`:'';
   const score=kingdoms?`🚩 ${Number(p.placed)||0} · ✓ ${correct}`:`${Number(p.score)||0}`;
-  return `<div class="classic-best-player">${rank}${team}<span class="classic-best-name" data-user-content="true">${esc(p.name||'Участник')}</span><b class="classic-best-score">${score}</b></div>`;
+  return `<div class="classic-best-player" data-player-id="${esc(p.id)}">${rank}${team}<span class="classic-best-name" data-user-content="true">${esc(p.name||'Участник')}</span><b class="classic-best-score">${score}</b></div>`;
  }).join('');
  return `<section class="classic-best-panel" aria-live="polite"><div class="classic-best-heading"><span>🏆</span><div><b>${tr('Лучшие участники')}</b><small>${tr('Рейтинг обновляется в ходе игры')}</small></div></div><div class="classic-best-list">${items||`<p class="mut">${tr('Ожидаем участников…')}</p>`}</div></section>`;
 }
@@ -1261,13 +1261,14 @@ function kingdomRoundOutcomeHtml(){
 }
 function kingdomRosterSide(team,stat){
  const palette=KINGDOM_PALETTE[team]||KINGDOM_PALETTE[0];
- const members=(S.rows||[]).filter(p=>Number(p.team)===team).sort((a,b)=>(Number(b.placed)||0)-(Number(a.placed)||0)||(Number(b.correctN)||0)-(Number(a.correctN)||0));
+ const members=(S.rows||[]).filter(p=>Number(p.team)===team);
+ const flagLeader=members.reduce((lead,p)=>!lead||(Number(p.placed)||0)>(Number(lead.placed)||0)?p:lead,null);
  const memberRows=members.map((p,i)=>{
   const name=(p.name||'?').trim(),initial=esc(name.slice(0,1).toUpperCase());
-  return '<div class="kingdom-roster-player '+(p.online?'is-online':'is-offline')+'"><span class="kingdom-roster-avatar">'+initial+'</span><span class="kingdom-roster-name" data-user-content="true">'+esc(name)+'</span>'+(i===0&&Number(p.placed)>0?'<span class="kingdom-roster-crown" title="Больше всего флагов">♛</span>':'')+'<span class="kingdom-roster-flags">⚑ '+(Number(p.placed)||0)+'</span></div>';
+  return '<div class="kingdom-roster-player '+(p.online?'is-online':'is-offline')+'" data-player-id="'+esc(p.id)+'"><span class="kingdom-roster-avatar">'+initial+'</span><span class="kingdom-roster-name" data-user-content="true">'+esc(name)+'</span>'+(flagLeader&&p.id===flagLeader.id&&Number(p.placed)>0?'<span class="kingdom-roster-crown" title="Больше всего флагов">♛</span>':'')+'<span class="kingdom-roster-flags">⚑ '+(Number(p.placed)||0)+'</span></div>';
  }).join('');
  const trophyText=Number(stat.trophies)>0?'🏆 '.repeat(Math.min(5,Number(stat.trophies))):'—';
- return '<section class="kingdom-side-team" style="--team-color:'+palette.color+';--team-color-light:'+palette.light+';--team-color-dark:'+palette.dark+';--team-color-border:'+palette.border+'"><header class="kingdom-side-team-head"><span class="kingdom-side-crest">'+KINGDOM_MARKS[team]+'</span><div class="kingdom-side-team-title"><b>'+tr(KN[team]||'Команда')+'</b><small>'+members.length+' / '+(Number(stat.members)||members.length)+' '+tr('участников')+'</small></div><span class="kingdom-side-trophies" title="'+tr('Трофеи')+'">'+trophyText+'</span></header><div class="kingdom-side-territory"><b>'+((Number(stat.tiles)||0))+'</b><span>'+tr('клеток')+'</span><i>⚑ '+(Number(stat.flags)||0)+'</i></div><div class="kingdom-roster-list">'+(memberRows||'<div class="kingdom-roster-empty">'+tr('Игроки не подключены')+'</div>')+'</div></section>';
+ return '<section class="kingdom-side-team" data-team-id="'+team+'" style="--team-color:'+palette.color+';--team-color-light:'+palette.light+';--team-color-dark:'+palette.dark+';--team-color-border:'+palette.border+'"><header class="kingdom-side-team-head"><span class="kingdom-side-crest">'+KINGDOM_MARKS[team]+'</span><div class="kingdom-side-team-title"><b>'+tr(KN[team]||'Команда')+'</b><small>'+members.length+' / '+(Number(stat.members)||members.length)+' '+tr('участников')+'</small></div><span class="kingdom-side-trophies" title="'+tr('Трофеи')+'">'+trophyText+'</span></header><div class="kingdom-side-territory"><b>'+((Number(stat.tiles)||0))+'</b><span>'+tr('клеток')+'</span><i>⚑ '+(Number(stat.flags)||0)+'</i></div><div class="kingdom-roster-list">'+(memberRows||'<div class="kingdom-roster-empty">'+tr('Игроки не подключены')+'</div>')+'</div></section>';
 }
 function hostK(a){
  const fin=S.state==='final',st=S.stats||[],teamCount=Math.max(2,st.length||2);
@@ -1849,6 +1850,61 @@ window.confirm=(message)=>_nativeConfirm(tr(String(message)));
 window.alert=(message)=>_nativeAlert(tr(String(message)));
 // Экран перерисовывается только если его содержимое изменилось, и не во время нажатия:
 // иначе кнопка заменялась бы «из-под пальца» и ответ терялся.
+
+/* Keep game nodes stable across live server updates to avoid participant-card jitter. */
+let lastRenderWasGame=false;
+function renderNodeKey(node){
+ if(!node||node.nodeType!==1)return '';
+ if(node.id)return 'id:'+node.id;
+ for(const attr of ['data-player-id','data-team-id','data-tile','data-render-key']){
+  const value=node.getAttribute(attr);
+  if(value!==null)return attr+':'+value;
+ }
+ return '';
+}
+function sameRenderNode(a,b){
+ return !!a&&!!b&&a.nodeType===b.nodeType&&(a.nodeType!==1||a.tagName===b.tagName);
+}
+function patchRenderNode(current,next){
+ if(current.nodeType===3||current.nodeType===8){
+  if(current.nodeValue!==next.nodeValue)current.nodeValue=next.nodeValue;
+  return current;
+ }
+ if(current.nodeType!==1)return current;
+ const oldAttrs=Array.from(current.attributes),newAttrs=new Map(Array.from(next.attributes).map(a=>[a.name,a.value]));
+ oldAttrs.forEach(a=>{if(!newAttrs.has(a.name))current.removeAttribute(a.name)});
+ newAttrs.forEach((value,name)=>{if(current.getAttribute(name)!==value)current.setAttribute(name,value)});
+ patchRenderChildren(current,next);
+ return current;
+}
+function patchRenderChildren(currentParent,nextParent){
+ let cursor=currentParent.firstChild;
+ const nextChildren=Array.from(nextParent.childNodes);
+ for(const nextChild of nextChildren){
+  const key=renderNodeKey(nextChild);
+  let match=null;
+  if(key){
+   for(let scan=cursor;scan;scan=scan.nextSibling){if(renderNodeKey(scan)===key){match=scan;break}}
+   if(match&&match!==cursor)currentParent.insertBefore(match,cursor);
+   if(!match){match=nextChild.cloneNode(true);currentParent.insertBefore(match,cursor)}
+  }else if(cursor&&!renderNodeKey(cursor)&&sameRenderNode(cursor,nextChild)){
+   match=cursor;
+  }else{
+   match=nextChild.cloneNode(true);
+   currentParent.insertBefore(match,cursor);
+  }
+  if(!sameRenderNode(match,nextChild)){
+   const replacement=nextChild.cloneNode(true);
+   currentParent.replaceChild(replacement,match);
+   match=replacement;
+  }else{
+   patchRenderNode(match,nextChild);
+  }
+  cursor=match.nextSibling;
+ }
+ while(cursor){const next=cursor.nextSibling;currentParent.removeChild(cursor);cursor=next}
+}
+
 function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  trackSiteNavigation();
@@ -1869,7 +1925,7 @@ function render(){
   }
   if(participantScreen)vApp.querySelectorAll('.cabinet-menu-wrap,.floating-menu-anchor').forEach(node=>node.remove());
   if(!gameScreen&&!participantScreen&&!vApp.querySelector('.cabinet-menu-wrap'))vApp.insertAdjacentHTML('afterbegin',`<div class="floating-menu-anchor">${cabinetMenu('')}</div>`);
- }finally{const h=vApp.innerHTML;vApp=null;if(h!==lastHTML){lastHTML=h;real.innerHTML=h}}
+ }finally{const fresh=vApp,h=fresh.innerHTML;vApp=null;if(h!==lastHTML){if(gameScreen&&lastRenderWasGame)patchRenderChildren(real,fresh);else real.innerHTML=h;lastHTML=h}lastRenderWasGame=gameScreen}
  if(view==='lib')filterLibrary();
  applyUiLanguage();
  if(view==='security'&&securitySetup)renderSecurityQr();
