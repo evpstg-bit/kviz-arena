@@ -1523,6 +1523,14 @@ function home(a){
  <section class="home-hero minimal-home-hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> ОБУЧЕНИЕ В ФОРМАТЕ ИГРЫ</div><h1 class="home-title">Знания, которые<br><span>объединяют.</span></h1><p class="home-lead">Запускайте интерактивные викторины, подключайте студентов по PIN-коду и наблюдайте за результатами в реальном времени.</p><div class="hero-benefits"><span><i>✓</i> Без регистрации для участников</span><span><i>✓</i> Два режима игры</span></div></div><aside class="home-guide"><span class="section-kicker">КАК ЭТО РАБОТАЕТ</span><div class="guide-step"><span>1</span><div><b>Выберите тест</b><small>Вопросы из библиотеки проекта</small></div></div><div class="guide-step"><span>2</span><div><b>Запустите игру</b><small>Получите PIN-код комнаты</small></div></div><div class="guide-step"><span>3</span><div><b>Подключите группу</b><small>Студенты отвечают со своих устройств</small></div></div></aside></section>
  <footer class="home-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>Меньше рутины. Больше вовлечённости.</span></footer>`;
 }
+function teacherDashboardCardIcon(name){
+ const paths={
+  library:'<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+  reports:'<path d="M12 16v5"/><path d="M16 14v7"/><path d="M20 10v11"/><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.708 0L2 15"/>',
+  settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 1.72l-.13.96a2 2 0 0 1-1.01 1.43l-.91.52a2 2 0 0 1-1.73.12l-.88-.44a2 2 0 0 0-2.67.85l-.22.38a2 2 0 0 0 .57 2.56l.75.6a2 2 0 0 1 .67 1.75l-.1 1.03a2 2 0 0 1-.98 1.53l-.85.5a2 2 0 0 0-.74 2.68l.22.38a2 2 0 0 0 2.56.8l.88-.44a2 2 0 0 1 1.73.12l.91.52a2 2 0 0 1 1.01 1.43l.13.96a2 2 0 0 0 2 1.72h.44a2 2 0 0 0 2-1.72l.13-.96a2 2 0 0 1 1.01-1.43l.91-.52a2 2 0 0 1 1.73-.12l.88.44a2 2 0 0 0 2.56-.8l.22-.38a2 2 0 0 0-.74-2.68l-.85-.5a2 2 0 0 1-.98-1.53l-.1-1.03a2 2 0 0 1 .67-1.75l.75-.6a2 2 0 0 0 .57-2.56l-.22-.38a2 2 0 0 0-2.67-.85l-.88.44a2 2 0 0 1-1.73-.12l-.91-.52a2 2 0 0 1-1.01-1.43l-.13-.96A2 2 0 0 0 12.22 2Z"/><circle cx="12" cy="12" r="3"/>'
+ };
+ return '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[name]||'')+'</svg>';
+}
 function teacherDashboardPage(a){
  if(!USER){view='auth';return authView(a)}
  const rawName=String(USER.name||USER.login||'').trim();
@@ -1536,17 +1544,17 @@ function teacherDashboardPage(a){
   </section>
   <section class="teacher-dashboard-grid" aria-label="${tr('Выбор раздела')}">
    <button type="button" class="teacher-dashboard-card" onclick="openLib()" aria-label="${tr('Библиотека')}">
-    <span class="teacher-dashboard-card-icon" aria-hidden="true">${navIcon('library')}</span>
+    <span class="teacher-dashboard-card-icon" aria-hidden="true">${teacherDashboardCardIcon('library')}</span>
     <span class="teacher-dashboard-card-copy"><strong>${tr('Библиотека')}</strong><span>${tr('Управляйте тестами, вопросами и тематическими папками.')}</span></span>
     <span class="teacher-dashboard-card-arrow" aria-hidden="true">→</span>
    </button>
    <button type="button" class="teacher-dashboard-card" onclick="openReports()" aria-label="${tr('Отчёты')}">
-    <span class="teacher-dashboard-card-icon reports" aria-hidden="true">${navIcon('reports')}</span>
+    <span class="teacher-dashboard-card-icon reports" aria-hidden="true">${teacherDashboardCardIcon('reports')}</span>
     <span class="teacher-dashboard-card-copy"><strong>${tr('Отчёты')}</strong><span>${tr('Анализируйте результаты игр и ответы участников.')}</span></span>
     <span class="teacher-dashboard-card-arrow" aria-hidden="true">→</span>
    </button>
    <button type="button" class="teacher-dashboard-card" onclick="openSettings()" aria-label="${tr('Настройки')}">
-    <span class="teacher-dashboard-card-icon settings" aria-hidden="true">${navIcon('settings')}</span>
+    <span class="teacher-dashboard-card-icon settings" aria-hidden="true">${teacherDashboardCardIcon('settings')}</span>
     <span class="teacher-dashboard-card-copy"><strong>${tr('Настройки')}</strong><span>${tr('Настраивайте правила игровых режимов и параметры платформы.')}</span></span>
     <span class="teacher-dashboard-card-arrow" aria-hidden="true">→</span>
    </button>
