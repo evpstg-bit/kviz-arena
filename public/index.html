@@ -148,7 +148,7 @@ function authView(a){
 }
 async function openSecurity(){
  if(!USER)return goAuth();
- closeCabinetMenu();captureCurrentNavigationSnapshot();
+ closeCabinetMenu();
  const nav=++cabinetNavSeq;
  view='security';securityStatus=null;securityMsg='';securityPassword='';securityCode='';securitySetup=null;securityRecoveryCodes=null;render();
  const r=await capi('auth/2fa/status',{});
