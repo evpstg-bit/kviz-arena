@@ -124,7 +124,7 @@ body.game-view-active:has(.kingdom-score-chip)::before{content:"";position:fixed
 #app.game-view-active:has(.kingdom-score-chip) .bar i{height:100%;border-radius:inherit;background:linear-gradient(90deg,#74a840,#d8ef5f)!important;transition:width .2s linear}
 #app.game-view-active:has(.kingdom-score-chip) .ans{border-radius:16px!important;box-shadow:0 6px 16px rgba(56,83,31,.1)!important;transition:transform .18s,box-shadow .18s}
 #app.game-view-active:has(.kingdom-score-chip) .ans:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(56,83,31,.17)!important}
-@keyframes kingdom-tile-capture{0%{transform:scale(.55) rotate(-7deg);filter:brightness(1.8) saturate(1.4) drop-shadow(0 0 10px rgba(255,255,206,.95))}38%{transform:scale(1.16) rotate(3deg)}65%{transform:scale(.94) rotate(-1deg)}100%{transform:scale(1);filter:none}}
+@keyframes kingdom-tile-capture{0%{transform:scale(.55) rotate(-7deg);opacity:.55}38%{transform:scale(1.16) rotate(3deg);opacity:1}65%{transform:scale(.94) rotate(-1deg)}100%{transform:scale(1);opacity:1}}
 @keyframes kingdom-capture-glow{0%{opacity:.9;transform:scale(.1)}100%{opacity:0;transform:scale(1.8)}}
 @keyframes kingdom-target-breathe{0%,100%{filter:drop-shadow(0 0 2px rgba(255,255,220,.5));opacity:.88}50%{filter:drop-shadow(0 0 8px rgba(255,255,223,.95));opacity:1}}
 @keyframes kingdom-fortress-idle{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.06)}}
