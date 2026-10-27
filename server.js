@@ -47,6 +47,7 @@ function writeJ(f,v){
   catch(e){console.error('Не удалось записать',f+':',e.message);return false}
 }
 let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),BUILTINQ=[];
+let BUILTIN_GITHUB_HYDRATED=false,BUILTIN_GITHUB_HYDRATION=null;
 const hashPw=(pw,salt)=>crypto.scryptSync(String(pw),salt,32).toString('hex');
 const checkPw=(u,pw)=>{try{return crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'))}catch(e){return false}};
 const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin});
@@ -218,6 +219,15 @@ const githubConfig=()=>{
   const token=String(process.env.GITHUB_TOKEN||'').trim(),repo=String(process.env.GITHUB_REPOSITORY||'').trim(),branch=String(process.env.GITHUB_BRANCH||'main').trim();
   return token&&/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)?{token,repo,branch}:null;
 };
+// Store editable quiz library and platform settings off the deployed app branch.
+// A content-only commit on this branch must not trigger a Render deployment and erase live rooms.
+const appDataStoreConfig=()=>{
+  const cfg=githubConfig();if(!cfg)return null;
+  const branch=String(process.env.APP_DATA_BRANCH||'kviz-arena-data').trim();
+  if(!/^[A-Za-z0-9._/-]{1,100}$/.test(branch)||branch.includes('..')||branch.startsWith('/')||branch.endsWith('/'))throw new Error('Некорректное имя APP_DATA_BRANCH');
+  if(branch===cfg.branch)throw new Error('APP_DATA_BRANCH должен отличаться от GITHUB_BRANCH, чтобы изменения данных не запускали деплой сайта');
+  return{...cfg,branch};
+};
 
 const reportsStoreConfig=()=>{
   const cfg=githubConfig();if(!cfg)return null;
@@ -262,6 +272,20 @@ async function reportsApiJson(res,what){
   const txt=await res.text().catch(()=> '');
   if(!res.ok)throw new Error(what+' (HTTP '+res.status+'). '+txt.slice(0,180));
   try{return JSON.parse(txt)}catch(e){throw new Error(what+': GitHub вернул некорректный ответ')}
+}
+async function githubEnsureAppDataBranch(cfg){
+  const name=encodeURIComponent(cfg.branch);
+  let r=await reportsGithubFetch(cfg,'git/ref/heads/'+name);
+  if(r.ok)return await r.json();
+  if(r.status!==404)await reportsApiJson(r,'Не удалось проверить отдельную ветку данных приложения');
+  const sourceBranch=String(process.env.GITHUB_BRANCH||'main').trim();
+  const base=await reportsGithubFetch(cfg,'git/ref/heads/'+encodeURIComponent(sourceBranch));
+  if(!base.ok)await reportsApiJson(base,'Не удалось найти исходную ветку приложения');
+  const baseRef=await base.json();
+  const create=await reportsGithubFetch(cfg,'git/refs',{method:'POST',body:{ref:'refs/heads/'+cfg.branch,sha:baseRef.object.sha}});
+  if(!create.ok&&create.status!==422)await reportsApiJson(create,'Не удалось создать отдельную ветку данных приложения');
+  const check=await reportsGithubFetch(cfg,'git/ref/heads/'+name);
+  return reportsApiJson(check,'Не удалось открыть отдельную ветку данных приложения');
 }
 async function githubEnsureReportsBranch(cfg){
   const name=encodeURIComponent(cfg.reportsBranch);
@@ -560,9 +584,10 @@ async function githubWriteAppSettings(cfg,sha,settings,message){
 // Hydrate global settings from GitHub once per process before the UI or a new game relies on local defaults.
 let APP_SETTINGS_HYDRATED=false,APP_SETTINGS_HYDRATION=null;
 async function hydrateAppSettingsFromGitHub(){
-  const cfg=githubConfig();if(!cfg||APP_SETTINGS_HYDRATED)return;
+  const cfg=appDataStoreConfig();if(!cfg||APP_SETTINGS_HYDRATED)return;
   if(!APP_SETTINGS_HYDRATION){
     APP_SETTINGS_HYDRATION=(async()=>{
+      await githubEnsureAppDataBranch(cfg);
       const remote=await githubReadAppSettings(cfg);
       APP_SETTINGS=remote.settings;
       if(remote.exists)writeAppSettingsFile(APP_SETTINGS);
@@ -583,6 +608,22 @@ async function githubReadBuiltin(cfg){
   const items=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
   const folders=normalizeFolders(raw&&raw.folders),validFolders=new Set(folders.map(f=>f.id)),normalizedItems=normalizeBuiltinItems(items);normalizedItems.forEach(item=>{if(item.folderId&&!validFolders.has(item.folderId))item.folderId=''});return{sha:data.sha,items:normalizedItems,folders};
 }
+async function hydrateBuiltinFromGitHub(){
+  const cfg=appDataStoreConfig();if(!cfg)return false;
+  if(BUILTIN_GITHUB_HYDRATED)return true;
+  if(BUILTIN_GITHUB_HYDRATION)return BUILTIN_GITHUB_HYDRATION;
+  BUILTIN_GITHUB_HYDRATION=(async()=>{
+    await githubEnsureAppDataBranch(cfg);
+    const remote=await githubReadBuiltin(cfg);
+    writeBuiltinDocument(remote.items,remote.folders);
+    BUILTIN_GITHUB_HYDRATED=true;
+    return true;
+  })().catch(e=>{
+    console.warn('Не удалось загрузить библиотеку тестов из отдельной GitHub-ветки; используется локальная копия:',e.message);
+    return false;
+  }).finally(()=>{BUILTIN_GITHUB_HYDRATION=null});
+  return BUILTIN_GITHUB_HYDRATION;
+}
 async function githubWriteBuiltin(cfg,sha,items,folders,message){
   const url='https://api.github.com/repos/'+cfg.repo+'/contents/builtin-tests.json';
   const folderList=normalizeFolders(folders),folderIds=new Set(folderList.map(f=>f.id));
@@ -593,8 +634,9 @@ async function githubWriteBuiltin(cfg,sha,items,folders,message){
   return fetch(url,{method:'PUT',headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'kviz-arena','Content-Type':'application/json'},body:JSON.stringify(body)});
 }
 async function mutateBuiltinDocument(mutator,message){
-  const cfg=githubConfig();
+  const cfg=appDataStoreConfig();
   if(cfg){
+    await githubEnsureAppDataBranch(cfg);
     for(let attempt=0;attempt<3;attempt++){
       const remote=await githubReadBuiltin(cfg),out=mutator({items:remote.items.map(x=>({...x,quiz:x.quiz})),folders:remote.folders.map(x=>({...x}))});
       if(out.noChange)return{persistedToGitHub:true,itemCount:remote.items.length,folderCount:remote.folders.length,...(out.data||{})};
@@ -603,6 +645,7 @@ async function mutateBuiltinDocument(mutator,message){
       if((wr.status===409||wr.status===422)&&attempt<2)continue;
       if(!wr.ok){const detail=await wr.text().catch(()=> '');throw new Error('Не удалось сохранить библиотеку в GitHub (HTTP '+wr.status+'). '+detail.slice(0,220))}
       try{writeBuiltinDocument(nextItems,nextFolders)}catch(e){BUILTINQ=builtinQuizzesFromItems(nextItems);console.warn('GitHub файл обновлён, но локальную копию не удалось записать:',e.message)}
+      BUILTIN_GITHUB_HYDRATED=true;
       return{persistedToGitHub:true,itemCount:nextItems.length,folderCount:nextFolders.length,...(out.data||{})};
     }
     throw new Error('Файл изменился одновременно в GitHub. Повторите операцию.');
@@ -928,8 +971,9 @@ http.createServer(async(req,res)=>{
   if(u.pathname.startsWith('/api/settings/')){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
     if(!me.admin)return json(res,{error:'Настройки платформы доступны только администратору'},403);
-    const op=u.pathname.slice('/api/settings/'.length),cfg=githubConfig();
+    const op=u.pathname.slice('/api/settings/'.length),cfg=appDataStoreConfig();
     try{
+      if(cfg)await githubEnsureAppDataBranch(cfg);
       if(op==='get'){
         if(cfg){const remote=await githubReadAppSettings(cfg);APP_SETTINGS=remote.settings;APP_SETTINGS_HYDRATED=true;writeAppSettingsFile(APP_SETTINGS);return json(res,{settings:APP_SETTINGS,persistedToGitHub:remote.exists,source:remote.exists?'github':'local',notice:remote.exists?'':'Файл настроек пока не найден в GitHub. Сохраните настройки, чтобы создать его.'})}
         APP_SETTINGS=readAppSettingsFile();return json(res,{settings:APP_SETTINGS,persistedToGitHub:false,source:'local'});
@@ -1080,6 +1124,7 @@ http.createServer(async(req,res)=>{
   // ---------- встроенная библиотека тестов из builtin-tests.json ----------
   if(u.pathname.startsWith('/api/lib/')){
     const me=userOf(b.token);if(!me)return json(res,{error:'Требуется вход в аккаунт',code:401},401);
+    await hydrateBuiltinFromGitHub();
     const op=u.pathname.slice(9),builtin=BUILTINQ.find(x=>x.id===b.id);
     if(op==='list'){const doc=readBuiltinDocument();return json(res,{folders:doc.folders.map(f=>({...f,count:BUILTINQ.filter(q=>q.folderId===f.id).length})),items:BUILTINQ.map(x=>({id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}))});}
     if(op==='get')return builtin?json(res,{quiz:builtin.quiz,folderId:builtin.folderId||'',builtin:true}):json(res,{error:'Тест не найден'},404);
@@ -1263,6 +1308,7 @@ http.createServer(async(req,res)=>{
   // ---------- создание игры ----------
   if(u.pathname==='/api/create'){
     await hydrateAppSettingsFromGitHub();
+    await hydrateBuiltinFromGitHub();
     const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
     const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Можно запускать только тесты из библиотеки проекта.'},403);
     const requestedMode=String(b.mode||'');
