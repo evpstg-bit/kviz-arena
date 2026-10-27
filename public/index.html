@@ -3,17 +3,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.27">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.27">
-<link rel="shortcut icon" href="/favicon.ico?v=1.16.27">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.27">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.28">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.28">
+<link rel="shortcut icon" href="/favicon.ico?v=1.16.28">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.28">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.16.27">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.16.27">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.16.27">
-<link rel="stylesheet" href="/lobby.css?v=1.16.27">
-<link rel="stylesheet" href="/kingdoms.css?v=1.16.27">
+<link rel="stylesheet" href="/ui.css?v=1.16.28">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.16.28">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.16.28">
+<link rel="stylesheet" href="/lobby.css?v=1.16.28">
+<link rel="stylesheet" href="/kingdoms.css?v=1.16.28">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script>
 /* Boot safety net: never leave users on an endless loading label. */
@@ -49,11 +49,11 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.27'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.28'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
-let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.16.27',status:'online'};
+let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.16.28',status:'online'};
 
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
 let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
@@ -79,19 +79,20 @@ applyTheme(document.documentElement.classList.contains('dark')?'dark':'light',fa
 try{libraryLaunchMode=localStorage.getItem('kviz-launch-mode')==='kingdoms'?'kingdoms':'classic'}catch(e){}
 function setLaunchMode(mode){const next=mode==='kingdoms'?'kingdoms':'classic';if(!CLIENT_SETTINGS.modes[next].enabled)return;libraryLaunchMode=next;try{localStorage.setItem('kviz-launch-mode',libraryLaunchMode)}catch(e){}render()}
 function actionIcon(name){const paths={play:'<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L9 17l-4 1 1-4Z"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'};return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`}
-const api=(p,o)=>fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o),signal:AbortSignal.timeout(6000)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
+const api=(p,o)=>TEACHER_SANDBOX_ACTIVE?Promise.resolve(dpApi(p,o||{})):fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o),signal:AbortSignal.timeout(6000)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
 const act=(type,a,x)=>api('action',{pin,id:me,type,a,...(x||{})});
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function saveToken(){try{TOKEN?localStorage.setItem('qtoken',TOKEN):localStorage.removeItem('qtoken')}catch(e){}}
 const EDITOR_DRAFT_KEY='kviz-arena:editor-draft:v1';
 function persistEditorDraft(){
+ if(TEACHER_SANDBOX_ACTIVE)return true;
  if(view!=='quiz-editor'||!editorQuiz)return false;
  try{
   localStorage.setItem(EDITOR_DRAFT_KEY,JSON.stringify({version:1,ownerLogin:String(USER&&USER.login||''),editorId:String(editorId||''),editorIsNew:!!editorIsNew,editorFolderId:String(editorFolderId||''),editorQuiz,savedAt:Date.now()}));
   return true;
  }catch(e){return false}
 }
-function clearEditorDraft(){try{localStorage.removeItem(EDITOR_DRAFT_KEY)}catch(e){}}
+function clearEditorDraft(){if(TEACHER_SANDBOX_ACTIVE)return;try{localStorage.removeItem(EDITOR_DRAFT_KEY)}catch(e){}}
 function restoreEditorDraftAfterAuth(){
  let d=null;
  try{d=JSON.parse(localStorage.getItem(EDITOR_DRAFT_KEY)||'null')}catch(e){}
@@ -122,6 +123,7 @@ function handleCapiAuthExpired(r){
  render();return r;
 }
 async function capi(p,o){
+ if(TEACHER_SANDBOX_ACTIVE)return dpCapi(p,o||{});
  if(TOKEN&&configuredTokenExpiring(TOKEN)){
   const checked=await api('auth/me',{token:TOKEN});
   if(checked.user){USER=checked.user;if(checked.token){TOKEN=checked.token;saveToken()}}
@@ -144,6 +146,7 @@ function unavailableGameMessage(role){
  return (messages[role]||messages.other)[lang]||messages.other.ru;
 }
 function connect(){
+ if(TEACHER_SANDBOX_ACTIVE){tsCreateRoom(quiz||TEACHER_SANDBOX_PENDING_QUIZ||TS_DATA.items[0].quiz,libraryLaunchMode);view='game';render();return}
  if(es)es.close();fbSeen=-2;bnSeen=-1;fbUntil=0;banUntil=0;
  if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(e){}
  const source=new EventSource('/api/events?pin='+encodeURIComponent(pin)+'&id='+encodeURIComponent(me));
@@ -202,7 +205,7 @@ async function submitAuthSecondFactor(){
  TOKEN=r.token;USER=r.user;saveToken();AF={login:'',pass:'',pass2:'',code:'',name:''};authChallenge='';authCode='';INFO.hasUsers=true;continueAfterAuth();
 }
 function cancelAuthChallenge(){authChallenge='';authCode='';msg='';AF.pass='';render()}
-async function logout(){cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;securityStatus=null;securitySetup=null;securityRecoveryCodes=null;view='home';render()}
+async function logout(){if(TEACHER_SANDBOX_ACTIVE){dpBack();return}cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;securityStatus=null;securitySetup=null;securityRecoveryCodes=null;view='home';render()}
 function authView(a){
  const form=authChallenge
   ? `<div class="auth-security-prompt"><div class="auth-security-symbol" aria-hidden="true">✦</div><h2>${tr('Подтверждение входа')}</h2><p class="mut">${tr('Введите одноразовый код из Google Authenticator или резервный код.')}</p><label class="field-label" for="auth-otp-code">${tr('Код приложения или резервный код')}</label><input id="auth-otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="29" placeholder="123456" value="${esc(authCode)}" oninput="authCode=this.value" onkeydown="if(event.key==='Enter')submitAuthSecondFactor()"><p class="bad auth-error" role="alert">${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuthSecondFactor()">${tr('Подтвердить код')} <span aria-hidden="true">→</span></button><button class="sec auth-back-button" type="button" onclick="cancelAuthChallenge()">${tr('Назад ко входу')}</button></div>`
@@ -240,74 +243,123 @@ function dpNav(s){dpInit();DP_NOTICE='';const valid=['dashboard','library','test
 function dpBack(){view='developer-home';try{localStorage.setItem('kviz-developer-view','home')}catch(e){}render()}
 function dpTabs(active){const tabs=[['dashboard','Обзор'],['library','Библиотека'],['tests','Редактор теста'],['reports','Отчёты'],['modes','Режимы игры'],['game','Игровой стенд']];return '<nav class="dp-tabs">'+tabs.map(t=>'<button class="'+(active===t[0]?'active':'')+'" data-v="'+t[0]+'" onclick="dpNav(this.dataset.v)">'+t[1]+'</button>').join('')+'<button class="dp-exit" onclick="dpBack()">← В кабинет разработчика</button></nav>'}
 function dpShell(active,title,desc,body){document.title='Квиз-арена — Предпросмотр преподавателя';return developerHeader()+'<main class="developer-page dp-page"><div class="dp-notice-banner"><i></i><span><b>Режим предпросмотра</b> · демонстрационные данные, отдельно от рабочей платформы</span></div>'+dpTabs(active)+'<section class="dp-heading"><span class="section-kicker">ПРЕДПРОСМОТР КАБИНЕТА ПРЕПОДАВАТЕЛЯ</span><h1 class="page-title">'+esc(title)+'<span class="title-period">.</span></h1><p>'+esc(desc)+'</p></section>'+body+(DP_NOTICE?'<p class="dp-flash" role="status">'+esc(DP_NOTICE)+'</p>':'')+'<footer class="dashboard-footer minimal-footer"><span>Изменения стенда сохраняются только в браузере.</span></footer></main>'}
-function dpDashboard(a){
- dpInit();const body='<section class="dp-welcome"><div><span class="section-kicker">КАБИНЕТ ПРЕПОДАВАТЕЛЯ</span><h2>Добро пожаловать, Анна<span class="title-period">.</span></h2><p>Пример интерфейса со студентами, тестами и результатами.</p></div><span class="dp-badge">DEMO DATA</span></section><section class="dp-cards"><button class="teacher-dashboard-card library dp-teacher-card" data-v="library" onclick="dpNav(this.dataset.v)"><span class="teacher-dashboard-card-icon">'+navIcon('library')+'</span><span class="teacher-dashboard-card-copy"><strong>Библиотека</strong><span>Тесты и редактор вопросов.</span></span><span class="teacher-dashboard-card-arrow">→</span></button><button class="teacher-dashboard-card reports dp-teacher-card" data-v="reports" onclick="dpNav(this.dataset.v)"><span class="teacher-dashboard-card-icon reports">'+navIcon('reports')+'</span><span class="teacher-dashboard-card-copy"><strong>Отчёты</strong><span>Результаты и сложные вопросы.</span></span><span class="teacher-dashboard-card-arrow">→</span></button><button class="teacher-dashboard-card settings dp-teacher-card" data-v="modes" onclick="dpNav(this.dataset.v)"><span class="teacher-dashboard-card-icon settings">'+navIcon('settings')+'</span><span class="teacher-dashboard-card-copy"><strong>Режимы игры</strong><span>Настройки и проверка сценариев.</span></span><span class="teacher-dashboard-card-arrow">→</span></button></section><section class="dp-stats"><article><span>Демо-тестов</span><strong>'+DP_TESTS.length+'</strong></article><article><span>Примерных отчётов</span><strong>'+DP_REPORTS.length+'</strong></article><article><span>Игровых сценариев</span><strong>'+(2+DP_CUSTOM.length)+'</strong></article></section><section class="dp-panel"><h3>Быстрая проверка</h3><div class="dp-quick"><button data-v="tests" onclick="dpNav(this.dataset.v)">Открыть пример теста</button><button data-v="reports" onclick="dpNav(this.dataset.v)">Посмотреть отчёты</button><button data-v="game" onclick="dpNav(this.dataset.v)">Запустить симуляцию игры</button><button data-v="modes" onclick="dpNav(this.dataset.v)">Настроить параметры</button></div></section>';
- a.innerHTML=dpShell('dashboard','Обзор преподавателя','Тестовая копия основных экранов преподавателя с безопасными демонстрационными данными.',body)
+
+let TEACHER_SANDBOX_ACTIVE=false,TS_DATA=null,TS_SETTINGS=null,TS_TIMER=null;
+const TS_STORE='kviz-arena:developer-teacher-sandbox:v1';
+function tsReports(){
+ const people=['Анна Лебедева','Илья Морозов','София Климова','Даниил Волков'];
+ const specs=[['report-demo-economy','Рост национальной экономики Беларуси','classic','Classic',2,[4,3,2,1]],['report-demo-kingdoms','Менеджмент и предпринимательство','kingdoms','Color Kingdoms',26,[4,3,3,2]],['report-demo-digital','Цифровая экономика','classic','Classic',50,[4,4,3,2]]];
+ return specs.map(function(s){
+  const questions=[['Что характеризует экономический рост?',['Увеличение реального выпуска','Только рост цен','Падение выпуска','Снижение производительности'],s[5][0]],['Как оценивают динамику выпуска?',['Реальный ВВП','Только курс валюты','Число выходных','Количество брендов'],s[5][1]],['Что помогает повысить производительность?',['Технологии и обучение','Простой оборудования','Потеря навыков','Устаревшие процессы'],s[5][2]],['Что относится к сфере услуг?',['ИТ-услуги','Только добыча руды','Только земледелие','Только металлургия'],s[5][3]]].map(function(q,i){return {index:i+1,t:q[0],a:q[1],correct:[0],correctCount:q[2],incorrectCount:people.length-q[2],responseCount:people.length,respondentCount:people.length,answerCounts:[q[2],people.length-q[2],0,0],n:4,multi:false}});
+  const participants=people.map(function(name,i){const c=[4,3,2,1][i];return {id:'demo-player-'+i,name:name,score:[3200,2450,1700,850][i],correctCount:c,correctN:c,answeredCount:4,answeredN:4,unansweredCount:0,log:questions.map(function(q,qi){return {qi:qi,ok:qi<c,answer:qi<c?0:1}}),rank:i+1,team:i%2,placed:i+1,pts:[3200,2450,1700,850][i]}});
+  const ct=questions.reduce(function(n,q){return n+q.correctCount},0),ta=questions.length*participants.length;
+  return {id:s[0],pin:'482615',title:s[1],sourceId:'demo-economy',mode:s[2],modeName:s[3],completedAt:Date.now()-s[4]*3600000,incomplete:false,questionCount:questions.length,participantCount:participants.length,supportThreshold:60,participants:participants,questions:questions,teams:s[2]==='kingdoms'?[{k:0,name:'Фиолетовые',tiles:17,trophies:2,members:2,flags:8,correct:7},{k:1,name:'Синие',tiles:13,trophies:1,members:2,flags:5,correct:5}]:[],summary:{playedSeconds:267,participantCount:participants.length,totalAnswers:ta,totalCorrect:ct,totalIncorrect:ta-ct,accuracy:Math.round(ct/ta*100),averageScore:Math.round(participants.reduce(function(n,p){return n+p.score},0)/participants.length),unanswered:0}};
+ });
 }
-function dpLibrary(a){
- dpInit();const rows=DP_TESTS.map(t=>'<article class="dp-row"><span class="dp-icon">'+navIcon('file')+'</span><div class="dp-row-copy"><b>'+esc(t.title)+'</b><small>'+esc(t.topic)+' · '+t.questions+' вопросов · '+t.time+' сек.</small><p>'+esc(t.description)+'</p></div><button data-id="'+t.id+'" onclick="dpOpenTest(this.dataset.id)">Открыть</button></article>').join('');
- a.innerHTML=dpShell('library','Библиотека тестов','Примеры тестов похожи на библиотеку преподавателя.','<section class="dp-panel"><div class="dp-panel-head"><div><h3>Библиотека</h3><p>Демо-материалы не попадают в рабочую библиотеку.</p></div><button class="dp-primary" onclick="dpAddTest()">+ Добавить пример</button></div>'+rows+'</section>')
+function tsDefault(){
+ const folders=[{id:'demo-economics',name:'Экономика',createdAt:Date.now(),updatedAt:Date.now()},{id:'demo-it',name:'Информационные технологии',createdAt:Date.now(),updatedAt:Date.now()},{id:'demo-management',name:'Менеджмент',createdAt:Date.now(),updatedAt:Date.now()}];
+ const mk=function(title,T,qs){return {title:title,T:T,mode:'choose',dur:5,need:3,q:qs.map(function(q){return {t:q[0],a:q[1],cs:[q[2]],T:T}})}};
+ const items=[
+ {id:'demo-economy',folderId:folders[0].id,quiz:mk('Рост национальной экономики Беларуси',20,[['Что характеризует экономический рост?',['Увеличение реального объёма производства','Только рост цен','Снижение производительности','Уменьшение выпуска'],0],['Какой показатель оценивает динамику выпуска?',['Реальный валовой внутренний продукт','Только курс валюты','Число выходных','Количество видов товара'],0],['Что повышает производительность труда?',['Обновление технологий и обучение','Простой оборудования','Потеря навыков','Устаревшие процессы'],0],['Что относится к сфере услуг?',['Информационные услуги','Добыча руды','Выращивание зерна','Производство стали'],0]])},
+ {id:'demo-digital',folderId:folders[1].id,quiz:mk('Цифровая экономика',25,[['Что создаёт ценность в цифровой экономике?',['Данные и цифровые технологии','Отказ от информационных систем','Отсутствие сети','Бумажные журналы'],0],['Для чего нужны облачные сервисы?',['Для доступа к ресурсам через сеть','Для локальной печати','Для отключения резервных копий','Для замены интерфейсов'],0],['Что такое автоматизация процесса?',['Выполнение операций по заданным правилам','Увеличение ручного ввода','Отказ от учёта','Перенос задач на бумагу'],0]])},
+ {id:'demo-management',folderId:folders[2].id,quiz:mk('Менеджмент и предпринимательство',20,[['Для чего нужна сегментация рынка?',['Выделить группы клиентов со схожими потребностями','Всем предлагать один продукт','Отказаться от исследования спроса','Исключить обратную связь'],0],['Что изучает SWOT-анализ?',['Сильные и слабые стороны, возможности и угрозы','Только фонд оплаты труда','Только цену товара','Только число продаж'],0],['Как проверить спрос на услугу?',['Тестированием на целевой аудитории','Запуском без обратной связи','Отказом от исследования','Выбором цены вслепую'],0]])}
+ ];
+ const reports=tsReports(),reportDetails={};reports.forEach(function(r){reportDetails[r.id]=r});
+ return {folders:folders,items:items,reports:reports,reportDetails:reportDetails,settings:normalizeClientSettings(INFO.settings||DEFAULT_PLATFORM_SETTINGS)};
 }
-function dpOpenTest(id){dpInit();DP_TEST_ID=id;dpNav('tests')}
-function dpAddTest(){dpInit();const id='demo-'+Date.now().toString(36);DP_TESTS.push({id,title:'Новый демонстрационный тест',topic:'Новая тема',questions:1,time:20,description:'Тест для проверки редактора.',sampleQuestion:'Введите вопрос для тестирования',options:['Вариант 1','Вариант 2','Вариант 3','Вариант 4'],correct:0});DP_TEST_ID=id;dpSave();dpNav('tests')}
-function dpRefreshTestPreview(t){const card=document.querySelector('.dp-preview-card');if(!card||!t)return;const title=card.querySelector('h3'),desc=card.querySelector('p'),q=desc&&desc.nextElementSibling;if(title)title.textContent=t.title;if(desc)desc.textContent=t.description;if(q)q.textContent=t.sampleQuestion;const rows=card.querySelectorAll('.dp-option');rows.forEach((el,i)=>{el.textContent=String.fromCharCode(65+i)+'. '+String(t.options[i]||'')+(Number(t.correct)===i?' ✓':'');el.classList.toggle('correct',Number(t.correct)===i)})}
-function dpUpdateTest(k,v){const t=DP_TESTS.find(x=>x.id===DP_TEST_ID)||DP_TESTS[0];if(!t)return;if(k==='questions'||k==='time')v=Math.max(1,Math.min(240,Number(v)||1));if(k==='correct')v=Number(v);t[k]=v;dpSave();dpRefreshTestPreview(t)}
-function dpUpdateOption(i,v){const t=DP_TESTS.find(x=>x.id===DP_TEST_ID)||DP_TESTS[0];if(t){t.options[i]=v;dpSave();dpRefreshTestPreview(t)}}
-function dpTests(a){
- dpInit();const t=DP_TESTS.find(x=>x.id===DP_TEST_ID)||DP_TESTS[0];const opts=t.options.map((o,i)=>'<label class="dp-option-edit">Вариант '+String.fromCharCode(65+i)+'<input value="'+esc(o)+'" oninput="dpUpdateOption('+i+',this.value)"></label>').join('');
- const body='<section class="dp-panel"><div class="dp-panel-head"><div><h3>Редактор демонстрационного теста</h3><p>Изменения сохраняются только в локальном стенде.</p></div><button class="sec" data-v="library" onclick="dpNav(this.dataset.v)">← Библиотека</button></div><div class="dp-editor"><div class="dp-form"><label>Название теста</label><input data-k="title" value="'+esc(t.title)+'" oninput="dpUpdateTest(this.dataset.k,this.value)"><label>Тема</label><input data-k="topic" value="'+esc(t.topic)+'" oninput="dpUpdateTest(this.dataset.k,this.value)"><label>Описание</label><textarea data-k="description" oninput="dpUpdateTest(this.dataset.k,this.value)">'+esc(t.description)+'</textarea><div class="dp-fields2"><div><label>Количество вопросов</label><input type="number" data-k="questions" value="'+t.questions+'" oninput="dpUpdateTest(this.dataset.k,this.value)"></div><div><label>Время на вопрос, сек.</label><input type="number" data-k="time" value="'+t.time+'" oninput="dpUpdateTest(this.dataset.k,this.value)"></div></div><label>Пример вопроса</label><textarea data-k="sampleQuestion" oninput="dpUpdateTest(this.dataset.k,this.value)">'+esc(t.sampleQuestion)+'</textarea>'+opts+'<label>Правильный ответ</label><select data-k="correct" onchange="dpUpdateTest(this.dataset.k,this.value)">'+t.options.map((o,i)=>'<option value="'+i+'" '+(Number(t.correct)===i?'selected':'')+'>'+String.fromCharCode(65+i)+' · '+esc(o)+'</option>').join('')+'</select></div><aside class="dp-preview-card"><span class="section-kicker">ПРЕДПРОСМОТР</span><h3>'+esc(t.title)+'</h3><p>'+esc(t.description)+'</p><strong>'+esc(t.sampleQuestion)+'</strong>'+t.options.map((o,i)=>'<div class="dp-option '+(Number(t.correct)===i?'correct':'')+'">'+String.fromCharCode(65+i)+'. '+esc(o)+(Number(t.correct)===i?' ✓':'')+'</div>').join('')+'<button class="dp-primary" onclick="dpSelectMode(\'classic\')">Проверить в игре →</button></aside></div></section>';
- a.innerHTML=dpShell('tests','Редактор теста','Посмотрите, как выглядит редактирование теста, вопроса и вариантов ответа.',body)
+function tsEnsure(){
+ if(!TS_DATA){let d=null;try{d=JSON.parse(localStorage.getItem(TS_STORE)||'null')}catch(e){}TS_DATA=d&&Array.isArray(d.items)&&Array.isArray(d.folders)?d:tsDefault();if(!Array.isArray(TS_DATA.reports)||!TS_DATA.reports.length||!TS_DATA.reportDetails||!Object.keys(TS_DATA.reportDetails).length){const r=tsReports();TS_DATA.reports=r;TS_DATA.reportDetails={};r.forEach(function(x){TS_DATA.reportDetails[x.id]=x})}if(!TS_DATA.settings)TS_DATA.settings=normalizeClientSettings(INFO.settings||DEFAULT_PLATFORM_SETTINGS)}
+ TS_SETTINGS=normalizeClientSettings(TS_DATA.settings||DEFAULT_PLATFORM_SETTINGS);
+ if(!USER||USER.login!=='developer-preview')USER={id:'developer-preview-user',login:'developer-preview',name:'Анна',admin:true,role:'teacher'};
 }
-function dpReports(a){
- const rows=DP_REPORTS.map(r=>'<article class="dp-row"><span class="dp-icon report">'+navIcon('reports')+'</span><div class="dp-row-copy"><b>'+esc(r.title)+'</b><small>'+esc(r.date)+' · '+esc(r.mode)+'</small><p>'+r.players+' участников · '+r.questions+' вопросов · средний результат '+r.average+'%</p></div><button data-id="'+r.id+'" onclick="dpOpenReport(this.dataset.id)">Подробнее</button></article>').join('');
- a.innerHTML=dpShell('reports','Отчёты','Пример списка завершённых игр и статистики группы.','<section class="dp-panel"><div class="dp-panel-head"><div><h3>Отчёты об играх</h3><p>Учебные данные, не связанные с реальными участниками.</p></div><span class="dp-badge">3 ПРИМЕРА</span></div>'+rows+'</section>')
+function tsSave(){if(!TS_DATA)return;TS_DATA.settings=normalizeClientSettings(TS_SETTINGS||CLIENT_SETTINGS);try{localStorage.setItem(TS_STORE,JSON.stringify(TS_DATA))}catch(e){}}
+function dpBack(){TEACHER_SANDBOX_ACTIVE=false;if(es){try{es.close()}catch(e){}es=null}if(TS_TIMER)clearTimeout(TS_TIMER);S=null;gameRole='';USER=null;LIB=null;FOLDERS=[];editorQuiz=null;ACTIVE_REPORT=null;REPORT_LIST=null;folderDialog=null;launchModeDialog=false;view='developer-home';try{localStorage.setItem('kviz-developer-view','home')}catch(e){}render()}
+function dpSectionForView(v){if(v==='cabinet-home')return 'dashboard';if(v==='lib'||v==='edit')return 'library';if(v==='quiz-editor')return 'tests';if(v==='reports')return 'reports';if(v==='report-detail')return 'report-detail';if(v==='settings'||v==='security')return 'modes';if(v==='game')return 'game';return 'dashboard'}
+function dpNav(s){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();closeCabinetMenu();const valid=['dashboard','library','tests','reports','report-detail','modes','game'];if(!valid.includes(s))s='dashboard';try{localStorage.setItem('kviz-developer-view',s)}catch(e){}
+ if(s==='dashboard'){view='cabinet-home';render();return}
+ if(s==='library'){LIB=TS_DATA.items.map(function(x){return {id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}});FOLDERS=TS_DATA.folders.map(function(x){return Object.assign({},x,{count:TS_DATA.items.filter(function(y){return y.folderId===x.id}).length})});selectedFolderId='*';view='lib';render();return}
+ if(s==='tests'){const item=TS_DATA.items.find(function(x){return x.id===editorId})||TS_DATA.items[0];editorId=item.id;editorQuiz=JSON.parse(JSON.stringify(item.quiz));editorIsNew=false;editorFolderId=item.folderId||'';editorMsg='';view='quiz-editor';render();return}
+ if(s==='reports'){openReports();return}
+ if(s==='report-detail'){openReportDetail(TS_DATA.reports[0].id);return}
+ if(s==='modes'){openSettings();return}
+ tsCreateRoom(TS_DATA.items[0].quiz,'classic');view='game';render()
 }
-function dpOpenReport(id){DP_REPORT_ID=id;dpNav('report-detail')}
-function dpReportDetail(a){
- const r=DP_REPORTS.find(x=>x.id===DP_REPORT_ID)||DP_REPORTS[0],qs=[['Что характеризует экономический рост?',86],['Какие показатели описывают структуру экономики?',74],['Какую роль играет производительность труда?',38],['Что относится к цифровым услугам?',33]],ps=[['Иван Петров',92,1380],['Мария Соколова',86,1290],['Алексей Новик',78,1170],['Дарья Ковалёва',65,975],['Никита Орлов',42,630]];
- const body='<section class="dp-panel"><div class="dp-panel-head"><div><h3>'+esc(r.title)+'</h3><p>'+esc(r.date)+' · '+esc(r.mode)+'</p></div><button class="sec" data-v="reports" onclick="dpNav(this.dataset.v)">← Все отчёты</button></div><div class="dp-kpis"><article><span>Участники</span><b>'+r.players+'</b></article><article><span>Средний результат</span><b>'+r.average+'%</b></article><article><span>Завершили игру</span><b>'+r.completion+'%</b></article><article><span>Вопросы</span><b>'+r.questions+'</b></article></div><h3 class="dp-subtitle">Результаты участников</h3><div class="dp-table-wrap"><table class="dp-table"><thead><tr><th>Участник</th><th>Точность</th><th>Баллы</th></tr></thead><tbody>'+ps.map(p=>'<tr><td>'+p[0]+'</td><td>'+p[1]+'%</td><td>'+p[2]+'</td></tr>').join('')+'</tbody></table></div><h3 class="dp-subtitle">Где возникли трудности</h3>'+qs.map(q=>'<article class="dp-question-row"><b class="'+(q[1]<40?'low':'')+'">'+q[1]+'%</b><span>'+esc(q[0])+'</span><small>'+(q[1]<40?'Нужна помощь':'В пределах нормы')+'</small></article>').join('')+'</section>';
- a.innerHTML=dpShell('reports','Детали отчёта','Пример анализа результатов группы и выявления сложных вопросов.',body)
+function dpDashboard(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();view='cabinet-home';return teacherDashboardPage(a)}
+function dpLibrary(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();LIB=TS_DATA.items.map(function(x){return {id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}});FOLDERS=TS_DATA.folders.map(function(x){return Object.assign({},x,{count:TS_DATA.items.filter(function(y){return y.folderId===x.id}).length})});selectedFolderId='*';view='lib';return lib()}
+function dpTests(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();const item=TS_DATA.items.find(function(x){return x.id===editorId})||TS_DATA.items[0];editorId=item.id;editorQuiz=JSON.parse(JSON.stringify(item.quiz));editorIsNew=false;editorFolderId=item.folderId||'';editorMsg='';view='quiz-editor';return editorView()}
+function dpReports(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();REPORT_LIST=TS_DATA.reports.map(tsReportListItem);reportLoadError='';view='reports';return reportListPage(a)}
+function dpReportDetail(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();const r=TS_DATA.reportDetails[activeReportId]||TS_DATA.reports[0];ACTIVE_REPORT=r||null;activeReportId=r?r.id:'';view='report-detail';return reportDetailPage(a)}
+function dpModes(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();CLIENT_SETTINGS=normalizeClientSettings(TS_SETTINGS);settingsSource='demo';settingsMsg='';settingsNotice='';view='settings';return settingsPage(a)}
+function dpGame(a){TEACHER_SANDBOX_ACTIVE=true;tsEnsure();if(!S||!S.host)tsCreateRoom(TS_DATA.items[0].quiz,'classic');view='game';return S.mode==='kingdoms'&&S.state!=='lobby'?hostK(a):host(a)}
+function tsReportListItem(r){const s=r.summary||{};return {id:r.id,pin:r.pin,title:r.title,sourceId:r.sourceId,mode:r.mode,modeName:r.modeName,completedAt:r.completedAt,incomplete:!!r.incomplete,questionCount:r.questionCount,participantCount:r.participantCount,accuracy:s.accuracy,averageScore:s.averageScore}}
+function tsCreateRoom(qz,mode){
+ const q=JSON.parse(JSON.stringify(qz||TS_DATA.items[0].quiz));libraryLaunchMode=mode||'classic';quiz=q;activeQuizId=editorId||TS_DATA.items[0].id;
+ const roster=[['Анна Лебедева',0],['Илья Морозов',1],['София Климова',2],['Даниил Волков',3]];
+ const rows=roster.map(function(p,i){return {id:'demo-player-'+i,name:p[0],score:[3200,2450,1700,850][i],roundPts:0,correctN:0,answeredN:0,answered:false,ok:false,team:i%Math.max(2,Number(TS_SETTINGS.modes.kingdoms.kingdomCount)||2),placed:0,online:true,log:[]}}).slice(0,Math.max(2,Math.min(4,Number(TS_SETTINGS.general.maxPlayers)||4)));
+ const qs=(q.q||[]).map(function(x){return {t:x.t,a:(x.a||[]).map(function(v){return String(v||'')}),cs:(x.cs||[]).slice(),T:Number(x.T)||Number(q.T)||20,multi:(x.cs||[]).length>1}});
+ S={host:true,state:'lobby',mode:libraryLaunchMode,pin:'482615',title:q.title||'Демонстрационный тест',q:qs,qi:0,total:qs.length,answered:0,counts:[],correct:[],rows:rows,dur:Number(q.dur)||Number(TS_SETTINGS.modes.kingdoms.durationMinutes)||5,need:Number(q.need)||Number(TS_SETTINGS.modes.kingdoms.correctAnswersForFlag)||3,kingdomCount:Number(TS_SETTINGS.modes.kingdoms.kingdomCount)||2,lobbySettings:normalizeClientSettings(TS_SETTINGS),locked:false,round:1,winner:-1};
+ S.N=7;S.rooks=[0,6,42,48];S.board=Array(49).fill(-1);S.hot=[];S.stats=[];S.valid=[];S.me={team:0};const teams=Math.max(2,Math.min(4,S.kingdomCount)),starts=[0,6,42,48];
+ for(let i=0;i<teams;i++)S.stats.push({k:i,name:KN[i],tiles:0,trophies:0,members:rows.filter(function(p){return p.team===i}).length,flags:0,correct:0});
+ for(let i=0;i<teams;i++)S.board[starts[i]]=i;
+ S.stats.forEach(function(t){t.tiles=S.board.filter(function(v){return v===t.k}).length});S.valid=[1,7,8].filter(function(i){return S.board[i]===-1});
+ gameRole='host';pin=S.pin;me='demo-host';msg='';t0=Date.now();tEnd=Date.now()+S.dur*60000;lastKey=''
 }
-function dpSetSetting(path,value){dpInit();const a=path.split('.');let o=DP_SETTINGS;for(let i=0;i<a.length-1;i++)o=o[a[i]];const k=a[a.length-1];o[k]=typeof o[k]==='boolean'?!!value:Number.isFinite(Number(o[k]))?Number(value):value;DP_NOTICE='Есть несохранённые изменения в демо.'}
-function dpSaveSettings(){dpSave();DP_NOTICE='Настройки демо сохранены в браузере. Рабочая платформа не изменена.';render()}
-function dpResetSettings(){DP_SETTINGS=normalizeClientSettings(INFO.settings||DEFAULT_PLATFORM_SETTINGS);DP_CUSTOM=[];try{localStorage.removeItem('kviz-dev-preview-settings');localStorage.removeItem('kviz-dev-preview-custom')}catch(e){}DP_NOTICE='Настройки сброшены к текущей конфигурации платформы.';render()}
-function dpAddMode(){dpInit();DP_CUSTOM.push({id:'proto-'+Date.now().toString(36),name:'Новый режим-прототип',description:'Описание механики',durationMinutes:5,basePoints:1000});dpSave();DP_NOTICE='Добавлен прототип в локальный стенд.';render()}
-function dpUpdateMode(id,k,v){const m=DP_CUSTOM.find(x=>x.id===id);if(!m)return;m[k]=(k==='durationMinutes'||k==='basePoints')?Number(v):v;dpSave()}
-function dpDeleteMode(id){DP_CUSTOM=DP_CUSTOM.filter(x=>x.id!==id);dpSave();DP_NOTICE='Прототип удалён из стенда.';render()}
-function dpModes(a){
- dpInit();const s=DP_SETTINGS;
- const custom=DP_CUSTOM.map(m=>'<article class="dp-mode-card"><div class="dp-panel-head"><b>Режим-прототип</b><button class="sec" data-id="'+m.id+'" onclick="dpDeleteMode(this.dataset.id)">Удалить</button></div><label>Название</label><input value="'+esc(m.name)+'" data-id="'+m.id+'" data-k="name" oninput="dpUpdateMode(this.dataset.id,this.dataset.k,this.value)"><label>Описание механики</label><textarea data-id="'+m.id+'" data-k="description" oninput="dpUpdateMode(this.dataset.id,this.dataset.k,this.value)">'+esc(m.description)+'</textarea><div class="dp-fields2"><div><label>Минуты</label><input type="number" value="'+m.durationMinutes+'" data-id="'+m.id+'" data-k="durationMinutes" oninput="dpUpdateMode(this.dataset.id,this.dataset.k,this.value)"></div><div><label>Базовые баллы</label><input type="number" value="'+m.basePoints+'" data-id="'+m.id+'" data-k="basePoints" oninput="dpUpdateMode(this.dataset.id,this.dataset.k,this.value)"></div></div><button class="dp-primary" data-id="'+m.id+'" onclick="dpSelectMode(this.dataset.id)">Запустить прототип →</button></article>').join('');
- const body='<section class="dp-panel"><div class="dp-panel-head"><div><h3>Параметры платформы</h3><p>Исходные значения загружены из текущей конфигурации; правки здесь изолированы.</p></div><span class="dp-badge">SANDBOX</span></div><div class="dp-settings-grid"><article><h4>Общие настройки</h4><label>Время вопроса, сек.</label><input type="number" data-path="general.defaultQuestionTime" value="'+s.general.defaultQuestionTime+'" oninput="dpSetSetting(this.dataset.path,this.value)"><label>Максимум участников</label><input type="number" data-path="general.maxPlayers" value="'+s.general.maxPlayers+'" oninput="dpSetSetting(this.dataset.path,this.value)"><label>Порог поддержки, %</label><input type="number" data-path="general.supportThreshold" value="'+s.general.supportThreshold+'" oninput="dpSetSetting(this.dataset.path,this.value)"><label class="dp-check"><input type="checkbox" data-path="general.autoOpenReports" '+(s.general.autoOpenReports?'checked':'')+' onchange="dpSetSetting(this.dataset.path,this.checked)"> Автоматически открывать отчёты</label><label class="dp-check"><input type="checkbox" data-path="general.showCorrectAnswerAfterQuestion" '+(s.general.showCorrectAnswerAfterQuestion?'checked':'')+' onchange="dpSetSetting(this.dataset.path,this.checked)"> Показывать правильный ответ</label></article><article><h4>Классическая викторина</h4><label class="dp-check"><input type="checkbox" data-path="modes.classic.enabled" '+(s.modes.classic.enabled?'checked':'')+' onchange="dpSetSetting(this.dataset.path,this.checked)"> Режим доступен</label><label>Базовые баллы</label><input type="number" data-path="modes.classic.basePoints" value="'+s.modes.classic.basePoints+'" oninput="dpSetSetting(this.dataset.path,this.value)"><label class="dp-check"><input type="checkbox" data-path="modes.classic.speedBonus" '+(s.modes.classic.speedBonus?'checked':'')+' onchange="dpSetSetting(this.dataset.path,this.checked)"> Бонус за скорость</label><button class="dp-primary" onclick="dpSelectMode(\'classic\')">Проверить режим →</button></article><article><h4>Color Kingdoms</h4><label class="dp-check"><input type="checkbox" data-path="modes.kingdoms.enabled" '+(s.modes.kingdoms.enabled?'checked':'')+' onchange="dpSetSetting(this.dataset.path,this.checked)"> Режим доступен</label><label>Длительность, минут</label><input type="number" data-path="modes.kingdoms.durationMinutes" value="'+s.modes.kingdoms.durationMinutes+'" oninput="dpSetSetting(this.dataset.path,this.value)"><label>Верных ответов для флага</label><input type="number" data-path="modes.kingdoms.correctAnswersForFlag" value="'+s.modes.kingdoms.correctAnswersForFlag+'" oninput="dpSetSetting(this.dataset.path,this.value)"><label>Количество королевств</label><input type="number" data-path="modes.kingdoms.kingdomCount" value="'+s.modes.kingdoms.kingdomCount+'" oninput="dpSetSetting(this.dataset.path,this.value)"><button class="dp-primary" onclick="dpSelectMode(\'kingdoms\')">Проверить режим →</button></article></div><div class="dp-actions"><button class="dp-primary" onclick="dpSaveSettings()">Сохранить настройки демо</button><button class="sec" onclick="dpResetSettings()">Сбросить</button><button class="sec" onclick="dpAddMode()">+ Добавить прототип режима</button></div><p class="dp-helper">Прототип можно описать и запустить в симуляции. Чтобы он стал настоящим игровым режимом, механику нужно реализовать в коде приложения и сервера.</p></section><section class="dp-custom-grid">'+custom+'</section>';
- a.innerHTML=dpShell('modes','Режимы игры','Меняйте тестовые параметры, добавляйте прототипы и проверяйте игровой сценарий.',body)
+function tsCreateReport(){
+ if(!TEACHER_SANDBOX_ACTIVE||!S||!S.host)return null;
+ const ps=S.rows.map(function(p,i){const logs=p.log||[],answered=logs.length,correct=logs.filter(function(x){return x.ok}).length;return {id:p.id,name:p.name,score:Number(p.score)||0,correctCount:correct,correctN:correct,answeredCount:answered,answeredN:answered,unansweredCount:Math.max(0,S.q.length-answered),log:logs,rank:i+1,team:p.team||0,placed:p.placed||0,pts:p.score||0}});
+ const qs=S.q.map(function(q,i){const logs=ps.map(function(p){return (p.log||[]).find(function(x){return Number(x.qi)===i})}).filter(Boolean),correctCount=logs.filter(function(x){return x.ok}).length;return {index:i+1,t:q.t,a:q.a,correct:q.cs||[],correctCount:correctCount,incorrectCount:logs.length-correctCount,responseCount:logs.length,respondentCount:logs.length,answerCounts:[correctCount,logs.length-correctCount,0,0],n:q.a.length,multi:!!q.multi}});
+ const ct=ps.reduce(function(n,p){return n+p.correctCount},0),ta=qs.reduce(function(n,q){return n+q.responseCount},0),mode=S.mode==='kingdoms'?'kingdoms':'classic',id='report-demo-game-'+Date.now().toString(36);
+ const r={id:id,pin:S.pin,title:S.title,sourceId:activeQuizId,mode:mode,modeName:mode==='kingdoms'?'Color Kingdoms':'Classic',completedAt:Date.now(),incomplete:false,questionCount:qs.length,participantCount:ps.length,supportThreshold:Number(TS_SETTINGS.general.supportThreshold)||60,participants:ps,questions:qs,teams:mode==='kingdoms'?S.stats.map(function(t){return Object.assign({},t)}):[],summary:{playedSeconds:Math.max(1,Math.round((Date.now()-t0)/1000)),participantCount:ps.length,totalAnswers:ta,totalCorrect:ct,totalIncorrect:Math.max(0,ta-ct),accuracy:reportSuccessPercent(ct,ta),averageScore:ps.length?Math.round(ps.reduce(function(n,p){return n+p.score},0)/ps.length):0,unanswered:ps.reduce(function(n,p){return n+p.unansweredCount},0)}};
+ TS_DATA.reports.unshift(r);TS_DATA.reportDetails[id]=r;tsSave();autoReportSeen='';return r
 }
-function dpResetGame(){DP_GAME={stage:'lobby',question:0,selected:-1,score:0,answers:[],captures:0};DP_NOTICE='';dpNav('game')}
-function dpSelectMode(id){DP_MODE=id;dpResetGame()}
-function dpStartGame(){DP_GAME={stage:DP_MODE==='kingdoms'?'board':'question',question:0,selected:-1,score:0,answers:[],captures:0};DP_NOTICE='';render()}
-function dpChooseAnswer(i){DP_GAME.selected=i;render()}
-function dpSubmitAnswer(){const g=DP_GAME,q=DP_QUESTIONS[g.question]||DP_QUESTIONS[0];if(g.selected<0){DP_NOTICE='Выберите вариант ответа.';return render()}g.lastCorrect=g.selected===q.c;g.answers.push({question:q.q,selected:g.selected,correct:g.lastCorrect});if(g.lastCorrect)g.score+=Number(DP_SETTINGS.modes.classic.basePoints)||1000;g.stage='answer-result';render()}
-function dpNextQuestion(){const g=DP_GAME;if(g.stage!=='answer-result'){g.stage='final';DP_NOTICE='';return render()}if(g.question+1>=DP_QUESTIONS.length){g.stage='final';return render()}g.question++;g.selected=-1;g.stage='question';render()}
-function dpCapture(i){DP_GAME.captures++;DP_GAME.lastTile=i;DP_NOTICE='Клетка '+(i+1)+' захвачена в демо.';render()}
-function dpGame(a){
- dpInit();const custom=DP_CUSTOM.find(x=>x.id===DP_MODE),mode=DP_MODE==='kingdoms'?'Color Kingdoms':custom?custom.name:'Классическая викторина';
- const modes=[{id:'classic',name:'Классика',enabled:DP_SETTINGS.modes.classic.enabled},{id:'kingdoms',name:'Color Kingdoms',enabled:DP_SETTINGS.modes.kingdoms.enabled}].concat(DP_CUSTOM.map(m=>({id:m.id,name:m.name,enabled:true})));
- const picker='<div class="dp-mode-picker">'+modes.map(m=>'<button class="'+(DP_MODE===m.id?'active':'')+'" '+(m.enabled?'':'disabled')+' data-mode="'+m.id+'" onclick="dpSelectMode(this.dataset.mode)">'+esc(m.name)+'</button>').join('')+'</div>';
- const g=DP_GAME;let scene='';
- if(g.stage==='lobby'){
- scene='<section class="dp-game-layout"><div><div class="dp-game-title"><span class="section-kicker">ДЕМО · '+esc(mode.toUpperCase())+'</span><h2>'+(DP_MODE==='kingdoms'?'Арена королевств':'Готовы к викторине?')+'</h2><p>Тестовый цикл ведущего, участников и итогов без реального запуска комнаты.</p></div><div class="dp-pin"><span>PIN-КОД ДЕМО-КОМНАТЫ</span><b>482 615</b><small>Не создаёт реальную комнату.</small></div><button class="dp-primary" onclick="dpStartGame()">Запустить демо-игру →</button></div><aside class="dp-players"><h3>Участники <span>4</span></h3>'+[['Анна Лебедева','AL'],['Илья Морозов','IM'],['София Климова','SK'],['Даниил Волков','DV']].map((p,i)=>'<div class="dp-player"><i class="c'+i+'">'+p[1]+'</i><span>'+p[0]+'</span><small>Готов</small></div>').join('')+'</aside></section>';
- }else if(g.stage==='question'||g.stage==='answer-result'){
- const q=DP_QUESTIONS[g.question]||DP_QUESTIONS[0];
- scene='<section class="dp-game-layout"><div><div class="dp-game-meta"><span>ВОПРОС '+(g.question+1)+' ИЗ '+DP_QUESTIONS.length+'</span><span>'+DP_SETTINGS.general.defaultQuestionTime+' сек.</span><span>'+esc(mode)+'</span></div><div class="dp-question"><h2>'+esc(q.q)+'</h2><div class="dp-answers">'+q.o.map((o,i)=>'<button class="'+(g.selected===i?'selected ':'')+(g.stage==='answer-result'&&i===q.c?'right':'')+'" onclick="dpChooseAnswer('+i+')" '+(g.stage==='answer-result'?'disabled':'')+'><b>'+String.fromCharCode(65+i)+'</b>'+esc(o)+'</button>').join('')+'</div>'+(g.stage==='answer-result'?'<p class="dp-answer-feedback '+(g.lastCorrect?'good':'bad')+'">'+(g.lastCorrect?'Верно!':'Неверно.')+' Правильный ответ: '+esc(q.o[q.c])+'</p>':'<button class="dp-primary" onclick="dpSubmitAnswer()">Ответить</button>')+'</div></div><aside class="dp-players"><h3>Рейтинг участников</h3>'+[['Анна Лебедева',1250],['Илья Морозов',980],['София Климова',820],['Даниил Волков',600]].map((p,i)=>'<div class="dp-score-row"><span>'+(i+1)+'</span>'+p[0]+'<b>'+(p[1]+(g.lastCorrect&&i===0?g.score:0))+'</b></div>').join('')+'</aside></section><div class="dp-game-bottom"><span>Тестовый счёт: <b>'+g.score+'</b></span><button class="sec" onclick="dpNextQuestion()">'+(g.stage==='answer-result'?(g.question+1>=DP_QUESTIONS.length?'Показать итоги':'Следующий вопрос'):'Завершить демо')+'</button></div>';
- }else if(g.stage==='board'){
- const tiles=Array.from({length:25},(_,i)=>'<button class="dp-tile t'+((i+g.captures)%4)+' '+(g.lastTile===i?'captured':'')+'" onclick="dpCapture('+i+')">'+(g.lastTile===i?'⚑':i%5===0?'♜':'')+'</button>').join('');
- scene='<section class="dp-game-layout"><div><div class="dp-game-title"><span class="section-kicker">COLOR KINGDOMS · ДЕМО</span><h2>Арена королевств</h2><p>Нажимайте на клетки, чтобы проверить экран захвата территории.</p></div><div class="dp-board">'+tiles+'</div><div class="dp-game-bottom">Захвачено клеток: <b>'+g.captures+'</b><button class="sec" onclick="dpResetGame()">В лобби</button></div></div><aside class="dp-players"><h3>Команды</h3><div class="dp-score-row">Фиолетовые<b>'+(5+g.captures)+'</b></div><div class="dp-score-row">Синие<b>5</b></div><div class="dp-score-row">Розовые<b>5</b></div><div class="dp-score-row">Зелёные<b>5</b></div><button class="dp-primary" onclick="DP_GAME.stage=\'final\';render()">Завершить матч</button></aside></section>';
- }else{
- scene='<section class="dp-final"><span class="section-kicker">ДЕМО ЗАВЕРШЕНО</span><h2>Результаты игры</h2><strong>'+g.score+' баллов</strong><p>Верных ответов: '+g.answers.filter(x=>x.correct).length+' из '+g.answers.length+'</p><div class="dp-stats"><article><span>Участников</span><b>4</b></article><article><span>Вопросов</span><b>'+g.answers.length+'</b></article><article><span>Захвачено клеток</span><b>'+g.captures+'</b></article></div><button class="dp-primary" onclick="dpResetGame()">Запустить заново</button><button class="sec" data-v="reports" onclick="dpNav(this.dataset.v)">Открыть пример отчёта</button></section>';
+function tsAdvance(){if(!TEACHER_SANDBOX_ACTIVE||!S||S.mode!=='classic'||S.state!=='results')return;if(S.qi+1>=S.q.length){S.state='final';const r=tsCreateReport();S.reportId=r?r.id:'';render();return}S.qi++;S.state='question';S.answered=0;S.counts=[];S.correct=[];S.rows.forEach(function(p){p.answered=false;p.ok=false;p.roundPts=0});t0=Date.now();render()}
+function dpApi(path,o){
+ o=o||{};
+ if(path==='action'){
+  const type=o.type;if(!S)return {error:'Демонстрационная игра не создана'};
+  if(type==='start'){S.state=S.mode==='kingdoms'?'playing':'question';S.qi=0;S.total=S.q.length;S.answered=0;S.correct=[];S.counts=[];S.rows.forEach(function(p){p.answered=false;p.ok=false;p.roundPts=0});t0=Date.now();tEnd=Date.now()+S.dur*60000;render();return {ok:true}}
+  if(type==='skip'){if(S.mode==='kingdoms'){S.state='final';S.winner=0;S.roundWinReason='territory';S.roundWinner=0;const r=tsCreateReport();S.reportId=r?r.id:'';render();return {ok:true}}
+   const q=S.q[S.qi]||S.q[0],correct=q.cs||[0];S.correct=correct;S.counts=(q.a||[]).map(function(_,i){return i===correct[0]?3:1});
+   S.rows.forEach(function(p,i){const ok=i<S.rows.length-1;p.ok=ok;p.roundPts=ok?Math.max(100,1000-S.qi*100):0;if(ok)p.score=(Number(p.score)||0)+p.roundPts;p.correctN=(Number(p.correctN)||0)+(ok?1:0);p.answeredN=(Number(p.answeredN)||0)+1;p.answered=true;p.log=p.log||[];p.log.push({qi:S.qi,ok:ok,answer:ok?correct[0]:((correct[0]+1)%(q.a.length||1))})});
+   S.answered=S.rows.length;S.state='results';S.top=S.rows.slice().sort(function(a,b){return b.score-a.score}).map(function(p){return {name:p.name,score:p.score,roundPts:p.roundPts}});S.resultEndsAt=Date.now()+2800;render();if(TS_TIMER)clearTimeout(TS_TIMER);TS_TIMER=setTimeout(tsAdvance,2850);return {ok:true}}
+  if(type==='place'){const tile=Number(o.tile);if(Number.isInteger(tile)&&tile>=0&&tile<S.board.length&&S.board[tile]===-1){S.board[tile]=Number(S.me&&S.me.team)||0;const st=S.stats.find(function(t){return t.k===S.board[tile]});if(st){st.tiles++;st.flags++}S.rows.forEach(function(p){if(p.team===S.board[tile])p.placed=(Number(p.placed)||0)+1});S.valid=[tile-1,tile+1,tile-S.N,tile+S.N].filter(function(v){return v>=0&&v<S.board.length&&S.board[v]===-1});S.banner={team:S.board[tile],n:Date.now(),age:0};render()}return {ok:true}}
+  if(type==='lock'){S.locked=!S.locked;render();return {ok:true}}
+  if(type==='kick'){const id=String(o.a||''),p=S.rows.find(function(x){return String(x.id)===id});S.rows=S.rows.filter(function(x){return String(x.id)!==id});render();return {removed:p?{id:p.id}:null}}
+  if(type==='end'){S.state='final';S.winner=0;S.roundWinReason='territory';S.roundWinner=0;const r=tsCreateReport();S.reportId=r?r.id:'';render();return {ok:true}}
+  return {ok:true}
  }
- a.innerHTML=dpShell('game','Игровой стенд','Выберите игровой режим и пройдите демонстрационный цикл.','<section class="dp-panel"><div class="dp-panel-head"><div><h3>Симуляция игры</h3><p>Лобби, ответы, поле Color Kingdoms и экран итогов.</p></div><span class="dp-badge">НЕ ВЛИЯЕТ НА LIVE</span></div>'+picker+scene+'</section>')
+ if(path==='report')return {title:S&&S.title||'',mode:S&&S.mode||'classic',playedSeconds:Math.max(1,Math.round((Date.now()-t0)/1000)),questions:S&&S.q||[],players:S&&S.rows||[],teams:S&&S.stats||[]};
+ if(path==='join')return {error:'Это демонстрационная игровая комната. Подключение реальных участников отключено.'};
+ return {ok:true,preview:true}
+}
+async function dpCapi(path,o){
+ tsEnsure();o=o||{};
+ if(path==='lib/list')return {folders:TS_DATA.folders.map(function(f){return Object.assign({},f,{count:TS_DATA.items.filter(function(q){return q.folderId===f.id}).length})}),items:TS_DATA.items.map(function(x){return {id:x.id,title:x.quiz.title,n:x.quiz.q.length,mode:x.quiz.mode,folderId:x.folderId||'',builtin:true,source:'builtin'}})};
+ if(path==='lib/get'){const x=TS_DATA.items.find(function(q){return q.id===o.id});return x?{quiz:JSON.parse(JSON.stringify(x.quiz)),folderId:x.folderId||'',builtin:true}:{error:'Тест не найден',code:404}}
+ if(path==='lib/export')return {app:'kviz-arena',version:3,folders:TS_DATA.folders,items:TS_DATA.items.map(function(x){return {id:x.id,quiz:x.quiz,folderId:x.folderId||''}})};
+ if(path==='lib/create'){const x={id:'demo-test-'+Date.now().toString(36),quiz:JSON.parse(JSON.stringify(o.quiz||{})),folderId:o.folderId||''};TS_DATA.items.push(x);tsSave();return {ok:true,created:true,id:x.id,persistedToGitHub:false,preview:true}}
+ if(path==='lib/update'){const x=TS_DATA.items.find(function(q){return q.id===o.id});if(!x)return {error:'Тест не найден'};x.quiz=JSON.parse(JSON.stringify(o.quiz||x.quiz));tsSave();return {ok:true,updated:true,id:x.id,persistedToGitHub:false,preview:true}}
+ if(path==='lib/copy'){const x=TS_DATA.items.find(function(q){return q.id===o.id});if(!x)return {error:'Тест не найден'};const cp={id:'demo-test-'+Date.now().toString(36),quiz:JSON.parse(JSON.stringify(x.quiz)),folderId:x.folderId||''};cp.quiz.title=(cp.quiz.title||'Тест')+' — копия';TS_DATA.items.push(cp);tsSave();return {ok:true,created:true,id:cp.id,persistedToGitHub:false,preview:true}}
+ if(path==='lib/delete'){const n=TS_DATA.items.length;TS_DATA.items=TS_DATA.items.filter(function(q){return q.id!==o.id});tsSave();return {ok:TS_DATA.items.length<n,removed:TS_DATA.items.length<n,persistedToGitHub:false,preview:true}}
+ if(path==='lib/import'){const incoming=Array.isArray(o.tests)?o.tests:[];incoming.forEach(function(q){if(q&&q.quiz)TS_DATA.items.push({id:'demo-test-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),quiz:q.quiz,folderId:q.folderId||''})});tsSave();return {ok:true,added:incoming.length,persistedToGitHub:false,preview:true}}
+ if(path==='lib/folders/create'){const id='demo-folder-'+Date.now().toString(36);TS_DATA.folders.push({id:id,name:String(o.name||'Новая папка'),createdAt:Date.now(),updatedAt:Date.now()});tsSave();return {ok:true,id:id,persistedToGitHub:false,preview:true}}
+ if(path==='lib/folders/update'){const f=TS_DATA.folders.find(function(x){return x.id===o.id});if(!f)return {error:'Папка не найдена'};f.name=String(o.name||f.name);f.updatedAt=Date.now();tsSave();return {ok:true,id:f.id,persistedToGitHub:false,preview:true}}
+ if(path==='lib/folders/delete'){TS_DATA.folders=TS_DATA.folders.filter(function(f){return f.id!==o.id});TS_DATA.items.forEach(function(x){if(x.folderId===o.id)x.folderId=''});tsSave();return {ok:true,persistedToGitHub:false,preview:true}}
+ if(path==='lib/move'){const x=TS_DATA.items.find(function(q){return q.id===o.id});if(!x)return {error:'Тест не найден'};x.folderId=o.folderId||'';tsSave();return {ok:true,persistedToGitHub:false,preview:true}}
+ if(path==='lib/reorder'){const ids=Array.isArray(o.ids)?o.ids:[];TS_DATA.items.sort(function(a,b){return ids.indexOf(a.id)-ids.indexOf(b.id)});tsSave();return {ok:true,persistedToGitHub:false,preview:true}}
+ if(path==='settings/get')return {settings:normalizeClientSettings(TS_SETTINGS),persistedToGitHub:false,source:'demo',notice:'Настройки доступны только в тестовой среде.'};
+ if(path==='settings/save'){TS_SETTINGS=normalizeClientSettings(o.settings);TS_DATA.settings=TS_SETTINGS;tsSave();return {settings:TS_SETTINGS,persistedToGitHub:false,source:'demo',preview:true}}
+ if(path==='create'){TEACHER_SANDBOX_PENDING_QUIZ=JSON.parse(JSON.stringify(o.quiz||{}));libraryLaunchMode=o.mode||'classic';return {pin:'482615',id:'demo-host-session',demo:true}}
+ if(path==='reports/list')return {items:TS_DATA.reports.map(tsReportListItem),storage:{source:'demo'}};
+ if(path==='reports/get'){const r=TS_DATA.reportDetails[o.reportId];return r?{report:r}:{error:'Отчёт не найден'}}
+ if(path==='reports/delete'){const ids=new Set(Array.isArray(o.ids)?o.ids:[]);TS_DATA.reports=TS_DATA.reports.filter(function(r){return !ids.has(r.id)});ids.forEach(function(id){delete TS_DATA.reportDetails[id]});tsSave();return {ok:true,preview:true}}
+ if(path==='reports/export'){const ids=new Set(Array.isArray(o.ids)?o.ids:[]);return {reports:TS_DATA.reports.filter(function(r){return ids.has(r.id)})}}
+ if(path==='auth/2fa/status')return {enabled:false};
+ return {ok:true,preview:true}
 }
 
 function developerHeader(){
- return `<header class="app-topbar dashboard-topbar site-app-topbar developer-topbar"><a class="brand-lockup" href="/" aria-label="Квиз-арена — на главную"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">Кабинет разработчика</span><span class="app-release-badge"><span class="app-release-dot" aria-hidden="true"></span>BETA · v${esc(DEVELOPER_INFO.version||INFO.version||'1.16.27')}</span></div></a><div class="developer-topbar-right"><span class="developer-role-chip">РАЗРАБОТЧИК</span><a class="developer-home-link" href="/">На главную ↗</a></div></header>`;
+ return `<header class="app-topbar dashboard-topbar site-app-topbar developer-topbar"><a class="brand-lockup" href="/" aria-label="Квиз-арена — на главную"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">Кабинет разработчика</span><span class="app-release-badge"><span class="app-release-dot" aria-hidden="true"></span>BETA · v${esc(DEVELOPER_INFO.version||INFO.version||'1.16.28')}</span></div></a><div class="developer-topbar-right"><span class="developer-role-chip">РАЗРАБОТЧИК</span><a class="developer-home-link" href="/">На главную ↗</a></div></header>`;
 }
 function developerLoginPage(a){
  document.title='Квиз-арена — Кабинет разработчика';
@@ -320,7 +372,7 @@ async function submitDeveloperLogin(){
  DEVELOPER_BUSY=false;
  if(result.error){DEVELOPER_MSG=result.error;return render()}
  DEVELOPER_TOKEN=String(result.token||'');DEVELOPER_USER=result.user||null;
- DEVELOPER_INFO={version:result.version||INFO.version||'1.16.27',status:result.status||'online'};
+ DEVELOPER_INFO={version:result.version||INFO.version||'1.16.28',status:result.status||'online'};
  DEVELOPER_FORM={login:'',password:''};DEVELOPER_MSG='';
  try{localStorage.setItem('kviz-developer-token',DEVELOPER_TOKEN)}catch(e){}
  view='developer-home';render();
@@ -335,7 +387,7 @@ async function developerLogout(){
 function developerDashboardPage(a){
  const login=DEVELOPER_USER&&DEVELOPER_USER.login||'developer';
  document.title='Квиз-арена — Кабинет разработчика';
- a.innerHTML=`${developerHeader()}<main class="developer-page developer-dashboard-page"><section class="developer-dashboard-heading"><span class="section-kicker">ТЕХНИЧЕСКИЙ РАЗДЕЛ</span><h1 class="page-title">Кабинет разработчика<span class="title-period">.</span></h1><p class="page-subtitle">Центр управления разработкой и публикацией «Квиз-арены».</p></section><section class="developer-status-strip"><div class="developer-status-indicator"><span class="secure-dot"></span><span>Авторизация подтверждена</span></div><div class="developer-status-meta"><span>Версия</span><strong>v${esc(DEVELOPER_INFO.version||INFO.version||'1.16.27')}</strong></div><div class="developer-status-meta"><span>Сервис</span><strong>${esc(DEVELOPER_INFO.status==='online'?'Работает':'Статус неизвестен')}</strong></div><div class="developer-status-user"><span class="developer-user-avatar">D</span><span><b>${esc(login)}</b><small>Разработчик</small></span></div><button type="button" class="sec developer-logout-button" onclick="developerLogout()">Выйти</button></section><section class="dp-launch"><div class="dp-launch-icon">⌘</div><div><span class="section-kicker">ТЕСТОВАЯ СРЕДА</span><h2>Предпросмотр кабинета преподавателя</h2><p>Библиотека, редактор, отчёты, режимы и игровой стенд с демо-данными.</p></div><button class="dp-primary" data-v="dashboard" onclick="dpNav(this.dataset.v)">Открыть стенд →</button></section><section class="developer-tool-grid" aria-label="Инструменты разработчика"><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-github">${navIcon('file')}</span><span><strong>Исходный код</strong><small>Репозиторий, файлы и коммиты проекта</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena/commits/main" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-history">${navIcon('reports')}</span><span><strong>История обновлений</strong><small>Изменения версий и журнал коммитов</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://dashboard.render.com/web/srv-dbd5j9vavr4c73cggg40" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-render">${navIcon('settings')}</span><span><strong>Публикация Render</strong><small>Развёртывания, журналы и параметры сервиса</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://bntu-max.onrender.com/" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-site">${navIcon('home')}</span><span><strong>Рабочий сайт</strong><small>Открыть опубликованную платформу</small></span><span class="developer-tool-arrow">↗</span></a></section><section class="developer-boundary-note"><strong>Разделение доступа</strong><p>Кабинет разработчика использует отдельный логин, пароль и сессию. Он не входит в систему аккаунтов преподавателей и не подменяет её права доступа.</p></section><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a></footer></main>`;
+ a.innerHTML=`${developerHeader()}<main class="developer-page developer-dashboard-page"><section class="developer-dashboard-heading"><span class="section-kicker">ТЕХНИЧЕСКИЙ РАЗДЕЛ</span><h1 class="page-title">Кабинет разработчика<span class="title-period">.</span></h1><p class="page-subtitle">Центр управления разработкой и публикацией «Квиз-арены».</p></section><section class="developer-status-strip"><div class="developer-status-indicator"><span class="secure-dot"></span><span>Авторизация подтверждена</span></div><div class="developer-status-meta"><span>Версия</span><strong>v${esc(DEVELOPER_INFO.version||INFO.version||'1.16.28')}</strong></div><div class="developer-status-meta"><span>Сервис</span><strong>${esc(DEVELOPER_INFO.status==='online'?'Работает':'Статус неизвестен')}</strong></div><div class="developer-status-user"><span class="developer-user-avatar">D</span><span><b>${esc(login)}</b><small>Разработчик</small></span></div><button type="button" class="sec developer-logout-button" onclick="developerLogout()">Выйти</button></section><section class="dp-launch"><div class="dp-launch-icon">⌘</div><div><span class="section-kicker">ТЕСТОВАЯ СРЕДА</span><h2>Предпросмотр кабинета преподавателя</h2><p>Библиотека, редактор, отчёты, режимы и игровой стенд с демо-данными.</p></div><button class="dp-primary" data-v="dashboard" onclick="dpNav(this.dataset.v)">Открыть стенд →</button></section><section class="developer-tool-grid" aria-label="Инструменты разработчика"><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-github">${navIcon('file')}</span><span><strong>Исходный код</strong><small>Репозиторий, файлы и коммиты проекта</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena/commits/main" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-history">${navIcon('reports')}</span><span><strong>История обновлений</strong><small>Изменения версий и журнал коммитов</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://dashboard.render.com/web/srv-dbd5j9vavr4c73cggg40" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-render">${navIcon('settings')}</span><span><strong>Публикация Render</strong><small>Развёртывания, журналы и параметры сервиса</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://bntu-max.onrender.com/" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-site">${navIcon('home')}</span><span><strong>Рабочий сайт</strong><small>Открыть опубликованную платформу</small></span><span class="developer-tool-arrow">↗</span></a></section><section class="developer-boundary-note"><strong>Разделение доступа</strong><p>Кабинет разработчика использует отдельный логин, пароль и сессию. Он не входит в систему аккаунтов преподавателей и не подменяет её права доступа.</p></section><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a></footer></main>`;
 }
 async function openSecurity(){
  if(!USER)return goAuth();
@@ -451,7 +503,7 @@ async function leave(){
 }
 async function endGame(){
  if(!confirm('Завершить игру для всех игроков?'))return;
- await act('end');clearSess();if(es)es.close();location.reload();
+ await act('end');if(TEACHER_SANDBOX_ACTIVE)return;clearSess();if(es)es.close();location.reload();
 }
 const kickRequestsInFlight=new Set();
 async function kick(id){
@@ -586,6 +638,7 @@ async function finishLibraryMutation(r,description){
  captureCurrentNavigationSnapshot();
  if(r.error){libMsg=r.error;libInfo='';view='lib';await refreshLibrary();render();return}
  libMsg='';
+ if(TEACHER_SANDBOX_ACTIVE){libInfo=description+' Сохранено только в тестовом стенде разработчика.';view='lib';editorQuiz=null;editorId='';editorIsNew=false;editorFolderId='';await refreshLibrary();render();return}
  if(r.persistedToGitHub){libInfo=description+' Изменения автоматически записаны в библиотеку проекта в GitHub.'}
  else{
   const backup=await capi('lib/export',{});if(!backup.error)dl('builtin-tests.json',JSON.stringify(backup,null,2));
@@ -698,7 +751,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.16.27')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.16.28')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -724,7 +777,7 @@ function cabinetMenu(active){
  ${settingsHtml()}
  </div></div>`;
 }
-function cabinetHeader(active,subtitle){return `<header class="app-topbar dashboard-topbar site-app-topbar">${brandMarkup(subtitle||tr('Кабинет преподавателя'))}<div class="site-header-controls">${siteHistoryButtons()}${cabinetMenu(active)}</div></header>`}
+function cabinetHeader(active,subtitle){return `<header class="app-topbar dashboard-topbar site-app-topbar">${brandMarkup(subtitle||tr('Кабинет преподавателя'))}<div class="site-header-controls">${TEACHER_SANDBOX_ACTIVE?'<button type="button" class="teacher-sandbox-exit" onclick="dpBack()" title="Вернуться в кабинет разработчика">Предпросмотр · выйти</button>':''}${siteHistoryButtons()}${cabinetMenu(active)}</div></header>`}
 function captureCurrentNavigationSnapshot(){const entry=makeSiteNavEntry();if(entry&&siteNavIndex>=0&&siteNavHistory[siteNavIndex])siteNavHistory[siteNavIndex]=entry}
 function toggleCabinetMenu(e){if(e)e.stopPropagation();cabinetMenuToggled=!cabinetMenuToggled;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.toggle('is-open',cabinetMenuToggled);if(btn)btn.setAttribute('aria-expanded',String(cabinetMenuToggled))}
 function closeCabinetMenu(){if(cabinetMenuHoverTimer){clearTimeout(cabinetMenuHoverTimer);cabinetMenuHoverTimer=null}cabinetMenuToggled=false;const wrap=$('cabinet-menu-wrap'),btn=$('cabinet-menu-trigger');if(wrap)wrap.classList.remove('is-open');if(btn)btn.setAttribute('aria-expanded','false')}
@@ -785,6 +838,7 @@ async function openSettings(){
 function saveSettingsField(id,value){const map={defaultQuestionTime:['general','defaultQuestionTime','general'],maxPlayers:['general','maxPlayers','general'],supportThreshold:['general','supportThreshold','general'],classicBasePoints:['classic','basePoints','mode'],kingdomsDuration:['kingdoms','durationMinutes','mode'],kingdomsFlagNeed:['kingdoms','correctAnswersForFlag','mode'],kingdomsCount:['kingdoms','kingdomCount','mode']};const x=map[id];if(!x)return;changeSetting(x[0],x[1],Number(value),x[2]);}
 function defaultSettingsForm(){CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));settingsMsg=tr('Значения сброшены в форме. Нажмите «Сохранить настройки», чтобы применить их.');settingsNotice='';render()}
 async function savePlatformSettings(){
+ if(TEACHER_SANDBOX_ACTIVE){if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}settingsSaving=true;settingsMsg='';render();TS_SETTINGS=normalizeClientSettings(CLIENT_SETTINGS);const saved=await capi('settings/save',{settings:TS_SETTINGS});settingsSaving=false;if(saved.error){settingsMsg=saved.error;return render()}CLIENT_SETTINGS=normalizeClientSettings(saved.settings);settingsSource='demo';settingsNotice='Изменения сохранены только в тестовом стенде. Рабочие настройки не меняются.';settingsMsg='Настройки предпросмотра сохранены.';return render()}
  if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}
  settingsSaving=true;settingsMsg='';render();const nav=++cabinetNavSeq;
  const r=await capi('settings/save',{settings:CLIENT_SETTINGS});settingsSaving=false;
@@ -833,6 +887,7 @@ function folderDialogHtml(){
 }
 function closeFolderDialog(){folderDialog=null;render()}
 async function finishFolderMutation(r,description){
+ if(TEACHER_SANDBOX_ACTIVE){libInfo=description+' Сохранено только в тестовом стенде разработчика.';libMsg='';await refreshLibrary();render();return}
  if(r.persistedToGitHub){libInfo=description+' '+tr('Изменения автоматически сохранены в GitHub.')}else{const backup=await capi('lib/export',{});if(!backup.error)dl('builtin-tests.json',JSON.stringify(backup,null,2));libInfo=description+' '+tr('Скачана резервная копия builtin-tests.json. На Render без GitHub-синхронизации временные изменения могут пропасть после нового деплоя.')}
  libMsg='';await refreshLibrary();render();
 }
@@ -908,7 +963,7 @@ function lib(){
  <footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer" aria-label="Instagram eyefront, открыть в новой вкладке">© eyefront</a><span>${tr('Библиотека тестов · Управление через GitHub')}</span></footer>`;
 }
 
-function newGame(){clearSess();location.reload()}
+function newGame(){if(TEACHER_SANDBOX_ACTIVE){tsCreateRoom(quiz||TS_DATA.items[0].quiz,libraryLaunchMode);view='game';render();return}clearSess();location.reload()}
 function joinBase(){const h=location.hostname;return(h==='localhost'||h==='127.0.0.1')&&INFO.urls.length?INFO.urls[0]:location.origin}
 function qrSvg(t){if(typeof qrcode==='undefined')return '';const q=qrcode(0,'M');q.addData(t);q.make();return q.createSvgTag({cellSize:4,margin:0,scalable:true})}
 function qrBox(w){return `<div class="mx-auto my-3 max-w-full cursor-zoom-in rounded-2xl bg-white p-3 leading-none shadow-xl ring-1 ring-black/5 transition hover:scale-[1.02]" role="button" title="Нажмите, чтобы открыть на весь экран" onclick="qrFull=true;render()" style="width:${w}px">${qrSvg(joinBase()+'/?pin='+S.pin)}</div>`}
@@ -2181,6 +2236,8 @@ function render(){
  let gameScreen=false;
  try{
   draw();
+  if(TEACHER_SANDBOX_ACTIVE){try{localStorage.setItem('kviz-developer-view',dpSectionForView(view))}catch(e){}}
+  if(TEACHER_SANDBOX_ACTIVE&&view==='game')vApp.insertAdjacentHTML('afterbegin','<div class="teacher-sandbox-game-exit"><span>Предпросмотр преподавателя · демонстрационная игра</span><button type="button" onclick="dpBack()">В кабинет разработчика</button></div>');
   if(view==='lib'&&folderDialog)vApp.insertAdjacentHTML('beforeend',folderDialogHtml());
   if(view==='lib'&&launchModeDialog)vApp.insertAdjacentHTML('beforeend',launchModeDialogHtml());
   gameScreen=view==='game';const participantScreen=participantOnly||qrJoinMode;
@@ -2222,7 +2279,7 @@ if(document.addEventListener){
    const developerSession=await api('developer/me',{token:DEVELOPER_TOKEN});
    if(developerSession.user){
     DEVELOPER_USER=developerSession.user;
-    DEVELOPER_INFO={version:developerSession.version||INFO.version||'1.16.27',status:developerSession.status||'online'};
+    DEVELOPER_INFO={version:developerSession.version||INFO.version||'1.16.28',status:developerSession.status||'online'};
    }else{
     DEVELOPER_TOKEN='';
     try{localStorage.removeItem('kviz-developer-token')}catch(e){}
