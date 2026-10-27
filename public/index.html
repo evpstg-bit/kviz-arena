@@ -187,8 +187,8 @@ function renderSecurityQr(){
  const el=$('security-2fa-qr');if(!el||!securitySetup)return;
  try{
   if(typeof qrcode!=='function')throw new Error('QR unavailable');
-  const qr=qrcode(0,'M');qr.addData(securitySetup.otpauthUrl);qr.make();el.innerHTML=qr.createImgTag(5,8);
-  const img=el.querySelector('img');if(img){img.alt=tr('QR-код для Google Authenticator');img.setAttribute('aria-label',img.alt)}
+  const qr=qrcode(0,'M');qr.addData(securitySetup.otpauthUrl);qr.make();el.innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true});
+  const svg=el.querySelector('svg');if(svg){svg.setAttribute('role','img');svg.setAttribute('aria-label',tr('QR-код для Google Authenticator'))}
  }catch(e){el.innerHTML='<span class="mut">'+tr('QR-код недоступен. Введите секретный ключ вручную.')+'</span>'}
 }
 async function copySecurityRecoveryCodes(){
