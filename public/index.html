@@ -1519,8 +1519,18 @@ function tick(){
 function enter(){
  const k=view+'|'+(S?S.state+'|'+(S.qi||0)+'|'+(S.round||0):'');
  if(k!==lastKey){
+  const previousKey=lastKey,previousParts=previousKey.split('|'),currentParts=k.split('|');
   lastKey=k;
   const e=$('app');
+  // When a fortress is captured, Color Kingdoms advances the round and shows
+  // its own capture overlay. Keep the arena in place; animate only that overlay.
+  const kingdomsRoundAdvance=view==='game'&&S&&S.mode==='kingdoms'&&S.state==='playing'
+   &&previousParts[0]==='game'&&previousParts[1]==='playing'
+   &&Number(previousParts[3]||0)!==Number(currentParts[3]||0);
+  if(kingdomsRoundAdvance){
+   e.classList.remove('enter');
+   return;
+  }
   // The Classic results overlay has its own entrance animation. Do not animate
   // the entire game screen at the same time, otherwise the page appears to refresh twice.
   if(view==='game'&&S&&S.mode==='classic'&&S.state==='results'){
