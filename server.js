@@ -52,6 +52,42 @@ const hashPw=(pw,salt)=>crypto.scryptSync(String(pw),salt,32).toString('hex');
 const checkPw=(u,pw)=>{try{return crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'))}catch(e){return false}};
 const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin});
 
+const DEVELOPER_SESSIONS=new Map(),DEVELOPER_LOGIN_FAILS=new Map();
+const DEVELOPER_SESSION_TTL=12*60*60*1000;
+function developerConfig(){
+  const login=String(process.env.DEVELOPER_LOGIN||'').trim();
+  const password=String(process.env.DEVELOPER_PASSWORD||'');
+  const sessionSecret=String(process.env.DEVELOPER_SESSION_SECRET||'');
+  if(!login||password.length<16||sessionSecret.length<32)return null;
+  return{login,password,sessionSecret};
+}
+function developerSecureEqual(a,b){
+  const left=crypto.createHash('sha256').update(String(a??'')).digest();
+  const right=crypto.createHash('sha256').update(String(b??'')).digest();
+  return crypto.timingSafeEqual(left,right);
+}
+function developerFingerprint(cfg){
+  return crypto.createHash('sha256').update('kviz-arena-developer-v1\\0'+cfg.login+'\\0'+cfg.password+'\\0'+cfg.sessionSecret).digest('hex');
+}
+function developerPublicUser(cfg){return{login:cfg.login,name:'Разработчик',role:'developer'};}
+function newDeveloperSession(cfg){
+  const now=Date.now(),fingerprint=developerFingerprint(cfg);
+  for(const[token,s]of DEVELOPER_SESSIONS)if(s.expiresAt<=now||s.fingerprint!==fingerprint)DEVELOPER_SESSIONS.delete(token);
+  while(DEVELOPER_SESSIONS.size>=50)DEVELOPER_SESSIONS.delete(DEVELOPER_SESSIONS.keys().next().value);
+  const token=crypto.randomBytes(32).toString('base64url');
+  DEVELOPER_SESSIONS.set(token,{login:cfg.login,fingerprint,expiresAt:now+DEVELOPER_SESSION_TTL});
+  return token;
+}
+function developerUserFromToken(token){
+  const cfg=developerConfig();if(!cfg||typeof token!=='string'||!token)return null;
+  const session=DEVELOPER_SESSIONS.get(token);if(!session)return null;
+  if(session.expiresAt<=Date.now()||session.fingerprint!==developerFingerprint(cfg)){
+    DEVELOPER_SESSIONS.delete(token);return null;
+  }
+  return developerPublicUser(cfg);
+}
+
+
 // Постоянный администратор берётся из файла проекта, а не из временной папки DATA_DIR.
 // Подписанная сессия этого аккаунта остаётся действительной после перезапуска Render.
 function readAdminConfig(){
@@ -942,7 +978,7 @@ http.createServer(async(req,res)=>{
     if(!f){res.writeHead(404);return res.end()}
     return fs.readFile(f,(e,b)=>{const type=u.pathname.endsWith('.css')?'text/css':u.pathname.endsWith('.svg')?'image/svg+xml':u.pathname.endsWith('.png')?'image/png':u.pathname.endsWith('.ico')?'image/x-icon':'application/javascript';res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-cache'});res.end(b)});
   }
-  if(req.method==='GET'&&u.pathname==='/'){
+  if(req.method==='GET'&&(u.pathname==='/'||u.pathname==='/developer'||u.pathname==='/developer/')){
     const f=[path.join(__dirname,'public','index.html'),path.join(__dirname,'index.html')].find(p=>fs.existsSync(p));
     if(!f){res.writeHead(500,{'Content-Type':'text/plain; charset=utf-8'});return res.end('Не найден файл public/index.html')}
     return fs.readFile(f,(e,b)=>{res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'});res.end(b)});
@@ -969,6 +1005,42 @@ http.createServer(async(req,res)=>{
   }
   if(req.method!=='POST')return json(res,{},404);
   const b=await body(req),werr=()=>json(res,{error:'Не удалось записать файл на сервере (проверьте права на папку data)'},500);
+
+
+  // ---------- отдельный кабинет разработчика (независим от аккаунтов преподавателей) ----------
+  if(u.pathname.startsWith('/api/developer/')){
+    const op=u.pathname.slice('/api/developer/'.length);
+    if(op==='login'){
+      const cfg=developerConfig();
+      if(!cfg)return json(res,{error:'Кабинет разработчика пока не настроен. Проверьте секретные переменные DEVELOPER_LOGIN, DEVELOPER_PASSWORD и DEVELOPER_SESSION_SECRET в Render.'},503);
+      const ip=authRequestIp(req),now=Date.now(),failure=DEVELOPER_LOGIN_FAILS.get(ip);
+      if(failure&&failure.until>now)return json(res,{error:'Слишком много попыток входа. Подождите минуту.'},429);
+      const login=String(b.login||'').trim();
+      const validLogin=developerSecureEqual(login.toLowerCase(),cfg.login.toLowerCase());
+      const validPassword=developerSecureEqual(String(b.password||''),cfg.password);
+      if(!validLogin||!validPassword){
+        const n=(failure&&failure.n||0)+1;
+        DEVELOPER_LOGIN_FAILS.set(ip,n>=5?{n:0,until:now+60000,last:now}:{n,until:0,last:now});
+        while(DEVELOPER_LOGIN_FAILS.size>2000)DEVELOPER_LOGIN_FAILS.delete(DEVELOPER_LOGIN_FAILS.keys().next().value);
+        return json(res,{error:'Неверный логин или пароль разработчика.'},401);
+      }
+      DEVELOPER_LOGIN_FAILS.delete(ip);
+      const token=newDeveloperSession(cfg);
+      return json(res,{token,user:developerPublicUser(cfg),version:APP_VERSION,status:'online',expiresIn:DEVELOPER_SESSION_TTL/1000});
+    }
+    if(op==='me'){
+      const user=developerUserFromToken(String(b.token||''));
+      if(!user)return json(res,{error:'Сессия разработчика истекла. Войдите снова.',code:401},401);
+      return json(res,{user,version:APP_VERSION,status:'online',service:'bntu_max'});
+    }
+    if(op==='logout'){
+      const token=String(b.token||''),user=developerUserFromToken(token);
+      if(!user)return json(res,{error:'Сессия разработчика истекла. Войдите снова.',code:401},401);
+      DEVELOPER_SESSIONS.delete(token);
+      return json(res,{ok:true});
+    }
+    return json(res,{error:'Неизвестная операция кабинета разработчика'},404);
+  }
 
   // ---------- global platform settings ----------
   if(u.pathname.startsWith('/api/settings/')){
