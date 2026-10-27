@@ -1811,3 +1811,41 @@ html.dark #app .teacher-dashboard-card-icon.settings{background:rgba(244,114,182
  #app .teacher-dashboard-card-copy strong{font-size:1rem}
  #app .teacher-dashboard-card-copy>span{font-size:.84rem;line-height:1.5}
 }
+
+
+/* v1.16.18 — make each teacher dashboard icon background clearly distinct in light and dark themes. */
+#app .teacher-dashboard-card-icon{
+  background:#E9D5FF !important;
+  border:1px solid #C084FC !important;
+  color:#6D28D9 !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.32),0 3px 9px rgba(109,40,217,.12) !important;
+}
+#app .teacher-dashboard-card-icon.reports{
+  background:#BAE6FD !important;
+  border-color:#38BDF8 !important;
+  color:#075985 !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.32),0 3px 9px rgba(2,132,199,.12) !important;
+}
+#app .teacher-dashboard-card-icon.settings{
+  background:#FBCFE8 !important;
+  border-color:#F472B6 !important;
+  color:#9D174D !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.32),0 3px 9px rgba(219,39,119,.12) !important;
+}
+#app .teacher-dashboard-card-icon svg{color:inherit;stroke:currentColor}
+html.dark #app .teacher-dashboard-card-icon{
+  background:#4C1D95 !important;
+  border-color:#A78BFA !important;
+  color:#F5F3FF !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 3px 10px rgba(0,0,0,.22) !important;
+}
+html.dark #app .teacher-dashboard-card-icon.reports{
+  background:#075985 !important;
+  border-color:#38BDF8 !important;
+  color:#E0F2FE !important;
+}
+html.dark #app .teacher-dashboard-card-icon.settings{
+  background:#9D174D !important;
+  border-color:#F472B6 !important;
+  color:#FCE7F3 !important;
+}
