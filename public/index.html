@@ -3,17 +3,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.17.3">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.17.3">
-<link rel="shortcut icon" href="/favicon.ico?v=1.17.3">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.17.3">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.17.4">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.17.4">
+<link rel="shortcut icon" href="/favicon.ico?v=1.17.4">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.17.4">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.17.3">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.17.3">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.17.3">
-<link rel="stylesheet" href="/lobby.css?v=1.17.3">
-<link rel="stylesheet" href="/kingdoms.css?v=1.17.3">
+<link rel="stylesheet" href="/ui.css?v=1.17.4">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.17.4">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.17.4">
+<link rel="stylesheet" href="/lobby.css?v=1.17.4">
+<link rel="stylesheet" href="/kingdoms.css?v=1.17.4">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script>
 /* Boot safety net: never leave users on an endless loading label. */
@@ -49,13 +49,13 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.17.3'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.17.4'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let classicPlayerFeedback=null,classicPlayerFeedbackTimer=null;
 const classicCountupSeen=new WeakMap();
-let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.17.3',status:'online'};
+let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.17.4',status:'online'};
 
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
 let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
@@ -158,6 +158,7 @@ function connect(){
   sseMissingChecks=0;
   const previousS=S;
   const incomingS=JSON.parse(e.data);
+  if(classicPlayerFeedback&&(classicPlayerFeedback.pin!==incomingS.pin||Number(classicPlayerFeedback.qi)!==Number(incomingS.qi)||["lobby","countdown","final","ended","kicked"].includes(incomingS.state)))classicPlayerFeedback=null;
   const answeredNow=incomingS.mode==="classic"&&!incomingS.host&&["question","results"].includes(incomingS.state)&&incomingS.me&&incomingS.me.answered&&(!previousS||previousS.pin!==incomingS.pin||Number(previousS.qi)!==Number(incomingS.qi)||!previousS.me||!previousS.me.answered);
   if(answeredNow){
    const points=Math.max(0,Number(incomingS.me.pts)||0);
@@ -371,7 +372,7 @@ async function dpCapi(path,o){
 }
 
 function developerHeader(){
- return `<header class="app-topbar dashboard-topbar site-app-topbar developer-topbar"><a class="brand-lockup" href="/" aria-label="Квиз-арена — на главную"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">Кабинет разработчика</span><span class="app-release-badge"><span class="app-release-dot" aria-hidden="true"></span>BETA · v${esc(DEVELOPER_INFO.version||INFO.version||'1.17.3')}</span></div></a><div class="developer-topbar-right"><span class="developer-role-chip">РАЗРАБОТЧИК</span><a class="developer-home-link" href="/">На главную ↗</a></div></header>`;
+ return `<header class="app-topbar dashboard-topbar site-app-topbar developer-topbar"><a class="brand-lockup" href="/" aria-label="Квиз-арена — на главную"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">Кабинет разработчика</span><span class="app-release-badge"><span class="app-release-dot" aria-hidden="true"></span>BETA · v${esc(DEVELOPER_INFO.version||INFO.version||'1.17.4')}</span></div></a><div class="developer-topbar-right"><span class="developer-role-chip">РАЗРАБОТЧИК</span><a class="developer-home-link" href="/">На главную ↗</a></div></header>`;
 }
 function developerLoginPage(a){
  document.title='Квиз-арена — Кабинет разработчика';
@@ -384,7 +385,7 @@ async function submitDeveloperLogin(){
  DEVELOPER_BUSY=false;
  if(result.error){DEVELOPER_MSG=result.error;return render()}
  DEVELOPER_TOKEN=String(result.token||'');DEVELOPER_USER=result.user||null;
- DEVELOPER_INFO={version:result.version||INFO.version||'1.17.3',status:result.status||'online'};
+ DEVELOPER_INFO={version:result.version||INFO.version||'1.17.4',status:result.status||'online'};
  DEVELOPER_FORM={login:'',password:''};DEVELOPER_MSG='';
  try{localStorage.setItem('kviz-developer-token',DEVELOPER_TOKEN)}catch(e){}
  view='developer-home';render();
@@ -399,7 +400,7 @@ async function developerLogout(){
 function developerDashboardPage(a){
  const login=DEVELOPER_USER&&DEVELOPER_USER.login||'developer';
  document.title='Квиз-арена — Кабинет разработчика';
- a.innerHTML=`${developerHeader()}<main class="developer-page developer-dashboard-page"><section class="developer-dashboard-heading"><span class="section-kicker">ТЕХНИЧЕСКИЙ РАЗДЕЛ</span><h1 class="page-title">Кабинет разработчика<span class="title-period">.</span></h1><p class="page-subtitle">Центр управления разработкой и публикацией «Квиз-арены».</p></section><section class="developer-status-strip"><div class="developer-status-indicator"><span class="secure-dot"></span><span>Авторизация подтверждена</span></div><div class="developer-status-meta"><span>Версия</span><strong>v${esc(DEVELOPER_INFO.version||INFO.version||'1.17.3')}</strong></div><div class="developer-status-meta"><span>Сервис</span><strong>${esc(DEVELOPER_INFO.status==='online'?'Работает':'Статус неизвестен')}</strong></div><div class="developer-status-user"><span class="developer-user-avatar">D</span><span><b>${esc(login)}</b><small>Разработчик</small></span></div><button type="button" class="sec developer-logout-button" onclick="developerLogout()">Выйти</button></section><section class="dp-launch"><div class="dp-launch-icon">⌘</div><div><span class="section-kicker">ТЕСТОВАЯ СРЕДА</span><h2>Предпросмотр кабинета преподавателя</h2><p>Библиотека, редактор, отчёты, режимы и игровой стенд с демо-данными.</p></div><button class="dp-primary" data-v="dashboard" onclick="dpNav(this.dataset.v)">Открыть стенд →</button></section><section class="developer-tool-grid" aria-label="Инструменты разработчика"><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-github">${navIcon('file')}</span><span><strong>Исходный код</strong><small>Репозиторий, файлы и коммиты проекта</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena/commits/main" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-history">${navIcon('reports')}</span><span><strong>История обновлений</strong><small>Изменения версий и журнал коммитов</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://dashboard.render.com/web/srv-dbd5j9vavr4c73cggg40" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-render">${navIcon('settings')}</span><span><strong>Публикация Render</strong><small>Развёртывания, журналы и параметры сервиса</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://bntu-max.onrender.com/" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-site">${navIcon('home')}</span><span><strong>Рабочий сайт</strong><small>Открыть опубликованную платформу</small></span><span class="developer-tool-arrow">↗</span></a></section><section class="developer-boundary-note"><strong>Разделение доступа</strong><p>Кабинет разработчика использует отдельный логин, пароль и сессию. Он не входит в систему аккаунтов преподавателей и не подменяет её права доступа.</p></section><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a></footer></main>`;
+ a.innerHTML=`${developerHeader()}<main class="developer-page developer-dashboard-page"><section class="developer-dashboard-heading"><span class="section-kicker">ТЕХНИЧЕСКИЙ РАЗДЕЛ</span><h1 class="page-title">Кабинет разработчика<span class="title-period">.</span></h1><p class="page-subtitle">Центр управления разработкой и публикацией «Квиз-арены».</p></section><section class="developer-status-strip"><div class="developer-status-indicator"><span class="secure-dot"></span><span>Авторизация подтверждена</span></div><div class="developer-status-meta"><span>Версия</span><strong>v${esc(DEVELOPER_INFO.version||INFO.version||'1.17.4')}</strong></div><div class="developer-status-meta"><span>Сервис</span><strong>${esc(DEVELOPER_INFO.status==='online'?'Работает':'Статус неизвестен')}</strong></div><div class="developer-status-user"><span class="developer-user-avatar">D</span><span><b>${esc(login)}</b><small>Разработчик</small></span></div><button type="button" class="sec developer-logout-button" onclick="developerLogout()">Выйти</button></section><section class="dp-launch"><div class="dp-launch-icon">⌘</div><div><span class="section-kicker">ТЕСТОВАЯ СРЕДА</span><h2>Предпросмотр кабинета преподавателя</h2><p>Библиотека, редактор, отчёты, режимы и игровой стенд с демо-данными.</p></div><button class="dp-primary" data-v="dashboard" onclick="dpNav(this.dataset.v)">Открыть стенд →</button></section><section class="developer-tool-grid" aria-label="Инструменты разработчика"><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-github">${navIcon('file')}</span><span><strong>Исходный код</strong><small>Репозиторий, файлы и коммиты проекта</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena/commits/main" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-history">${navIcon('reports')}</span><span><strong>История обновлений</strong><small>Изменения версий и журнал коммитов</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://dashboard.render.com/web/srv-dbd5j9vavr4c73cggg40" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-render">${navIcon('settings')}</span><span><strong>Публикация Render</strong><small>Развёртывания, журналы и параметры сервиса</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://bntu-max.onrender.com/" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-site">${navIcon('home')}</span><span><strong>Рабочий сайт</strong><small>Открыть опубликованную платформу</small></span><span class="developer-tool-arrow">↗</span></a></section><section class="developer-boundary-note"><strong>Разделение доступа</strong><p>Кабинет разработчика использует отдельный логин, пароль и сессию. Он не входит в систему аккаунтов преподавателей и не подменяет её права доступа.</p></section><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a></footer></main>`;
 }
 async function openSecurity(){
  if(!USER)return goAuth();
@@ -763,7 +764,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.17.3')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.17.4')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -1688,51 +1689,36 @@ function host(a){
   ${liveParticipantsPanel()}`;
  if(S.state==='results'){
   const mx=Math.max(1,...S.counts),okN=S.rows.filter(p=>p.ok).length;
-  return a.innerHTML=`<h2 data-user-content="true" class="c">${esc(q.t)}</h2><div class="cnt">${S.counts.slice(0,q.a.length).map((n,j)=>`<div class="a${j}" style="height:${Math.max(16,n/mx*100)}%;${S.correct.includes(j)?'outline:4px solid var(--fg)':'opacity:.45'}">${n}<br>${SH[j]}${S.correct.includes(j)?' ✓':''}</div>`).join('')}</div>
-  <p class="c ok big">Правильный ответ: <b data-user-content="true">${esc(S.correct.map(k=>q.a[k]).join(' + '))}</b></p><p class="c mut">Верно ответили: ${okN} из ${N}</p>
+  const options=q.a.map((answer,j)=>{
+   const correct=S.correct.includes(j);
+   return `<div data-user-content="true" class="ans a${j} teacher-answer-option ${correct?'is-correct':'is-incorrect'}"><span class="teacher-answer-symbol" aria-hidden="true">${SH[j]}</span><span class="teacher-answer-text">${esc(answer)}</span><span class="teacher-answer-verdict" aria-label="${correct?tr('Правильный ответ'):tr('Неправильный ответ')}">${correct?'✓':'×'}</span></div>`;
+  }).join('');
+  return a.innerHTML=`<section class="teacher-question-results"><h2 data-user-content="true" class="teacher-results-question">${esc(q.t)}</h2><div class="cnt teacher-answer-chart">${S.counts.slice(0,q.a.length).map((n,j)=>`<div class="a${j} ${S.correct.includes(j)?'is-correct':'is-incorrect'}" style="height:${Math.max(16,n/mx*100)}%;${S.correct.includes(j)?'outline:4px solid rgba(255,255,255,.9)':'opacity:.45'}">${n}<br>${SH[j]}${S.correct.includes(j)?' ✓':''}</div>`).join('')}</div><div class="teacher-answer-feedback-grid">${options}</div>
+  <p class="c ok big teacher-correct-answer-summary">${tr('Правильный ответ')}: <b data-user-content="true">${esc(S.correct.map(k=>q.a[k]).join(' + '))}</b></p><p class="c mut">${tr('Верно ответили')}: ${okN} ${tr('из')} ${N}</p>
+  ${classicTeacherRankingHtml()}
   <div class="row host-results-controls" style="justify-content:center;margin-top:14px">${dl}</div>
-  ${liveParticipantsPanel()}`;
+  ${liveParticipantsPanel()}</section>`;
  }
  return a.innerHTML=classicFinalResults(S.rows, `${dl}<button onclick="newGame()">${tr("Новая игра")}</button>`);
 }
-function classicRankingOverlay(){
+function classicTeacherRankingHtml(){
  if(!S||S.mode!=="classic"||!S.host||S.state!=="results")return "";
- const rows=(Array.isArray(S.top)?S.top:[]).slice(0,10);
- const endAt=Number(S.resultEndsAt)||0;
- const progressKey=String(S.pin||pin)+"|"+String(S.qi)+"|"+String(endAt);
- if(progressKey!==classicRankingProgressKey){
-  classicRankingProgressKey=progressKey;
-  classicRankingProgressDuration=Math.max(1,Math.min(3000,(endAt||Date.now()+3000)-Date.now()));
- }
- const remaining=classicRankingProgressDuration;
- const medals=["🥇","🥈","🥉"];
+ const rows=(Array.isArray(S.top)?S.top:[]).slice(0,10),medals=["🥇","🥈","🥉"];
  const items=rows.map((p,i)=>{
-  const score=Math.max(0,Number(p.score)||0);
-  const earned=Math.max(0,Number(p.roundPts)||0);
-  const prior=Math.max(0,Number(p.priorScore!==undefined?p.priorScore:score-earned)||0);
-  const identity=String(p.id||p.name||i);
-  const baseKey=String(S.pin||pin)+"|"+String(S.qi)+"|"+identity;
+  const score=Math.max(0,Number(p.score)||0),earned=Math.max(0,Number(p.roundPts)||0),prior=Math.max(0,Number(p.priorScore!==undefined?p.priorScore:score-earned)||0);
+  const identity=String(p.id||p.name||i),baseKey=String(S.pin||pin)+"|"+String(S.qi)+"|"+identity;
   return `<li class="classic-ranking-row"><span class="classic-ranking-place ${i<3?"is-podium":""}">${medals[i]||i+1}</span><span class="classic-ranking-person"><span class="classic-ranking-name" data-user-content="true">${esc(p.name||"Участник")}</span><span class="classic-ranking-earned"><span class="classic-ranking-earned-label">${tr("За вопрос")}</span><strong>+<span data-countup="true" data-countup-key="${esc(baseKey+"|earned")}" data-countup-start="0" data-countup-end="${earned}">0</span></strong><span class="classic-ranking-earned-unit">${tr("баллов")}</span></span></span><strong class="classic-ranking-score"><span data-countup="true" data-countup-key="${esc(baseKey+"|total")}" data-countup-start="${prior}" data-countup-end="${score}">${prior}</span></strong></li>`;
  }).join("");
- const progress=`<div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div>`;
- return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr("Рейтинг игроков")}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr("Рейтинг игроков")}</p><h2>${tr("Топ-10 игроков")}</h2></div></header>${progress}<ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr("Пока нет участников")}</li>`}</ol><p class="classic-ranking-caption">${tr("Следующий вопрос откроется автоматически")}</p></section></div>`;
+ return `<section class="classic-teacher-ranking" aria-label="${tr("Рейтинг игроков")}"><header class="classic-teacher-ranking-header"><span aria-hidden="true">🏆</span><div><p>${tr("Рейтинг игроков")}</p><h2>${tr("Топ-10 игроков")}</h2></div></header><ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr("Пока нет участников")}</li>`}</ol></section>`;
 }
-function dismissPlayerFeedback(){
- if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
- classicPlayerFeedbackTimer=null;
- classicPlayerFeedback=null;
- render();
-}
-function classicAnswerFeedbackOverlay(){
- const feedback=classicPlayerFeedback;
- if(!S||S.host||!feedback||feedback.stage!=="feedback")return "";
- const isCorrect=!!feedback.ok;
- const earned=Math.max(0,Number(feedback.pts)||0);
- const total=Math.max(0,Number(feedback.score)||0);
- const previous=Math.max(0,Number(feedback.previousScore)||0);
- const baseKey=String(feedback.pin)+"|"+String(feedback.qi)+"|participant";
- const pointsMarkup=isCorrect&&earned?`<p class="player-feedback-points">+<span data-countup="true" data-countup-key="${esc(baseKey+"|earned")}" data-countup-start="0" data-countup-end="${earned}">0</span> ${tr("баллов")}</p>`:"";
- return `<div class="player-feedback-backdrop" role="presentation"><section class="player-feedback-dialog ${isCorrect?"is-correct":"is-incorrect"}" role="dialog" aria-modal="true" aria-labelledby="player-feedback-title"><div class="player-feedback-mark" aria-hidden="true">${isCorrect?"✓":"×"}</div><p class="player-feedback-kicker">${tr("РЕЗУЛЬТАТ ОТВЕТА")}</p><h2 id="player-feedback-title">${isCorrect?tr("Верно"):tr("Неверно")}</h2>${pointsMarkup}<div class="player-feedback-total"><span>${tr("Ваш счёт")}</span><strong><span data-countup="true" data-countup-key="${esc(baseKey+"|total")}" data-countup-start="${previous}" data-countup-end="${total}">${previous}</span></strong><small>${tr("баллов")}</small></div><button type="button" class="player-feedback-next" onclick="dismissPlayerFeedback()">${tr("Далее")} <span aria-hidden="true">→</span></button></section></div>`;
+function participantAnswerFeedbackHtml(p){
+ const feedback=classicPlayerFeedback&&classicPlayerFeedback.pin===S.pin&&Number(classicPlayerFeedback.qi)===Number(S.qi)?classicPlayerFeedback:null;
+ const answered=!!(p&&p.answered),ok=answered&&!!p.ok;
+ const points=Math.max(0,Number(feedback?feedback.pts:p&&p.pts)||0),score=Math.max(0,Number(p&&p.score)||0),previous=Math.max(0,Number(feedback?feedback.previousScore:score-points)||0);
+ const baseKey=String(S.pin||pin)+"|"+String(S.qi)+"|participant";
+ const earned=ok?`<p class="participant-feedback-earned">+<span data-countup="true" data-countup-key="${esc(baseKey+"|earned")}" data-countup-start="0" data-countup-end="${points}">0</span> ${tr("баллов")}</p>`:"";
+ const count=ok?`<span data-countup="true" data-countup-key="${esc(baseKey+"|total")}" data-countup-start="${previous}" data-countup-end="${score}">${previous}</span>`:`${score}`;
+ return `<section class="participant-inline-feedback ${ok?"is-correct":"is-incorrect"}"><div class="participant-inline-mark" aria-hidden="true">${ok?"✓":"×"}</div><div class="participant-inline-copy"><h1>${ok?tr("Верно! 🎉"):answered?tr("Неверно ✗"):tr("Время вышло")}</h1>${earned}<p class="participant-inline-total">${tr("Ваш счёт")}: <strong>${count}</strong> ${tr("баллов")}</p><p class="mut">${tr("Ответ принят. Ждём остальных…")}</p></div></section>`;
 }
 function gameCountdownHtml(){
  const endsAt=Number(S&&S.countdownEndsAt)||0;
@@ -1744,14 +1730,14 @@ function player(a){
  const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} ${tr("очков")}</b></div>`;
  if(S.state==="lobby")return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>${tr("Вы в игре!")}</h1><p>${tr("Ваше имя на экране ведущего. Ждём начала…")}</p>${S.mode==="kingdoms"?`<p class="lobby-team-hint">${tr("Режим Color Kingdoms: команда назначится при старте")}</p>`:""}</div></div>`;
  if(S.state==="question"){
-  if(p.answered)return a.innerHTML=head+`<div class="c player-answer-result player-answer-waiting"><h1 class="${p.ok?"ok":"bad"}">${p.ok?tr("Верно! 🎉"):tr("Неверно ✗")}</h1><p class="mut">${tr("Ответ принят. Ждём остальных…")}</p></div>`;
+  if(p.answered)return a.innerHTML=head+participantAnswerFeedbackHtml(p);
   const mu=!!(S.q&&S.q.multi);
   const clickFor=j=>mu?"tg2("+j+")":"act(\'answer\'," + j + ")";
   return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">${tr("Вопрос")} ${S.qi+1}</h2>${mu?`<p class="c mut">${tr("Выберите все правильные ответы и нажмите «Ответить»")}</p>`:""}<div class="grid mt-5 grid-cols-2">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j} h-36 justify-center text-6xl${mu&&sel.includes(j)?" sel":""}${mu&&sel.length&&!sel.includes(j)?" dim":""}" onclick="${clickFor(j)}">${SH[j]}</button>`).join("")}</div>${mu?`<div class="c" style="margin-top:14px"><button ${sel.length?"":"disabled"} onclick="sendSel()">${tr("Ответить")}</button></div>`:""}`;
  }
  if(S.state==="results"){
-  const ans=!!p.answered,ok=ans&&p.ok;
-  return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1 class="${ok?"ok":"bad"}">${ok?tr("Верно! 🎉"):ans?tr("Неверно ✗"):tr("Время вышло")}</h1>${ok&&p.pts?`<p class="big">+${Number(p.pts)} ${tr("баллов")}</p>`:""}<p class="mut">${tr("Ждём следующего вопроса")}</p></div>`;
+  if(p.answered)return a.innerHTML=head+participantAnswerFeedbackHtml(p);
+  return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1 class="bad">${tr("Время вышло")}</h1><p class="mut">${tr("Ждём следующего вопроса")}</p></div>`;
  }
  if(S.state==="final"&&S.mode==="classic")return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1>${tr("Игра окончена")}</h1><p class="big">${Number(p.score)||0} ${tr("баллов")}</p></div>`;
  a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${tr("Игра окончена")}</h1><p class="big">${Number(p.score)||0} ${tr("очков")}</p></div>`;
@@ -1848,7 +1834,7 @@ function draw(){
   }
  }
  if(S.mode==='kingdoms'&&S.banner&&Date.now()<banUntil)a.insertAdjacentHTML('beforeend',bannerHtml());
- if(S.mode==='classic'){if(!S.host&&classicPlayerFeedback&&classicPlayerFeedback.stage==='feedback')a.insertAdjacentHTML('beforeend',classicAnswerFeedbackOverlay());a.insertAdjacentHTML('beforeend',classicRankingOverlay());}
+
 }
 function tick(){
  if(!S)return;
@@ -2389,7 +2375,7 @@ if(document.addEventListener){
    const developerSession=await api('developer/me',{token:DEVELOPER_TOKEN});
    if(developerSession.user){
     DEVELOPER_USER=developerSession.user;
-    DEVELOPER_INFO={version:developerSession.version||INFO.version||'1.17.3',status:developerSession.status||'online'};
+    DEVELOPER_INFO={version:developerSession.version||INFO.version||'1.17.4',status:developerSession.status||'online'};
    }else{
     DEVELOPER_TOKEN='';
     try{localStorage.removeItem('kviz-developer-token')}catch(e){}
