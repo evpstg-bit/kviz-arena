@@ -54,6 +54,7 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let classicPlayerFeedback=null,classicPlayerFeedbackTimer=null;
+const classicCountupSeen=new WeakMap();
 let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.17.2',status:'online'};
 
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -157,21 +158,13 @@ function connect(){
   sseMissingChecks=0;
   const previousS=S;
   const incomingS=JSON.parse(e.data);
-  if(classicPlayerFeedback&&classicPlayerFeedback.stage==='ranking'&&classicPlayerFeedback.pin===incomingS.pin&&Number(classicPlayerFeedback.qi)!==Number(incomingS.qi)&&!classicPlayerFeedback.lateView){
-   classicPlayerFeedback=null;
-   if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
-   classicPlayerFeedbackTimer=null;
-  }
-  if(classicPlayerFeedback&&classicPlayerFeedback.pin===incomingS.pin&&Number(classicPlayerFeedback.qi)===Number(incomingS.qi)&&Array.isArray(incomingS.top)){
-   classicPlayerFeedback.top=incomingS.top.map(row=>({...row}));
-  }
-  const answeredNow=incomingS.mode==='classic'&&!incomingS.host&&['question','results'].includes(incomingS.state)&&incomingS.me&&incomingS.me.answered&&(!previousS||previousS.pin!==incomingS.pin||Number(previousS.qi)!==Number(incomingS.qi)||!previousS.me||!previousS.me.answered);
+  const answeredNow=incomingS.mode==="classic"&&!incomingS.host&&["question","results"].includes(incomingS.state)&&incomingS.me&&incomingS.me.answered&&(!previousS||previousS.pin!==incomingS.pin||Number(previousS.qi)!==Number(incomingS.qi)||!previousS.me||!previousS.me.answered);
   if(answeredNow){
-   const options=Array.isArray(incomingS.q&&incomingS.q.a)?incomingS.q.a:[];
-   const correctAnswers=Array.isArray(incomingS.correct)?incomingS.correct.map(i=>options[Number(i)]).filter(answer=>typeof answer==='string'&&answer.trim()):[];
+   const points=Math.max(0,Number(incomingS.me.pts)||0);
+   const score=Math.max(0,Number(incomingS.me.score)||0);
    if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
    classicPlayerFeedbackTimer=null;
-   classicPlayerFeedback={pin:incomingS.pin,qi:Number(incomingS.qi),stage:'feedback',ok:!!incomingS.me.ok,pts:Number(incomingS.me.pts)||0,score:Number(incomingS.me.score)||0,rank:Number(incomingS.me.rank)||0,correctAnswers,top:Array.isArray(incomingS.top)?incomingS.top.map(row=>({...row})):[],title:String(incomingS.q&&incomingS.q.t||''),createdAt:Date.now(),lateView:false};
+   classicPlayerFeedback={pin:incomingS.pin,qi:Number(incomingS.qi),stage:"feedback",ok:!!incomingS.me.ok,pts:points,score,previousScore:Math.max(0,score-points),title:String(incomingS.q&&incomingS.q.t||""),createdAt:Date.now()};
   }
   S=incomingS;gameRole=S.host?'host':'player';if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
@@ -1590,7 +1583,7 @@ function playerK(a){
  const fb=p.fb;
  if(fb&&Date.now()<fbUntil){
   const earned=fb.ok&&p.prog===0;
-  return a.innerHTML=head+`<div class="c" style="margin-top:40px"><h1 class="${fb.ok?'ok':'bad'} text-5xl">${fb.ok?'Верно! ✓':'Неверно ✗'}</h1>${fb.ok?'':`<p class="mut text-lg">Правильный ответ: <b data-user-content="true">${esc((fb.ans||[]).join(' + '))}</b></p>`}${earned?'<p class="big">🚩 Флаг заработан!</p>':''}</div>`;
+  return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:40px"><h1 class="${fb.ok?'ok':'bad'} text-5xl">${fb.ok?'Верно! ✓':'Неверно ✗'}</h1>${earned?'<p class="big">🚩 Флаг заработан!</p>':''}</div>`;
  }
  if(p.flags>0&&S.valid&&S.valid.length){
   return a.innerHTML=head+`<div class="c" style="margin-top:16px"><h2 class="text-2xl">🚩 Поставьте флаг на карту</h2><p class="mut">Нажмите на подсвеченную клетку рядом с вашей территорией${p.flags>1?' · флагов в запасе: '+p.flags:''}</p>${msg?`<p class="bad">${esc(msg)}</p>`:''}</div>${boardK({valid:S.valid})}`;
@@ -1703,75 +1696,65 @@ function host(a){
  return a.innerHTML=classicFinalResults(S.rows, `${dl}<button onclick="newGame()">${tr("Новая игра")}</button>`);
 }
 function classicRankingOverlay(){
- if(!S||S.mode!=='classic')return '';
- const isPlayer=!S.host;
- const feedback=isPlayer?classicPlayerFeedback:null;
- if(isPlayer&&(!feedback||feedback.stage!=='ranking'))return '';
- if(!isPlayer&&S.state!=='results')return '';
- const sameQuestion=!isPlayer||!!feedback&&Number(S.qi)===Number(feedback.qi);
- const currentResult=S.state==='results'&&sameQuestion;
- const stale=isPlayer&&!sameQuestion;
- const rows=(isPlayer&&stale&&Array.isArray(feedback.top)?feedback.top:(Array.isArray(S.top)?S.top:[])).slice(0,10);
- const endAt=currentResult?Number(S.resultEndsAt)||0:0;
- const progressKey=String(S.pin||pin)+'|'+String(isPlayer?feedback.qi:S.qi)+'|'+String(endAt)+'|'+(stale?'late':'live');
+ if(!S||S.mode!=="classic"||!S.host||S.state!=="results")return "";
+ const rows=(Array.isArray(S.top)?S.top:[]).slice(0,10);
+ const endAt=Number(S.resultEndsAt)||0;
+ const progressKey=String(S.pin||pin)+"|"+String(S.qi)+"|"+String(endAt);
  if(progressKey!==classicRankingProgressKey){
   classicRankingProgressKey=progressKey;
-  classicRankingProgressDuration=currentResult?Math.max(1,Math.min(3000,(endAt||Date.now()+3000)-Date.now())):(stale?3000:0);
+  classicRankingProgressDuration=Math.max(1,Math.min(3000,(endAt||Date.now()+3000)-Date.now()));
  }
  const remaining=classicRankingProgressDuration;
- const medals=['🥇','🥈','🥉'];
- const items=rows.map((p,i)=>`<li class="classic-ranking-row"><span class="classic-ranking-place ${i<3?'is-podium':''}">${medals[i]||i+1}</span><span class="classic-ranking-person"><span class="classic-ranking-name" data-user-content="true">${esc(p.name||'Участник')}</span><span class="classic-ranking-earned"><span class="classic-ranking-earned-label">${tr('За вопрос')}</span><strong>+${Number(p.roundPts)||0}</strong><span class="classic-ranking-earned-unit">${tr('баллов')}</span></span></span><strong class="classic-ranking-score">${Number(p.score)||0}</strong></li>`).join('');
- const progress=(currentResult||stale)?`<div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div>`:'';
- const caption=currentResult?tr('Следующий вопрос откроется автоматически'):stale?tr('Вы смотрите результаты предыдущего вопроса'):tr('Рейтинг обновляется по мере ответов');
- return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr('Рейтинг игроков')}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr('Рейтинг игроков')}</p><h2>${tr('Топ-10 игроков')}</h2></div></header>${progress}<ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr('Пока нет участников')}</li>`}</ol><p class="classic-ranking-caption">${caption}</p></section></div>`;
+ const medals=["🥇","🥈","🥉"];
+ const items=rows.map((p,i)=>{
+  const score=Math.max(0,Number(p.score)||0);
+  const earned=Math.max(0,Number(p.roundPts)||0);
+  const prior=Math.max(0,Number(p.priorScore!==undefined?p.priorScore:score-earned)||0);
+  const identity=String(p.id||p.name||i);
+  const baseKey=String(S.pin||pin)+"|"+String(S.qi)+"|"+identity;
+  return `<li class="classic-ranking-row"><span class="classic-ranking-place ${i<3?"is-podium":""}">${medals[i]||i+1}</span><span class="classic-ranking-person"><span class="classic-ranking-name" data-user-content="true">${esc(p.name||"Участник")}</span><span class="classic-ranking-earned"><span class="classic-ranking-earned-label">${tr("За вопрос")}</span><strong>+<span data-countup="true" data-countup-key="${esc(baseKey+"|earned")}" data-countup-start="0" data-countup-end="${earned}">0</span></strong><span class="classic-ranking-earned-unit">${tr("баллов")}</span></span></span><strong class="classic-ranking-score"><span data-countup="true" data-countup-key="${esc(baseKey+"|total")}" data-countup-start="${prior}" data-countup-end="${score}">${prior}</span></strong></li>`;
+ }).join("");
+ const progress=`<div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div>`;
+ return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr("Рейтинг игроков")}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr("Рейтинг игроков")}</p><h2>${tr("Топ-10 игроков")}</h2></div></header>${progress}<ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr("Пока нет участников")}</li>`}</ol><p class="classic-ranking-caption">${tr("Следующий вопрос откроется автоматически")}</p></section></div>`;
 }
-function continueToRanking(){
- const feedback=classicPlayerFeedback;
- if(!feedback||feedback.stage!=='feedback')return;
- feedback.stage='ranking';
- feedback.lateView=!S||S.host||S.pin!==feedback.pin||Number(S.qi)!==Number(feedback.qi)||S.state==='final';
+function dismissPlayerFeedback(){
  if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
  classicPlayerFeedbackTimer=null;
+ classicPlayerFeedback=null;
  render();
- if(feedback.lateView){
-  classicPlayerFeedbackTimer=setTimeout(()=>{
-   if(classicPlayerFeedback===feedback&&feedback.stage==='ranking'){
-    classicPlayerFeedback=null;classicPlayerFeedbackTimer=null;render();
-   }
-  },3000);
- }
 }
 function classicAnswerFeedbackOverlay(){
  const feedback=classicPlayerFeedback;
- if(!S||S.host||!feedback||feedback.stage!=='feedback')return '';
- const correctAnswers=Array.isArray(feedback.correctAnswers)?feedback.correctAnswers:[];
+ if(!S||S.host||!feedback||feedback.stage!=="feedback")return "";
  const isCorrect=!!feedback.ok;
- return `<div class="player-feedback-backdrop" role="presentation"><section class="player-feedback-dialog ${isCorrect?'is-correct':'is-incorrect'}" role="dialog" aria-modal="true" aria-labelledby="player-feedback-title"><div class="player-feedback-mark" aria-hidden="true">${isCorrect?'✓':'×'}</div><p class="player-feedback-kicker">${tr('РЕЗУЛЬТАТ ОТВЕТА')}</p><h2 id="player-feedback-title">${isCorrect?tr('Верно'):tr('Неверно')}</h2>${!isCorrect&&correctAnswers.length?`<div class="player-feedback-correct"><span>${tr(correctAnswers.length===1?'Правильный ответ:':'Правильные ответы:')}</span><strong>${correctAnswers.map(esc).join(' + ')}</strong></div>`:''}${isCorrect&&feedback.pts?`<p class="player-feedback-points">+${Number(feedback.pts)} ${tr('баллов')}</p>`:''}<button type="button" class="player-feedback-next" onclick="continueToRanking()">${tr('Далее')} <span aria-hidden="true">→</span></button></section></div>`;
+ const earned=Math.max(0,Number(feedback.pts)||0);
+ const total=Math.max(0,Number(feedback.score)||0);
+ const previous=Math.max(0,Number(feedback.previousScore)||0);
+ const baseKey=String(feedback.pin)+"|"+String(feedback.qi)+"|participant";
+ const pointsMarkup=isCorrect&&earned?`<p class="player-feedback-points">+<span data-countup="true" data-countup-key="${esc(baseKey+"|earned")}" data-countup-start="0" data-countup-end="${earned}">0</span> ${tr("баллов")}</p>`:"";
+ return `<div class="player-feedback-backdrop" role="presentation"><section class="player-feedback-dialog ${isCorrect?"is-correct":"is-incorrect"}" role="dialog" aria-modal="true" aria-labelledby="player-feedback-title"><div class="player-feedback-mark" aria-hidden="true">${isCorrect?"✓":"×"}</div><p class="player-feedback-kicker">${tr("РЕЗУЛЬТАТ ОТВЕТА")}</p><h2 id="player-feedback-title">${isCorrect?tr("Верно"):tr("Неверно")}</h2>${pointsMarkup}<div class="player-feedback-total"><span>${tr("Ваш счёт")}</span><strong><span data-countup="true" data-countup-key="${esc(baseKey+"|total")}" data-countup-start="${previous}" data-countup-end="${total}">${previous}</span></strong><small>${tr("баллов")}</small></div><button type="button" class="player-feedback-next" onclick="dismissPlayerFeedback()">${tr("Далее")} <span aria-hidden="true">→</span></button></section></div>`;
 }
-function playerCorrectAnswerHtml(){
- const correctAnswers=(Array.isArray(S&&S.correct)&&S.q&&Array.isArray(S.q.a))?S.correct.map(i=>S.q.a[i]).filter(x=>typeof x==='string'&&x.trim()):[];
- return correctAnswers.length?`<div class="player-correct-answer" role="status"><span>${tr(correctAnswers.length===1?'Правильный ответ:':'Правильные ответы:')}</span><b>${correctAnswers.map(esc).join(' + ')}</b></div>`:'';
+function gameCountdownHtml(){
+ const endsAt=Number(S&&S.countdownEndsAt)||0;
+ const remaining=endsAt?Math.max(1,Math.ceil((endsAt-Date.now())/1000)):5;
+ return `<main class="game-countdown-screen"><section class="game-countdown-card"><span class="game-countdown-kicker">${tr("ОТСЧЁТ ДО СТАРТА")}</span><h1>${tr("Игра начинается через")}</h1><strong id="start-countdown-number">${remaining}</strong><p>${tr("Приготовьтесь!")}</p></section></main>`;
 }
 function player(a){
- const p=S.me||{name:'',score:0,rank:0};
- const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} очков</b></div>`;
- if(S.state==='lobby')return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>Вы в игре!</h1><p>Ваше имя на экране ведущего. Ждём начала…</p>${S.mode==='kingdoms'?'<p class="lobby-team-hint">Режим Color Kingdoms: команда назначится при старте</p>':''}</div></div>`;
- if(S.state==='question'){
-  if(p.answered){
-   const correctAnswerHtml=!p.ok?playerCorrectAnswerHtml():'';
-   if(correctAnswerHtml)return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1 class="bad">Неверно ✗</h1>${correctAnswerHtml}<p class="mut">Ответ принят. Ждём остальных…</p></div>`;
-   return a.innerHTML=head+`<div class="c" style="margin-top:60px"><h1>Ответ принят ✓</h1><p class="mut">Ждём остальных…</p></div>`;
-  }
-  const mu=S.q.multi;
-  return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">Вопрос ${S.qi+1}</h2>${mu?'<p class="c mut">Выберите все правильные ответы и нажмите «Ответить»</p>':''}<div class="grid mt-5 grid-cols-2">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j} h-36 justify-center text-6xl${mu&&sel.includes(j)?' sel':''}${mu&&sel.length&&!sel.includes(j)?' dim':''}" onclick="${mu?'tg2('+j+')':'act(\'answer\','+j+')'}">${SH[j]}</button>`).join('')}</div>${mu?`<div class="c" style="margin-top:14px"><button ${sel.length?'':'disabled'} onclick="sendSel()">Ответить</button></div>`:''}`;
+ const p=S.me||{name:"",score:0,rank:0};
+ const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} ${tr("очков")}</b></div>`;
+ if(S.state==="lobby")return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>${tr("Вы в игре!")}</h1><p>${tr("Ваше имя на экране ведущего. Ждём начала…")}</p>${S.mode==="kingdoms"?`<p class="lobby-team-hint">${tr("Режим Color Kingdoms: команда назначится при старте")}</p>`:""}</div></div>`;
+ if(S.state==="question"){
+  if(p.answered)return a.innerHTML=head+`<div class="c player-answer-result player-answer-waiting"><h1 class="${p.ok?"ok":"bad"}">${p.ok?tr("Верно! 🎉"):tr("Неверно ✗")}</h1><p class="mut">${tr("Ответ принят. Ждём остальных…")}</p></div>`;
+  const mu=!!(S.q&&S.q.multi);
+  const clickFor=j=>mu?"tg2("+j+")":"act(\'answer\'," + j + ")";
+  return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">${tr("Вопрос")} ${S.qi+1}</h2>${mu?`<p class="c mut">${tr("Выберите все правильные ответы и нажмите «Ответить»")}</p>`:""}<div class="grid mt-5 grid-cols-2">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j} h-36 justify-center text-6xl${mu&&sel.includes(j)?" sel":""}${mu&&sel.length&&!sel.includes(j)?" dim":""}" onclick="${clickFor(j)}">${SH[j]}</button>`).join("")}</div>${mu?`<div class="c" style="margin-top:14px"><button ${sel.length?"":"disabled"} onclick="sendSel()">${tr("Ответить")}</button></div>`:""}`;
  }
- if(S.state==='results'){
-  const ans=p.answered,ok=ans&&p.ok;
-  const correctAnswerHtml=!ok&&ans?playerCorrectAnswerHtml():'';
-  return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1 class="${ok?'ok':'bad'}">${ok?'Верно! 🎉':ans?'Неверно':'Время вышло'}</h1>${correctAnswerHtml}${ok?`<p class="big">+${p.pts}</p>`:''}<p class="mut">Вы на ${p.rank} месте</p></div>`;
+ if(S.state==="results"){
+  const ans=!!p.answered,ok=ans&&p.ok;
+  return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1 class="${ok?"ok":"bad"}">${ok?tr("Верно! 🎉"):ans?tr("Неверно ✗"):tr("Время вышло")}</h1>${ok&&p.pts?`<p class="big">+${Number(p.pts)} ${tr("баллов")}</p>`:""}<p class="mut">${tr("Ждём следующего вопроса")}</p></div>`;
  }
- if(S.state==="final"&&S.mode==="classic")return a.innerHTML=head+classicFinalResults(Array.isArray(S.finalRows)?S.finalRows:(Array.isArray(S.top)?S.top:[]),'');
- a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${p.rank===1?'🥇 Вы победили!':'Игра окончена'}</h1><p class="big">Ваше место: ${p.rank}</p></div>`;
+ if(S.state==="final"&&S.mode==="classic")return a.innerHTML=head+`<div class="c player-answer-result" style="margin-top:30px"><h1>${tr("Игра окончена")}</h1><p class="big">${Number(p.score)||0} ${tr("баллов")}</p></div>`;
+ a.innerHTML=head+`<div class="c" style="margin-top:30px"><h1>${tr("Игра окончена")}</h1><p class="big">${Number(p.score)||0} ${tr("очков")}</p></div>`;
 }
 function participantEndScreen(a,headline=''){
  const detail=String(headline||tr('Этот экран предназначен только для игровой сессии.'));
@@ -1849,9 +1832,10 @@ function draw(){
  if(!S)return a.innerHTML='<p class="c mut">Подключение…</p>';
  if(S.state==='kicked'){if(es)es.close();if(gameRole==='player'||participantOnly){markParticipantOnly();return participantEndScreen(a,tr('Вас исключили из игры'))}clearSess();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}
  if(S.state==='ended'){if(es)es.close();if(gameRole==='player'||participantOnly){markParticipantOnly();return participantEndScreen(a,tr('Игра завершена ведущим'))}clearSess();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
- if(S.mode==='kingdoms'&&S.state!=='lobby')S.host?hostK(a):playerK(a);else S.host?host(a):player(a);
+ if(S.state==="countdown")a.innerHTML=gameCountdownHtml();
+ else if(S.mode==='kingdoms'&&S.state!=='lobby')S.host?hostK(a):playerK(a);else S.host?host(a):player(a);
  if(S.host&&qrFull)a.insertAdjacentHTML('beforeend',qrOverlay());
- if(S.host&&S.state!=='final'){
+ if(S.host&&S.state!=='final'&&S.state!=='countdown'){
   const controls=document.createElement('div');
   controls.className='host-controls-block';
   controls.innerHTML=hostBar();
@@ -1867,7 +1851,13 @@ function draw(){
  if(S.mode==='classic'){if(!S.host&&classicPlayerFeedback&&classicPlayerFeedback.stage==='feedback')a.insertAdjacentHTML('beforeend',classicAnswerFeedbackOverlay());a.insertAdjacentHTML('beforeend',classicRankingOverlay());}
 }
 function tick(){
- if(!S)return;let left,tot;
+ if(!S)return;
+ if(S.state==="countdown"){
+  const node=$("start-countdown-number"),endsAt=Number(S.countdownEndsAt)||0;
+  if(node)node.textContent=endsAt?Math.max(1,Math.ceil((endsAt-Date.now())/1000)):5;
+  return;
+ }
+ let left,tot;
  if(S.mode==='kingdoms'&&S.state==='playing'){left=Math.max(0,tEnd-Date.now());tot=S.dur;if($('tm')){$('tm').textContent=fmt(left);$('tm').classList.toggle('is-urgent',left<=10000)}}
  else if(S.state==='question'){left=Math.max(0,S.T*1000-(Date.now()-t0));tot=S.T*1000;if($('tm'))$('tm').textContent=Math.ceil(left/1000)}
  else return;
@@ -2259,6 +2249,12 @@ Object.assign(UI_TRANSLATIONS.en,{
 Object.assign(UI_TRANSLATIONS.zh,{
  'РЕЗУЛЬТАТ ОТВЕТА':'结果反馈','Далее':'下一步','Рейтинг обновляется по мере ответов':'排行榜会随着答题更新','Вы смотрите результаты предыдущего вопроса':'您正在查看上一题的结果'
 });
+Object.assign(UI_TRANSLATIONS.en,{
+ 'ОТСЧЁТ ДО СТАРТА':'COUNTDOWN TO START','Игра начинается через':'The game starts in','Приготовьтесь!':'Get ready!','Ваш счёт':'Your score','Ждём следующего вопроса':'Waiting for the next question','Ответ принят. Ждём остальных…':'Answer received. Waiting for others…'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'ОТСЧЁТ ДО СТАРТА':'开始倒计时','Игра начинается через':'游戏将在以下时间后开始','Приготовьтесь!':'准备好！','Ваш счёт':'你的积分','Ждём следующего вопроса':'等待下一题','Ответ принят. Ждём остальных…':'答案已收到，等待其他参与者…'
+});
 const _nativeConfirm=window.confirm.bind(window),_nativeAlert=window.alert.bind(window);
 window.confirm=(message)=>_nativeConfirm(tr(String(message)));
 window.alert=(message)=>_nativeAlert(tr(String(message)));
@@ -2285,10 +2281,11 @@ function patchRenderNode(current,next){
   return current;
  }
  if(current.nodeType!==1)return current;
+ const preserveCountup=current.hasAttribute("data-countup")&&next.hasAttribute("data-countup")&&current.getAttribute("data-countup-key")===next.getAttribute("data-countup-key");
  const oldAttrs=Array.from(current.attributes),newAttrs=new Map(Array.from(next.attributes).map(a=>[a.name,a.value]));
  oldAttrs.forEach(a=>{if(!newAttrs.has(a.name))current.removeAttribute(a.name)});
  newAttrs.forEach((value,name)=>{if(current.getAttribute(name)!==value)current.setAttribute(name,value)});
- patchRenderChildren(current,next);
+ if(!preserveCountup)patchRenderChildren(current,next);
  return current;
 }
 function patchRenderChildren(currentParent,nextParent){
@@ -2319,6 +2316,27 @@ function patchRenderChildren(currentParent,nextParent){
  while(cursor){const next=cursor.nextSibling;currentParent.removeChild(cursor);cursor=next}
 }
 
+function animateClassicScoreCounters(){
+ const nodes=document.querySelectorAll('#app [data-countup="true"]');
+ nodes.forEach(el=>{
+  const key=String(el.getAttribute("data-countup-key")||"");
+  if(classicCountupSeen.get(el)===key)return;
+  classicCountupSeen.set(el,key);
+  const start=Number(el.getAttribute("data-countup-start"))||0;
+  const end=Number(el.getAttribute("data-countup-end"))||0;
+  const duration=850,started=performance.now();
+  el.textContent=String(Math.round(start));
+  const frame=now=>{
+   if(!el.isConnected)return;
+   const t=Math.min(1,Math.max(0,(now-started)/duration));
+   const eased=1-Math.pow(1-t,3);
+   el.textContent=String(Math.round(start+(end-start)*eased));
+   if(t<1)requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+ });
+}
+
 function render(){
  if(down&&Date.now()-down<1500){if(!pend){pend=1;setTimeout(()=>{if(pend){pend=0;render()}},1600)}return}
  if(view==='quiz-editor'&&editorQuiz)persistEditorDraft();
@@ -2347,6 +2365,7 @@ function render(){
  if(view==='lib')filterLibrary();
  applyUiLanguage();
  if(view==='security'&&securitySetup)renderSecurityQr();
+ animateClassicScoreCounters();
  enter();tick();
 }
 if(typeof addEventListener==='function'){
