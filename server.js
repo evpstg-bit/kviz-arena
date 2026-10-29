@@ -759,7 +759,7 @@ function makeGameReport(g,{incomplete=false}={}){
   }).sort((a,b)=>g.mode==='kingdoms'?(b.placed-a.placed||b.correctCount-a.correctCount||a.name.localeCompare(b.name)):(b.score-a.score||b.correctCount-a.correctCount||a.name.localeCompare(b.name)));
   participants.forEach((p,i)=>p.rank=i+1);
   const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
-  const totalPossible=g.mode==='classic'?participants.length*questions.length:null;
+  const totalPossible=g.mode==='classic'?participants.length*questions.filter(q=>q.wasPresented!==false).length:null;
   const teamKeys=[...new Set(participants.map(p=>p.team).filter(Number.isInteger))].sort((a,b)=>a-b);
   const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:successPercent(correctCount,answers),flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
   const accuracies=participants.map(p=>g.mode==='classic'?(questions.length?p.correctCount/questions.length*100:0):(p.answeredCount?p.correctCount/p.answeredCount*100:0));
