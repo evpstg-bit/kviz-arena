@@ -1271,3 +1271,127 @@
 @media (max-width: 440px) {
   #app .floating-menu-anchor { top: 75px !important; }
 }
+
+/* Immediate participant answer feedback — mobile-first modal. */
+.player-feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: rgba(16, 19, 34, .62);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  animation: player-feedback-fade-in .18s ease-out both;
+}
+.player-feedback-dialog {
+  width: min(100%, 440px);
+  max-height: min(86dvh, 720px);
+  box-sizing: border-box;
+  padding: clamp(24px, 6vw, 36px);
+  overflow-y: auto;
+  color: var(--text-main);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .28);
+  animation: player-feedback-card-in .24s cubic-bezier(.2,.8,.2,1) both;
+}
+.player-feedback-mark {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 17px;
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 1;
+  border-radius: 22px;
+  box-shadow: 0 8px 22px rgba(20, 30, 48, .14);
+}
+.player-feedback-dialog.is-correct .player-feedback-mark { background: #149879; }
+.player-feedback-dialog.is-incorrect .player-feedback-mark { background: #d9435b; }
+.player-feedback-kicker {
+  margin: 0 0 6px !important;
+  color: var(--text-muted) !important;
+  font-size: .72rem !important;
+  font-weight: 850 !important;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.player-feedback-dialog h2 {
+  margin: 0 !important;
+  color: var(--text-main) !important;
+  font-size: clamp(1.8rem, 7vw, 2.35rem) !important;
+  font-weight: 850 !important;
+  letter-spacing: -.045em;
+  line-height: 1.1 !important;
+}
+.player-feedback-dialog.is-correct h2 { color: #12876e !important; }
+.player-feedback-dialog.is-incorrect h2 { color: #d9435b !important; }
+.player-feedback-correct {
+  display: grid;
+  gap: 7px;
+  margin-top: 19px;
+  padding: 15px 16px;
+  text-align: left;
+  color: var(--text-main);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  overflow-wrap: anywhere;
+}
+.player-feedback-correct span {
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+.player-feedback-correct strong {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.player-feedback-points {
+  margin: 12px 0 0 !important;
+  color: var(--text-soft) !important;
+  font-size: 1.05rem !important;
+  font-weight: 750 !important;
+}
+.player-feedback-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 24px;
+  padding: 13px 18px;
+  color: #fff !important;
+  font-size: 1rem;
+  font-weight: 800;
+  background: var(--accent-button) !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--accent-button) 24%, transparent);
+  cursor: pointer;
+  transition: transform .15s ease, filter .15s ease;
+}
+.player-feedback-next:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.player-feedback-next:active { transform: translateY(0); }
+.player-feedback-next:focus-visible { outline: 3px solid var(--accent) !important; outline-offset: 3px; }
+.player-feedback-next span { font-size: 1.25rem; }
+@keyframes player-feedback-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes player-feedback-card-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 440px) {
+  .player-feedback-backdrop { padding-left: 12px; padding-right: 12px; }
+  .player-feedback-dialog { padding: 24px 20px; border-radius: 22px; }
+  .player-feedback-mark { width: 60px; height: 60px; border-radius: 19px; font-size: 2.2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-feedback-backdrop, .player-feedback-dialog { animation: none !important; }
+}
