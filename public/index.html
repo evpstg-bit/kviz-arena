@@ -3,17 +3,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.16.31">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.16.31">
-<link rel="shortcut icon" href="/favicon.ico?v=1.16.31">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.16.31">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.17.0">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.17.0">
+<link rel="shortcut icon" href="/favicon.ico?v=1.17.0">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.17.0">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.16.31">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.16.31">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.16.31">
-<link rel="stylesheet" href="/lobby.css?v=1.16.31">
-<link rel="stylesheet" href="/kingdoms.css?v=1.16.31">
+<link rel="stylesheet" href="/ui.css?v=1.17.0">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.17.0">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.17.0">
+<link rel="stylesheet" href="/lobby.css?v=1.17.0">
+<link rel="stylesheet" href="/kingdoms.css?v=1.17.0">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script>
 /* Boot safety net: never leave users on an endless loading label. */
@@ -49,7 +49,7 @@ let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settin
 function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.16.31'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.17.0'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
@@ -359,7 +359,7 @@ async function dpCapi(path,o){
 }
 
 function developerHeader(){
- return `<header class="app-topbar dashboard-topbar site-app-topbar developer-topbar"><a class="brand-lockup" href="/" aria-label="Квиз-арена — на главную"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">Кабинет разработчика</span><span class="app-release-badge"><span class="app-release-dot" aria-hidden="true"></span>BETA · v${esc(DEVELOPER_INFO.version||INFO.version||'1.16.31')}</span></div></a><div class="developer-topbar-right"><span class="developer-role-chip">РАЗРАБОТЧИК</span><a class="developer-home-link" href="/">На главную ↗</a></div></header>`;
+ return `<header class="app-topbar dashboard-topbar site-app-topbar developer-topbar"><a class="brand-lockup" href="/" aria-label="Квиз-арена — на главную"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">Кабинет разработчика</span><span class="app-release-badge"><span class="app-release-dot" aria-hidden="true"></span>BETA · v${esc(DEVELOPER_INFO.version||INFO.version||'1.17.0')}</span></div></a><div class="developer-topbar-right"><span class="developer-role-chip">РАЗРАБОТЧИК</span><a class="developer-home-link" href="/">На главную ↗</a></div></header>`;
 }
 function developerLoginPage(a){
  document.title='Квиз-арена — Кабинет разработчика';
@@ -372,7 +372,7 @@ async function submitDeveloperLogin(){
  DEVELOPER_BUSY=false;
  if(result.error){DEVELOPER_MSG=result.error;return render()}
  DEVELOPER_TOKEN=String(result.token||'');DEVELOPER_USER=result.user||null;
- DEVELOPER_INFO={version:result.version||INFO.version||'1.16.31',status:result.status||'online'};
+ DEVELOPER_INFO={version:result.version||INFO.version||'1.17.0',status:result.status||'online'};
  DEVELOPER_FORM={login:'',password:''};DEVELOPER_MSG='';
  try{localStorage.setItem('kviz-developer-token',DEVELOPER_TOKEN)}catch(e){}
  view='developer-home';render();
@@ -387,7 +387,7 @@ async function developerLogout(){
 function developerDashboardPage(a){
  const login=DEVELOPER_USER&&DEVELOPER_USER.login||'developer';
  document.title='Квиз-арена — Кабинет разработчика';
- a.innerHTML=`${developerHeader()}<main class="developer-page developer-dashboard-page"><section class="developer-dashboard-heading"><span class="section-kicker">ТЕХНИЧЕСКИЙ РАЗДЕЛ</span><h1 class="page-title">Кабинет разработчика<span class="title-period">.</span></h1><p class="page-subtitle">Центр управления разработкой и публикацией «Квиз-арены».</p></section><section class="developer-status-strip"><div class="developer-status-indicator"><span class="secure-dot"></span><span>Авторизация подтверждена</span></div><div class="developer-status-meta"><span>Версия</span><strong>v${esc(DEVELOPER_INFO.version||INFO.version||'1.16.31')}</strong></div><div class="developer-status-meta"><span>Сервис</span><strong>${esc(DEVELOPER_INFO.status==='online'?'Работает':'Статус неизвестен')}</strong></div><div class="developer-status-user"><span class="developer-user-avatar">D</span><span><b>${esc(login)}</b><small>Разработчик</small></span></div><button type="button" class="sec developer-logout-button" onclick="developerLogout()">Выйти</button></section><section class="dp-launch"><div class="dp-launch-icon">⌘</div><div><span class="section-kicker">ТЕСТОВАЯ СРЕДА</span><h2>Предпросмотр кабинета преподавателя</h2><p>Библиотека, редактор, отчёты, режимы и игровой стенд с демо-данными.</p></div><button class="dp-primary" data-v="dashboard" onclick="dpNav(this.dataset.v)">Открыть стенд →</button></section><section class="developer-tool-grid" aria-label="Инструменты разработчика"><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-github">${navIcon('file')}</span><span><strong>Исходный код</strong><small>Репозиторий, файлы и коммиты проекта</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena/commits/main" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-history">${navIcon('reports')}</span><span><strong>История обновлений</strong><small>Изменения версий и журнал коммитов</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://dashboard.render.com/web/srv-dbd5j9vavr4c73cggg40" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-render">${navIcon('settings')}</span><span><strong>Публикация Render</strong><small>Развёртывания, журналы и параметры сервиса</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://bntu-max.onrender.com/" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-site">${navIcon('home')}</span><span><strong>Рабочий сайт</strong><small>Открыть опубликованную платформу</small></span><span class="developer-tool-arrow">↗</span></a></section><section class="developer-boundary-note"><strong>Разделение доступа</strong><p>Кабинет разработчика использует отдельный логин, пароль и сессию. Он не входит в систему аккаунтов преподавателей и не подменяет её права доступа.</p></section><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a></footer></main>`;
+ a.innerHTML=`${developerHeader()}<main class="developer-page developer-dashboard-page"><section class="developer-dashboard-heading"><span class="section-kicker">ТЕХНИЧЕСКИЙ РАЗДЕЛ</span><h1 class="page-title">Кабинет разработчика<span class="title-period">.</span></h1><p class="page-subtitle">Центр управления разработкой и публикацией «Квиз-арены».</p></section><section class="developer-status-strip"><div class="developer-status-indicator"><span class="secure-dot"></span><span>Авторизация подтверждена</span></div><div class="developer-status-meta"><span>Версия</span><strong>v${esc(DEVELOPER_INFO.version||INFO.version||'1.17.0')}</strong></div><div class="developer-status-meta"><span>Сервис</span><strong>${esc(DEVELOPER_INFO.status==='online'?'Работает':'Статус неизвестен')}</strong></div><div class="developer-status-user"><span class="developer-user-avatar">D</span><span><b>${esc(login)}</b><small>Разработчик</small></span></div><button type="button" class="sec developer-logout-button" onclick="developerLogout()">Выйти</button></section><section class="dp-launch"><div class="dp-launch-icon">⌘</div><div><span class="section-kicker">ТЕСТОВАЯ СРЕДА</span><h2>Предпросмотр кабинета преподавателя</h2><p>Библиотека, редактор, отчёты, режимы и игровой стенд с демо-данными.</p></div><button class="dp-primary" data-v="dashboard" onclick="dpNav(this.dataset.v)">Открыть стенд →</button></section><section class="developer-tool-grid" aria-label="Инструменты разработчика"><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-github">${navIcon('file')}</span><span><strong>Исходный код</strong><small>Репозиторий, файлы и коммиты проекта</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://github.com/evpstg-bit/kviz-arena/commits/main" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-history">${navIcon('reports')}</span><span><strong>История обновлений</strong><small>Изменения версий и журнал коммитов</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://dashboard.render.com/web/srv-dbd5j9vavr4c73cggg40" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-render">${navIcon('settings')}</span><span><strong>Публикация Render</strong><small>Развёртывания, журналы и параметры сервиса</small></span><span class="developer-tool-arrow">↗</span></a><a class="developer-tool-card" href="https://bntu-max.onrender.com/" target="_blank" rel="noopener noreferrer"><span class="developer-tool-icon developer-tool-site">${navIcon('home')}</span><span><strong>Рабочий сайт</strong><small>Открыть опубликованную платформу</small></span><span class="developer-tool-arrow">↗</span></a></section><section class="developer-boundary-note"><strong>Разделение доступа</strong><p>Кабинет разработчика использует отдельный логин, пароль и сессию. Он не входит в систему аккаунтов преподавателей и не подменяет её права доступа.</p></section><footer class="dashboard-footer minimal-footer"><a class="eyefront-link" href="https://www.instagram.com/eyefront/" target="_blank" rel="noopener noreferrer">© eyefront</a></footer></main>`;
 }
 async function openSecurity(){
  if(!USER)return goAuth();
@@ -751,7 +751,7 @@ function siteHistoryButtons(){
  const canBack=siteNavIndex>0,canForward=siteNavIndex>=0&&siteNavIndex<siteNavHistory.length-1;
  return `<div class="site-history-controls" role="group" aria-label="${tr('Навигация по страницам')}"><button type="button" class="site-history-button" onclick="navigateSiteHistory(-1)" title="${tr('Назад')}" aria-label="${tr('Назад')}" ${canBack?'':'disabled'}>${navIcon('back')}</button><button type="button" class="site-history-button" onclick="navigateSiteHistory(1)" title="${tr('Вперёд')}" aria-label="${tr('Вперёд')}" ${canForward?'':'disabled'}>${navIcon('forward')}</button></div>`;
 }
-function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.16.31')}
+function releaseLabel(){const lang=currentUiLanguage();const label={ru:'БЕТА',en:'BETA',zh:'测试版'}[lang]||'БЕТА';return label+' · v'+esc(INFO.version||'1.17.0')}
 function brandMarkup(subtitle){const release=releaseLabel();return `<a class="brand-lockup brand-home-link" href="/" onclick="return goBrandHome(event)" title="${tr('Квиз-арена — на главную')}" aria-label="${tr('Квиз-арена — на главную')}"><div class="brand-icon">K</div><div class="brand-copy"><strong>Квиз-арена</strong><span class="brand-subtitle">${subtitle||tr('Платформа интеллектуальных игр')}</span><span class="app-release-badge" title="${release}" aria-label="${release}"><span class="app-release-dot" aria-hidden="true"></span>${release}</span></div></a>`}
 function menuItem(icon,label,onClick,extraClass=''){return `<button type="button" role="menuitem" class="site-menu-item ${extraClass}" onclick="${onClick}">${navIcon(icon)}<span>${tr(label)}</span></button>`}
 function cabinetMenu(active){
@@ -2306,7 +2306,7 @@ if(document.addEventListener){
    const developerSession=await api('developer/me',{token:DEVELOPER_TOKEN});
    if(developerSession.user){
     DEVELOPER_USER=developerSession.user;
-    DEVELOPER_INFO={version:developerSession.version||INFO.version||'1.16.31',status:developerSession.status||'online'};
+    DEVELOPER_INFO={version:developerSession.version||INFO.version||'1.17.0',status:developerSession.status||'online'};
    }else{
     DEVELOPER_TOKEN='';
     try{localStorage.removeItem('kviz-developer-token')}catch(e){}
