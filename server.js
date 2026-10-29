@@ -790,7 +790,7 @@ async function saveGameReport(g,options={}){
 // ---- Classic ----
 function view(g,id,R0){
   const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
-  const v={state:g.state,resultEndsAt:g.resultEndsAt||0,countdownEndsAt:g.countdownEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
+  const v={state:g.state,resultsPhase:g.resultsPhase||'',resultEndsAt:g.resultEndsAt||0,countdownEndsAt:g.countdownEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
     elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:host?R.slice(0,10).map(p=>({id:p.id,name:p.name,score:p.score,priorScore:Number(g.roundStartScores&&g.roundStartScores[p.id]!==undefined?g.roundStartScores[p.id]:p.score)||0,roundPts:p.lastQ===g.qi?(Number(p.lastPts)||0):0})):[]};
   if(host&&g.state==='lobby'){const app=g.appSettings||APP_SETTINGS;v.lobbySettings={classic:{basePoints:app.modes.classic.basePoints,speedBonus:app.modes.classic.speedBonus},kingdoms:{durationMinutes:g.quiz.dur,correctAnswersForFlag:g.quiz.need,kingdomCount:clampInt(app.modes.kingdoms.kingdomCount,2,4,2)}}}
   if(host&&g.reportId)v.reportId=g.reportId;
@@ -837,7 +837,7 @@ function startCountdown(g){
 }
 function startQ(g){
   if(g.qi===0||!g.startedAt)g.startedAt=Date.now();
-  g.state='question';g.countdownEndsAt=0;g.resultEndsAt=0;
+  g.state='question';g.countdownEndsAt=0;g.resultEndsAt=0;g.resultsPhase='';
   g.roundStartScores=Object.fromEntries([...g.players.entries()].map(([id,p])=>[String(id),Number(p.score)||0]));
   g.qStart=Date.now();clearTimeout(g.timer);
   g.timer=setTimeout(()=>toResults(g),g.quiz.q[g.qi].T*1000+500);push(g);
@@ -846,19 +846,27 @@ function toResults(g){
   if(g.state!=='question')return;
   clearTimeout(g.timer);
   g.state='results';
+  // Phase 1: let the teacher show the highlighted correct answer for ten seconds.
+  g.resultsPhase='answer';
   g.resultEndsAt=Date.now()+10000;
   push(g);
-  // Keep the teacher's Top-10 leaderboard popup visible for ten seconds, then advance automatically.
   g.timer=setTimeout(()=>{
     if(g.state!=='results')return;
-    if(g.qi>=g.quiz.q.length-1){
-      const saved=saveGameReport(g);
-      g.state='final';g.resultEndsAt=0;push(g);
-      Promise.resolve(saved).then(()=>push(g)).catch(e=>console.error('Не удалось сохранить итоговый отчёт:',e.message));
-      return;
-    }
-    g.qi++;
-    startQ(g);
+    // Phase 2: show the Top-10 popup only after the answer-review period.
+    g.resultsPhase='leaderboard';
+    g.resultEndsAt=Date.now()+10000;
+    push(g);
+    g.timer=setTimeout(()=>{
+      if(g.state!=='results')return;
+      if(g.qi>=g.quiz.q.length-1){
+        const saved=saveGameReport(g);
+        g.state='final';g.resultsPhase='';g.resultEndsAt=0;push(g);
+        Promise.resolve(saved).then(()=>push(g)).catch(e=>console.error('Не удалось сохранить итоговый отчёт:',e.message));
+        return;
+      }
+      g.qi++;
+      startQ(g);
+    },10000);
   },10000);
 }
 
