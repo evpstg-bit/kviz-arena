@@ -53,6 +53,7 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
+let classicPlayerFeedback=null,classicPlayerFeedbackTimer=null;
 let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.17.1',status:'online'};
 
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
@@ -147,14 +148,32 @@ function unavailableGameMessage(role){
 }
 function connect(){
  if(TEACHER_SANDBOX_ACTIVE){tsCreateRoom(quiz||TEACHER_SANDBOX_PENDING_QUIZ||TS_DATA.items[0].quiz,libraryLaunchMode);view='game';render();return}
- if(es)es.close();fbSeen=-2;bnSeen=-1;fbUntil=0;banUntil=0;
+ if(es)es.close();fbSeen=-2;bnSeen=-1;fbUntil=0;banUntil=0;if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);classicPlayerFeedbackTimer=null;classicPlayerFeedback=null;
  if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(e){}
  const source=new EventSource('/api/events?pin='+encodeURIComponent(pin)+'&id='+encodeURIComponent(me));
  es=source;
  source.onmessage=e=>{
   if(es!==source)return;
   sseMissingChecks=0;
-  S=JSON.parse(e.data);gameRole=S.host?'host':'player';if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
+  const previousS=S;
+  const incomingS=JSON.parse(e.data);
+  if(classicPlayerFeedback&&classicPlayerFeedback.stage==='ranking'&&classicPlayerFeedback.pin===incomingS.pin&&Number(classicPlayerFeedback.qi)!==Number(incomingS.qi)&&!classicPlayerFeedback.lateView){
+   classicPlayerFeedback=null;
+   if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
+   classicPlayerFeedbackTimer=null;
+  }
+  if(classicPlayerFeedback&&classicPlayerFeedback.pin===incomingS.pin&&Number(classicPlayerFeedback.qi)===Number(incomingS.qi)&&Array.isArray(incomingS.top)){
+   classicPlayerFeedback.top=incomingS.top.map(row=>({...row}));
+  }
+  const answeredNow=incomingS.mode==='classic'&&!incomingS.host&&['question','results'].includes(incomingS.state)&&incomingS.me&&incomingS.me.answered&&(!previousS||previousS.pin!==incomingS.pin||Number(previousS.qi)!==Number(incomingS.qi)||!previousS.me||!previousS.me.answered);
+  if(answeredNow){
+   const options=Array.isArray(incomingS.q&&incomingS.q.a)?incomingS.q.a:[];
+   const correctAnswers=Array.isArray(incomingS.correct)?incomingS.correct.map(i=>options[Number(i)]).filter(answer=>typeof answer==='string'&&answer.trim()):[];
+   if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
+   classicPlayerFeedbackTimer=null;
+   classicPlayerFeedback={pin:incomingS.pin,qi:Number(incomingS.qi),stage:'feedback',ok:!!incomingS.me.ok,pts:Number(incomingS.me.pts)||0,score:Number(incomingS.me.score)||0,rank:Number(incomingS.me.rank)||0,correctAnswers,top:Array.isArray(incomingS.top)?incomingS.top.map(row=>({...row})):[],title:String(incomingS.q&&incomingS.q.t||''),createdAt:Date.now(),lateView:false};
+  }
+  S=incomingS;gameRole=S.host?'host':'player';if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
   if(S.host&&CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&S.reportId&&!(S.mode==='classic'&&S.state==='final')){
    if(autoReportSeen!==S.reportId){
@@ -1684,18 +1703,50 @@ function host(a){
  return a.innerHTML=classicFinalResults(S.rows, `${dl}<button onclick="newGame()">${tr("Новая игра")}</button>`);
 }
 function classicRankingOverlay(){
- if(!S||S.mode!=='classic'||S.state!=='results')return '';
- const rows=(Array.isArray(S.top)?S.top:[]).slice(0,10);
- const endAt=Number(S.resultEndsAt)||0;
- const progressKey=String(S.pin||pin)+'|'+String(S.qi)+'|'+String(endAt);
+ if(!S||S.mode!=='classic')return '';
+ const isPlayer=!S.host;
+ const feedback=isPlayer?classicPlayerFeedback:null;
+ if(isPlayer&&(!feedback||feedback.stage!=='ranking'))return '';
+ if(!isPlayer&&S.state!=='results')return '';
+ const sameQuestion=!isPlayer||!!feedback&&Number(S.qi)===Number(feedback.qi);
+ const currentResult=S.state==='results'&&sameQuestion;
+ const stale=isPlayer&&!sameQuestion;
+ const rows=(isPlayer&&stale&&Array.isArray(feedback.top)?feedback.top:(Array.isArray(S.top)?S.top:[])).slice(0,10);
+ const endAt=currentResult?Number(S.resultEndsAt)||0:0;
+ const progressKey=String(S.pin||pin)+'|'+String(isPlayer?feedback.qi:S.qi)+'|'+String(endAt)+'|'+(stale?'late':'live');
  if(progressKey!==classicRankingProgressKey){
   classicRankingProgressKey=progressKey;
-  classicRankingProgressDuration=Math.max(1,Math.min(3000,(endAt||Date.now()+3000)-Date.now()));
+  classicRankingProgressDuration=currentResult?Math.max(1,Math.min(3000,(endAt||Date.now()+3000)-Date.now())):(stale?3000:0);
  }
  const remaining=classicRankingProgressDuration;
  const medals=['🥇','🥈','🥉'];
  const items=rows.map((p,i)=>`<li class="classic-ranking-row"><span class="classic-ranking-place ${i<3?'is-podium':''}">${medals[i]||i+1}</span><span class="classic-ranking-person"><span class="classic-ranking-name" data-user-content="true">${esc(p.name||'Участник')}</span><span class="classic-ranking-earned"><span class="classic-ranking-earned-label">${tr('За вопрос')}</span><strong>+${Number(p.roundPts)||0}</strong><span class="classic-ranking-earned-unit">${tr('баллов')}</span></span></span><strong class="classic-ranking-score">${Number(p.score)||0}</strong></li>`).join('');
- return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr('Рейтинг игроков')}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr('Рейтинг игроков')}</p><h2>${tr('Топ-10 игроков')}</h2></div></header><div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div><ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr('Пока нет участников')}</li>`}</ol><p class="classic-ranking-caption">${tr('Следующий вопрос откроется автоматически')}</p></section></div>`;
+ const progress=(currentResult||stale)?`<div class="classic-ranking-progress" aria-hidden="true"><span style="animation-duration:${remaining}ms"></span></div>`:'';
+ const caption=currentResult?tr('Следующий вопрос откроется автоматически'):stale?tr('Вы смотрите результаты предыдущего вопроса'):tr('Рейтинг обновляется по мере ответов');
+ return `<div class="classic-ranking-backdrop" role="presentation"><section class="classic-ranking-card" role="dialog" aria-modal="true" aria-label="${tr('Рейтинг игроков')}"><header class="classic-ranking-header"><span class="classic-ranking-trophy" aria-hidden="true">🏆</span><div><p>${tr('Рейтинг игроков')}</p><h2>${tr('Топ-10 игроков')}</h2></div></header>${progress}<ol class="classic-ranking-list">${items||`<li class="classic-ranking-empty">${tr('Пока нет участников')}</li>`}</ol><p class="classic-ranking-caption">${caption}</p></section></div>`;
+}
+function continueToRanking(){
+ const feedback=classicPlayerFeedback;
+ if(!feedback||feedback.stage!=='feedback')return;
+ feedback.stage='ranking';
+ feedback.lateView=!S||S.host||S.pin!==feedback.pin||Number(S.qi)!==Number(feedback.qi)||S.state==='final';
+ if(classicPlayerFeedbackTimer)clearTimeout(classicPlayerFeedbackTimer);
+ classicPlayerFeedbackTimer=null;
+ render();
+ if(feedback.lateView){
+  classicPlayerFeedbackTimer=setTimeout(()=>{
+   if(classicPlayerFeedback===feedback&&feedback.stage==='ranking'){
+    classicPlayerFeedback=null;classicPlayerFeedbackTimer=null;render();
+   }
+  },3000);
+ }
+}
+function classicAnswerFeedbackOverlay(){
+ const feedback=classicPlayerFeedback;
+ if(!S||S.host||!feedback||feedback.stage!=='feedback')return '';
+ const correctAnswers=Array.isArray(feedback.correctAnswers)?feedback.correctAnswers:[];
+ const isCorrect=!!feedback.ok;
+ return `<div class="player-feedback-backdrop" role="presentation"><section class="player-feedback-dialog ${isCorrect?'is-correct':'is-incorrect'}" role="dialog" aria-modal="true" aria-labelledby="player-feedback-title"><div class="player-feedback-mark" aria-hidden="true">${isCorrect?'✓':'×'}</div><p class="player-feedback-kicker">${tr('РЕЗУЛЬТАТ ОТВЕТА')}</p><h2 id="player-feedback-title">${isCorrect?tr('Верно'):tr('Неверно')}</h2>${!isCorrect&&correctAnswers.length?`<div class="player-feedback-correct"><span>${tr(correctAnswers.length===1?'Правильный ответ:':'Правильные ответы:')}</span><strong>${correctAnswers.map(esc).join(' + ')}</strong></div>`:''}${isCorrect&&feedback.pts?`<p class="player-feedback-points">+${Number(feedback.pts)} ${tr('баллов')}</p>`:''}<button type="button" class="player-feedback-next" onclick="continueToRanking()">${tr('Далее')} <span aria-hidden="true">→</span></button></section></div>`;
 }
 function playerCorrectAnswerHtml(){
  const correctAnswers=(Array.isArray(S&&S.correct)&&S.q&&Array.isArray(S.q.a))?S.correct.map(i=>S.q.a[i]).filter(x=>typeof x==='string'&&x.trim()):[];
@@ -1813,7 +1864,7 @@ function draw(){
   }
  }
  if(S.mode==='kingdoms'&&S.banner&&Date.now()<banUntil)a.insertAdjacentHTML('beforeend',bannerHtml());
- if(S.mode==='classic'&&S.state==='results')a.insertAdjacentHTML('beforeend',classicRankingOverlay());
+ if(S.mode==='classic'){if(!S.host&&classicPlayerFeedback&&classicPlayerFeedback.stage==='feedback')a.insertAdjacentHTML('beforeend',classicAnswerFeedbackOverlay());a.insertAdjacentHTML('beforeend',classicRankingOverlay());}
 }
 function tick(){
  if(!S)return;let left,tot;
@@ -2202,6 +2253,12 @@ function applyUiLanguage(){
  });
  const select=root.querySelector('#ui-language');if(select)select.value=lang;
 }
+Object.assign(UI_TRANSLATIONS.en,{
+ 'РЕЗУЛЬТАТ ОТВЕТА':'ANSWER RESULT','Далее':'Next','Рейтинг обновляется по мере ответов':'Leaderboard updates as players answer','Вы смотрите результаты предыдущего вопроса':'You are viewing the previous question’s results'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'РЕЗУЛЬТАТ ОТВЕТА':'结果反馈','Далее':'下一步','Рейтинг обновляется по мере ответов':'排行榜会随着答题更新','Вы смотрите результаты предыдущего вопроса':'您正在查看上一题的结果'
+});
 const _nativeConfirm=window.confirm.bind(window),_nativeAlert=window.alert.bind(window);
 window.confirm=(message)=>_nativeConfirm(tr(String(message)));
 window.alert=(message)=>_nativeAlert(tr(String(message)));
