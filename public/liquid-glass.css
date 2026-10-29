@@ -2101,3 +2101,21 @@ html.dark #app .teacher-sandbox-game-exit button{background:rgba(15,20,38,.65);c
 #app .player-correct-answer b{font-size:clamp(1rem,2.5vw,1.3rem);font-weight:850;overflow-wrap:anywhere}
 html.dark #app .player-correct-answer{background:rgba(20,83,45,.3);border-color:rgba(134,239,172,.42);color:#bbf7d0}
 @media(max-width:640px){#app .player-correct-answer{margin:16px 12px 10px;padding:13px 14px;border-radius:13px}}
+/* v1.16.30: explicit skipped-question reporting */
+#app .report-skipped-panel{margin:18px 0}
+#app .report-skipped-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+#app .report-skipped-heading h2{margin:5px 0;font-size:1.08rem;font-weight:850}
+#app .report-skipped-heading p{margin:5px 0 0;color:var(--text-soft);font-size:.8rem;line-height:1.5}
+#app .report-skipped-question{padding:13px 0;border-top:1px solid var(--line)}
+#app .report-skipped-question-top{display:flex;align-items:flex-start;gap:10px}
+#app .report-skipped-question-top strong{flex:1;min-width:0;line-height:1.5}
+#app .report-question-number{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:rgba(245,158,11,.14);color:#92400e;font-size:.72rem;font-weight:900}
+#app .report-skipped-count{flex:0 0 auto;padding:5px 8px;border:1px solid rgba(245,158,11,.24);border-radius:999px;background:rgba(245,158,11,.1);color:#92400e;font-size:.7rem;font-weight:850}
+#app .report-skipped-question p{margin:8px 0 0 40px;color:var(--text-soft);font-size:.78rem;line-height:1.6;overflow-wrap:anywhere}
+#app .report-skipped-empty{padding:13px 15px;border-radius:12px;background:rgba(16,185,129,.08);color:var(--text-soft);font-size:.82rem}
+#app .report-skipped-note,#app .report-unasked-note{margin:12px 0 0;padding:11px 13px;border-radius:11px;background:rgba(245,158,11,.09);color:var(--text-soft);font-size:.76rem;line-height:1.6;overflow-wrap:anywhere}
+#app .report-participant-skipped-list{margin-top:16px;padding-top:13px;border-top:1px solid var(--line)}
+#app .report-participant-skipped-item{padding:11px 0;border-top:1px solid var(--line)}
+#app .report-participant-skipped-item p{margin:6px 0 0 40px;color:var(--text-soft);font-size:.78rem;line-height:1.5}
+html.dark #app .report-question-number,html.dark #app .report-skipped-count{background:rgba(180,83,9,.22);border-color:rgba(251,191,36,.22);color:#FDE68A}
+html.dark #app .report-skipped-empty{background:rgba(16,185,129,.1)}

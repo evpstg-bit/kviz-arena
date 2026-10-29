@@ -736,6 +736,7 @@ function successPercent(correctCount,totalCount){
 }
 function makeGameReport(g,{incomplete=false}={}){
   const roster=[...g.players.entries()].map(([id,p])=>({id,...p,removed:false})).concat((g.left||[]).map(p=>({...p,removed:true,log:Array.isArray(p.log)?p.log:[]})));
+  const classicQuestionWasPresented=qi=>!incomplete||((g.state==='question'||g.state==='results')&&Number(qi)<=Number(g.qi||0));
   const questions=(g.quiz.q||[]).map((q,qi)=>{
     const attempts=[];const respondents=new Set();
     roster.forEach(p=>(p.log||[]).forEach(l=>{if(Number(l.qi)===qi){attempts.push({name:p.name,playerId:p.id||'',ok:!!l.ok,answers:Array.isArray(l.a)?l.a:[],points:Number(l.pts)||0,ms:Number(l.ms)||0});respondents.add(p.id||p.name)}}));
@@ -743,13 +744,18 @@ function makeGameReport(g,{incomplete=false}={}){
     const correctCount=attempts.filter(a=>a.ok).length,incorrectCount=attempts.length-correctCount;
     const groupAccuracy=roster.length?Math.round(correctCount/roster.length*1000)/10:0;
     const belowGroupThreshold=roster.length>0&&(correctCount/roster.length)<0.4;
-    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:successPercent(correctCount,g.mode==='classic'?roster.length:attempts.length),groupAccuracy,belowGroupThreshold,answerCounts,attempts};
+    const wasPresented=g.mode==='classic'?classicQuestionWasPresented(qi):null;
+    const skippedParticipants=g.mode==='classic'&&wasPresented?roster.filter(p=>!(p.log||[]).some(l=>Number(l.qi)===qi)).map(p=>String(p.name||'Участник')):[];
+    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:successPercent(correctCount,g.mode==='classic'?roster.length:attempts.length),groupAccuracy,belowGroupThreshold,answerCounts,attempts,wasPresented,skippedCount:g.mode==='classic'?(wasPresented?skippedParticipants.length:0):null,skippedParticipants};
   });
   const participants=roster.map(p=>{
     const logs=Array.isArray(p.log)?p.log:[],correctCount=logs.filter(l=>l.ok).length,incorrectCount=logs.length-correctCount;
-    const uniqueQuestions=new Set(logs.map(l=>Number(l.qi)).filter(qi=>Number.isInteger(qi)&&qi>=0&&qi<questions.length)).size;
-    const classicUnanswered=g.mode==='classic'?Math.max(0,questions.length-uniqueQuestions):null;
-        return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,accuracy:successPercent(correctCount,g.mode==='classic'?questions.length:logs.length),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
+    const answeredQis=new Set(logs.map(l=>Number(l.qi)).filter(qi=>Number.isInteger(qi)&&qi>=0&&qi<questions.length));
+    const uniqueQuestions=answeredQis.size;
+    const askedQuestionCount=g.mode==='classic'?questions.filter(q=>q.wasPresented!==false).length:0;
+    const classicUnanswered=g.mode==='classic'?Math.max(0,askedQuestionCount-uniqueQuestions):null;
+    const skippedQuestionIndices=g.mode==='classic'?questions.filter(q=>q.wasPresented!==false&&!answeredQis.has(q.index-1)).map(q=>q.index):[];
+    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,skippedQuestionIndices,accuracy:successPercent(correctCount,g.mode==='classic'?questions.length:logs.length),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
   }).sort((a,b)=>g.mode==='kingdoms'?(b.placed-a.placed||b.correctCount-a.correctCount||a.name.localeCompare(b.name)):(b.score-a.score||b.correctCount-a.correctCount||a.name.localeCompare(b.name)));
   participants.forEach((p,i)=>p.rank=i+1);
   const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
