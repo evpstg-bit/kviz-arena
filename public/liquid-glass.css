@@ -2095,3 +2095,9 @@ html.dark #app .dp-answers button{background:rgba(15,20,38,.7);color:#f1f5f9}htm
 html.dark #app .teacher-sandbox-exit,html.dark #app .teacher-sandbox-game-exit{background:rgba(76,29,149,.28);border-color:rgba(167,139,250,.25);color:#ddd6fe}
 html.dark #app .teacher-sandbox-game-exit button{background:rgba(15,20,38,.65);color:#ddd6fe;border-color:rgba(167,139,250,.25)}
 @media(max-width:640px){#app .teacher-sandbox-exit{font-size:.65rem;padding:6px 7px}#app .teacher-sandbox-game-exit{margin:8px 10px;align-items:flex-start;flex-direction:column}}
+/* v1.16.29: reveal the correct answer under an incorrect participant result */
+#app .player-correct-answer{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:720px;margin:18px auto 12px;padding:16px 20px;border:1px solid #86efac;border-radius:16px;background:#f0fdf4;color:#166534;text-align:center;line-height:1.5;box-shadow:0 8px 24px rgba(22,101,52,.08)}
+#app .player-correct-answer span{font-size:.78rem;font-weight:750;letter-spacing:.01em;opacity:.85}
+#app .player-correct-answer b{font-size:clamp(1rem,2.5vw,1.3rem);font-weight:850;overflow-wrap:anywhere}
+html.dark #app .player-correct-answer{background:rgba(20,83,45,.3);border-color:rgba(134,239,172,.42);color:#bbf7d0}
+@media(max-width:640px){#app .player-correct-answer{margin:16px 12px 10px;padding:13px 14px;border-radius:13px}}
