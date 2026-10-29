@@ -846,9 +846,9 @@ function toResults(g){
   if(g.state!=='question')return;
   clearTimeout(g.timer);
   g.state='results';
-  g.resultEndsAt=Date.now()+3000;
+  g.resultEndsAt=Date.now()+10000;
   push(g);
-  // Keep the intermediate ranking visible for three seconds, then advance without host input.
+  // Keep the teacher's Top-10 leaderboard popup visible for ten seconds, then advance automatically.
   g.timer=setTimeout(()=>{
     if(g.state!=='results')return;
     if(g.qi>=g.quiz.q.length-1){
@@ -859,7 +859,7 @@ function toResults(g){
     }
     g.qi++;
     startQ(g);
-  },3000);
+  },10000);
 }
 
 // ---- Color Kingdoms: six-neighbour hex map and 2–4 kingdoms ----
