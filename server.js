@@ -797,8 +797,8 @@ function view(g,id,R0){
   if(g.mode==='classic'&&g.state==='final')v.finalRows=R.map((p,i)=>({rank:i+1,name:p.name,score:p.score}));
   if(g.state==='question'||g.state==='results'){
     const participantState=!host?g.players.get(id):null;
-    const needsAnswerReveal=g.state==='results'&&!!participantState&&participantState.lastQ===g.qi&&!same(participantState.lastA,q.cs);
-    const showCorrectAnswers=g.state==='results'&&(host||(g.appSettings||APP_SETTINGS).general.showCorrectAnswerAfterQuestion||needsAnswerReveal);
+    const needsAnswerReveal=!!participantState&&participantState.lastQ===g.qi&&!same(participantState.lastA,q.cs);
+    const showCorrectAnswers=(g.state==='results'&&(host||(g.appSettings||APP_SETTINGS).general.showCorrectAnswerAfterQuestion||needsAnswerReveal))||(g.state==='question'&&needsAnswerReveal);
     v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1,...(showCorrectAnswers?{a:[...q.a]}:{})};
     if(showCorrectAnswers)v.correct=[...q.cs];
   }
@@ -817,7 +817,7 @@ function view(g,id,R0){
     if(g.state==='results'){v.counts=[0,0,0,0];R.forEach(p=>{if(p.lastQ===g.qi)p.lastA.forEach(x=>v.counts[x]++)})}
   }else{
     const p=g.players.get(id);
-    if(p)v.me={name:p.name,score:p.score,answered:p.lastQ===g.qi,pts:p.lastQ===g.qi?p.lastPts:0,rank:R.findIndex(x=>x.id===id)+1,ok:g.state==='results'&&p.lastQ===g.qi&&same(p.lastA,q.cs)};
+    if(p)v.me={name:p.name,score:p.score,answered:p.lastQ===g.qi,pts:p.lastQ===g.qi?p.lastPts:0,rank:R.findIndex(x=>x.id===id)+1,ok:p.lastQ===g.qi&&same(p.lastA,q.cs)};
   }
   return v;
 }

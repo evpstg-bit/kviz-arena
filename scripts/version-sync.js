@@ -37,5 +37,8 @@ update('public/index.html', text => {
   // Версия, показываемая клиенту через /api/info, и резервное значение.
   result = result.replace(/(INFO\s*=\s*\{[^}]*?version\s*:\s*')[^']*(')/s, `$1${version}$2`);
   result = result.replace(/(INFO\.version\s*\|\|\s*')[^']*(')/g, `$1${version}$2`);
+  // Keep developer-cabinet version fallbacks in sync as well.
+  result = result.replace(/(DEVELOPER_INFO\s*=\s*\{[^}]*?version\s*:\s*')[^']*(')/s, `$1${version}$2`);
+  result = result.replace(/(DEVELOPER_INFO\s*=\s*\{[^}]*?INFO\.version\s*\|\|\s*')[^']*(')/gs, `$1${version}$2`);
   return result;
 });
