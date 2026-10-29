@@ -790,16 +790,15 @@ async function saveGameReport(g,options={}){
 // ---- Classic ----
 function view(g,id,R0){
   const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
-  const v={state:g.state,resultEndsAt:g.resultEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
-    elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:R.slice(0,10).map(p=>({name:p.name,score:p.score,roundPts:p.lastQ===g.qi?(Number(p.lastPts)||0):0}))};
+  const v={state:g.state,resultEndsAt:g.resultEndsAt||0,countdownEndsAt:g.countdownEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
+    elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:R.slice(0,10).map(p=>({id:p.id,name:p.name,score:p.score,priorScore:Number(g.roundStartScores&&g.roundStartScores[p.id]!==undefined?g.roundStartScores[p.id]:p.score)||0,roundPts:p.lastQ===g.qi?(Number(p.lastPts)||0):0}))};
   if(host&&g.state==='lobby'){const app=g.appSettings||APP_SETTINGS;v.lobbySettings={classic:{basePoints:app.modes.classic.basePoints,speedBonus:app.modes.classic.speedBonus},kingdoms:{durationMinutes:g.quiz.dur,correctAnswersForFlag:g.quiz.need,kingdomCount:clampInt(app.modes.kingdoms.kingdomCount,2,4,2)}}}
   if(host&&g.reportId)v.reportId=g.reportId;
   if(g.mode==='classic'&&g.state==='final')v.finalRows=R.map((p,i)=>({rank:i+1,name:p.name,score:p.score}));
   if(g.state==='question'||g.state==='results'){
-    const participantState=!host?g.players.get(id):null;
-    const needsAnswerReveal=!!participantState&&participantState.lastQ===g.qi&&!same(participantState.lastA,q.cs);
-    const showCorrectAnswers=(g.state==='results'&&(host||(g.appSettings||APP_SETTINGS).general.showCorrectAnswerAfterQuestion||needsAnswerReveal))||(g.state==='question'&&needsAnswerReveal);
-    v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1,...(showCorrectAnswers?{a:[...q.a]}:{})};
+    // Correct answers and answer distribution are teacher-only information.
+    const showCorrectAnswers=host&&g.state==='results';
+    v.q=host?{t:q.t,a:q.a,multi:q.cs.length>1}:{n:q.a.length,t:q.t,multi:q.cs.length>1};
     if(showCorrectAnswers)v.correct=[...q.cs];
   }
   if(host){
@@ -821,9 +820,26 @@ function view(g,id,R0){
   }
   return v;
 }
+function startCountdown(g){
+  clearTimeout(g.timer);
+  g.state='countdown';g.countdownEndsAt=Date.now()+5000;g.resultEndsAt=0;
+  g.timer=setTimeout(()=>{
+    if(g.state!=='countdown')return;
+    g.countdownEndsAt=0;
+    try{
+      if(g.mode==='kingdoms')startK(g);else startQ(g);
+    }catch(e){
+      console.error('Не удалось запустить игру после отсчёта '+g.pin+':',e.stack||e.message);
+      clearTimeout(g.timer);g.timer=null;g.kb=null;g.qi=0;g.countdownEndsAt=0;g.state='lobby';push(g);
+    }
+  },5000);
+  push(g);
+}
 function startQ(g){
   if(g.qi===0||!g.startedAt)g.startedAt=Date.now();
-  g.state='question';g.resultEndsAt=0;g.qStart=Date.now();clearTimeout(g.timer);
+  g.state='question';g.countdownEndsAt=0;g.resultEndsAt=0;
+  g.roundStartScores=Object.fromEntries([...g.players.entries()].map(([id,p])=>[String(id),Number(p.score)||0]));
+  g.qStart=Date.now();clearTimeout(g.timer);
   g.timer=setTimeout(()=>toResults(g),g.quiz.q[g.qi].T*1000+500);push(g);
 }
 function toResults(g){
@@ -927,7 +943,7 @@ function answerK(g,p,b){
   const ok=same(sel,qq.cs);p.answeredN++;
   if(ok){p.correctN++;p.prog++;if(p.prog>=g.kb.need){p.prog=0;p.flags++}}
   if(p.log.length<1000)p.log.push({qi:p.cur,a:sel,ok});
-  p.lastAnswerOk=ok;p.lastAnswerAt=Date.now();p.fb={id:p.qn,ok,correct:qq.cs,ans:qq.cs.map(i=>qq.a[i])};p.qn++;nextQ(g,p);return true;
+  p.lastAnswerOk=ok;p.lastAnswerAt=Date.now();p.fb={id:p.qn,ok};p.qn++;nextQ(g,p);return true;
 }
 function commonK(g,R){
   const kb=g.kb,now=Date.now(),count=kb.kingdomCount||2;
@@ -1470,7 +1486,7 @@ http.createServer(async(req,res)=>{
     }
     if(host&&b.type==='start'&&g.state==='lobby'&&g.players.size){
       try{
-        if(KM)startK(g);else{g.qi=0;startQ(g)}
+        g.qi=0;startCountdown(g);
       }catch(e){
         console.error('Не удалось запустить игру '+g.pin+' ('+g.mode+'):',e.stack||e.message);
         clearTimeout(g.timer);g.timer=null;
