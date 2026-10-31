@@ -1728,3 +1728,51 @@ body.participant-only-active .game-audio-control { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .game-audio-panel, .game-audio-icon-button { transition: none !important; }
 }
+
+
+/* Host game fullscreen exit control. The browser's Escape key remains the native exit shortcut. */
+.game-fullscreen-exit {
+  display: none;
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 20000;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #fff;
+  background: rgba(20, 25, 42, .88);
+  border: 1px solid rgba(255, 255, 255, .32);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: transform .16s ease, background .16s ease;
+}
+.game-fullscreen-exit:hover {
+  transform: scale(1.06);
+  background: rgba(20, 25, 42, .98);
+}
+.game-fullscreen-exit:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+html:fullscreen .game-fullscreen-exit,
+html:-webkit-full-screen .game-fullscreen-exit {
+  display: flex;
+}
+@media (max-width: 600px) {
+  .game-fullscreen-exit {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-fullscreen-exit { transition: none; }
+}
