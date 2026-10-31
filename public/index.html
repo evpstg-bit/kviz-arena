@@ -1878,7 +1878,7 @@ function submarinePlayer(a){
   if(p.role==='instructor'){
    body='<section class="submarine-player-card submarine-instructor-card"><span class="submarine-eyebrow">'+tr('ЭТАП 3 · ИНСТРУКТОР')+'</span><div class="submarine-instructor-symbol">'+esc(p.symbol||'◉')+'</div><h1>'+tr('Опишите символ своей команде')+'</h1><p>'+tr('Не называйте его напрямую и не показывайте экран. Объясните словами, чтобы участники выбрали правильный символ.')+'</p><div class="submarine-dive-progress">'+tr('Команда')+': '+(p.diveCorrect||0)+'/'+(p.diveThreshold||0)+' · '+tr('Этап')+': '+(p.diveRound||0)+'/'+(p.diveTarget||5)+'</div></section>';
   }else{
-   const symbols=(p.options||[]).map(x=>'<button type="button" class="submarine-symbol-option" '+(p.diveAnswered?'disabled':'')+' onclick="submarineDiveAnswer(\\''+x+'\\')">'+x+'</button>').join('');
+   const symbols=(p.options||[]).map(x=>'<button type="button" class="submarine-symbol-option" '+(p.diveAnswered?'disabled':'')+' onclick="submarineDiveAnswer(\''+x+'\')">'+x+'</button>').join('');
    body='<section class="submarine-player-card submarine-crew-card"><span class="submarine-eyebrow">'+tr('ЭТАП 3 · КОМАНДА')+'</span><h1>'+tr('Слушайте инструктора и выберите описанный символ')+'</h1><p>'+tr('Инструктор видит цель на своём экране и объясняет её голосом.')+'</p><div class="submarine-symbol-grid">'+symbols+'</div>'+(p.diveAnswered?'<p class="submarine-feedback is-good">'+tr('Верно! Ожидаем остальных участников команды.')+'</p>':'')+'<div class="submarine-dive-progress">'+tr('Верных выборов команды')+': '+(p.diveCorrect||0)+'/'+(p.diveThreshold||0)+' · '+tr('Этап')+': '+(p.diveRound||0)+'/'+(p.diveTarget||5)+'</div></section>';
   }
  }
