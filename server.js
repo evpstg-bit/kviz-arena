@@ -621,7 +621,7 @@ async function mutateTeacherAccountStore(mutator,message){
     const blob=await reportsApiJson(blobRes,'Не удалось зашифровать аккаунты преподавателей');
     const commitRes=await reportsGithubFetch(cfg,'git/commits/'+parent);
     const base=await reportsApiJson(commitRes,'Не удалось прочитать ветку хранения аккаунтов');
-    const treeRes=await reportsGithubFetch(cfg,'git/trees',{method:'POST',body:{base_tree:base.tree.sha,tree:[{path:'teacher-accounts.enc.json',mode:'100644',type:'blob',sha:blob.sha}]});
+    const treeRes=await reportsGithubFetch(cfg,'git/trees',{method:'POST',body:{base_tree:base.tree.sha,tree:[{path:'teacher-accounts.enc.json',mode:'100644',type:'blob',sha:blob.sha}]}});
     const tree=await reportsApiJson(treeRes,'Не удалось подготовить сохранение аккаунтов преподавателей');
     const commitCreate=await reportsGithubFetch(cfg,'git/commits',{method:'POST',body:{message:String(message||'Update teacher accounts'),tree:tree.sha,parents:[parent]}});
     const commit=await reportsApiJson(commitCreate,'Не удалось сохранить аккаунты преподавателей');
