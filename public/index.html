@@ -1831,6 +1831,79 @@ async function saveLobbySettings(){
  const r=await act('lobby-settings',undefined,{settings});
  if(r&&r.error){msg=r.error;render()}
 }
+
+function submarineHudHtml(){
+ const fish=Math.max(0,Math.min(100,Number(S.fish)||0)),charge=Math.max(0,Math.min(100,(Number(S.charge)||0)/Math.max(1,Number(S.chargeTarget)||1)*100));
+ const stage=S.stage||'quiz';
+ const stageText=stage==='quiz'?tr('ЗАРЯЖАЕМ ДВИГАТЕЛЬ'):stage==='boost'?tr('УСКОРЕНИЕ'):stage==='dive'?tr('ГЛУБОКОЕ ПОГРУЖЕНИЕ'):tr('ЭКСПЕДИЦИЯ');
+ return '<section class="submarine-hud"><div class="submarine-hud-top"><span class="submarine-stage-pill">'+stageText+'</span><span class="submarine-level">'+tr('Уровень')+' '+(S.level||1)+'</span><span class="submarine-clock" id="submarine-clock">'+fmt(S.left||0)+'</span></div><div class="submarine-waterline"><span class="submarine-fish" style="left:'+fish+'%">🦈</span><span class="submarine-vessel" style="left:'+Math.max(4,Math.min(92,100-fish))+'%">🚢</span></div><div class="submarine-danger-row"><span>'+tr('Опасность погони')+'</span><b>'+fish+'%</b></div><div class="submarine-danger-track"><i style="width:'+fish+'%"></i></div><div class="submarine-mission-metrics"><div><span>'+tr('Общий заряд')+'</span><b>'+(S.charge||0)+'/'+(S.chargeTarget||0)+'</b><i><em style="width:'+charge+'%"></em></i></div><div><span>'+tr('Ускорение')+'</span><b>'+(S.boost||0)+'%</b><i><em style="width:'+(S.boost||0)+'%"></em></i></div></div></section>';
+}
+function submarineHost(a){
+ if(S.state==='lobby')return host(a);
+ if(S.state==='final'){
+  const rows=(S.finalRows||[]).map(p=>'<li><span>'+p.rank+'</span><b>'+esc(p.name)+'</b><strong>'+p.correct+' ✓</strong></li>').join('');
+  a.innerHTML='<main class="submarine-screen submarine-finish"><section class="submarine-finish-card"><span class="submarine-eyebrow">'+tr('МИССИЯ ЗАВЕРШЕНА')+'</span><div class="submarine-finish-emoji">🚢</div><h1>'+tr('Экспедиция завершена')+'</h1><p>'+tr('Пройдено уровней')+': <b>'+(S.levelsCompleted||0)+'</b></p><p>'+tr('Неудачных попыток')+': <b>'+(S.failedLevels||0)+'</b></p><ol class="submarine-final-ranking">'+rows+'</ol><button class="btn-primary" onclick="openReports()">'+tr('Открыть отчёты')+'</button></section></main>';
+  return;
+ }
+ const rows=(S.rows||[]).map(p=>'<article class="submarine-host-player"><span class="submarine-player-avatar">'+esc((p.name||'?').slice(0,1).toUpperCase())+'</span><span><b>'+esc(p.name)+'</b><small>'+(p.online?tr('В сети'):tr('Не в сети'))+' · '+(p.correctN||0)+' '+tr('верных ответов')+'</small></span><strong>'+(p.boosting?'⚡ ':'')+(p.role==='instructor'?tr('Инструктор'):tr('Команда'))+'</strong></article>').join('');
+ const groupRows=(S.instructors||[]).map((g,i)=>'<div class="submarine-group-status"><b>'+tr('Группа')+' '+(i+1)+'</b><span>'+tr('Этап')+': '+Math.min(g.round||0,g.goal||5)+'/'+(g.goal||5)+'</span><strong>'+(g.done?tr('Готово'):(g.correct||0)+'/'+g.threshold)+'</strong></div>').join('');
+ let phase='';
+ if(S.stage==='quiz')phase='<div class="submarine-phase-card"><span class="submarine-phase-icon">⚡</span><h1>'+tr('Отвечайте, чтобы зарядить двигатель')+'</h1><p>'+tr('Каждый правильный ответ участников добавляет общий заряд. Вопросы могут повторяться — не прекращайте отвечать.')+'</p><div class="submarine-charge-large">'+(S.charge||0)+'<small> / '+(S.chargeTarget||0)+'</small></div></div>';
+ else if(S.stage==='boost')phase='<div class="submarine-phase-card is-boost"><span class="submarine-phase-icon">🚀</span><h1>'+tr('Удерживайте ускорение!')+'</h1><p>'+tr('Попросите всех участников нажать и удерживать кнопку на своих устройствах. Чем больше участников ускоряет субмарину одновременно, тем быстрее она наберёт ход.')+'</p><div class="submarine-boost-big">'+(S.boost||0)+'%</div><div class="submarine-phase-progress"><i style="width:'+(S.boost||0)+'%"></i></div></div>';
+ else phase='<div class="submarine-phase-card is-dive"><span class="submarine-phase-icon">🤿</span><h1>'+tr('Фаза погружения')+'</h1><p>'+tr('Инструкторы видят символ на своём экране. Пусть они опишут его голосом своей команде — участники должны выбрать нужный символ.')+'</p>'+groupRows+'</div>';
+ a.innerHTML='<main class="submarine-screen">'+submarineHudHtml()+'<header class="submarine-host-heading"><div><span class="submarine-eyebrow">'+tr('СОВМЕСТНАЯ МИССИЯ')+'</span><h1 data-user-content="true">'+esc(S.title)+'</h1><p>'+tr('Участники')+': '+((S.rows||[]).length)+'/30 · '+tr('Верных ответов команды')+': '+(S.totalCorrect||0)+'</p></div><div class="submarine-host-mark">🚢</div></header>'+phase+'<section class="submarine-host-roster"><header><h2>'+tr('Экипаж')+'</h2><span>'+(S.online||0)+' '+tr('в сети')+'</span></header><div>'+rows+'</div></section></main>';
+}
+let submarineBoostHeld=false;
+function submarineReleaseBoost(){
+ if(!submarineBoostHeld)return;
+ submarineBoostHeld=false;
+ if(S&&S.mode==='submarine'&&S.stage==='boost')act('boost-stop');
+}
+function submarinePlayer(a){
+ const p=S.me||{},name=esc(p.name||''),points=Number(p.score)||0;
+ const head='<header class="submarine-player-head"><span class="submarine-player-crest">🚢</span><b>'+name+'</b><strong>'+points+' '+tr('баллов')+'</strong></header>';
+ if(S.state==='lobby')return player(a);
+ if(S.state==='final'){
+  a.innerHTML='<main class="submarine-screen submarine-player-finish">'+head+'<section class="submarine-finish-card"><div class="submarine-finish-emoji">🌊</div><h1>'+tr('Экспедиция завершена')+'</h1><p>'+tr('Пройдено уровней')+': '+(S.levelsCompleted||0)+'</p><p>'+tr('Спасибо, что помогли экипажу!')+'</p></section></main>';
+  return;
+ }
+ let body='';
+ if(S.stage==='quiz'){
+  const q=S.q||{t:'',a:[],multi:false};
+  const choices=(q.a||[]).map((x,j)=>'<button type="button" class="submarine-answer-option '+(sel.includes(j)?'is-selected':'')+'" onclick="'+(q.multi?'tg2('+j+')':'submarineSubmitAnswer(['+j+'])')+'"><span>'+(SH[j]||'•')+'</span><b>'+esc(x)+'</b></button>').join('');
+  body='<section class="submarine-player-card"><span class="submarine-eyebrow">'+tr('ЭТАП 1 · ВОПРОСЫ')+'</span><div class="submarine-player-progress">'+tr('Уровень')+' '+(S.level||1)+' · '+tr('Заряд')+': '+(S.charge||0)+'/'+(S.chargeTarget||0)+'</div><h1 data-user-content="true">'+esc(q.t)+'</h1>'+(q.multi?'<p>'+tr('Выберите все правильные ответы, затем нажмите «Ответить».')+'</p>':'')+'<div class="submarine-answer-grid">'+choices+'</div>'+(q.multi?'<button class="btn-primary submarine-submit" '+(sel.length?'':'disabled')+' onclick="submarineSubmitAnswer(sel)">'+tr('Ответить')+'</button>':'')+(p.fb?'<p class="submarine-feedback '+(p.fb.ok?'is-good':'is-bad')+'">'+(p.fb.ok?tr('Верно! Двигатель заряжается.'):tr('Неверно — продолжайте помогать экипажу.'))+'</p>':'')+'</section>';
+ }else if(S.stage==='boost'){
+  body='<section class="submarine-player-card submarine-boost-card"><span class="submarine-eyebrow">'+tr('ЭТАП 2 · УСКОРЕНИЕ')+'</span><div class="submarine-boost-illustration">🚀</div><h1>'+tr('Удерживайте, чтобы ускорить субмарину!')+'</h1><p>'+tr('Не отпускайте кнопку — каждый участник помогает набрать скорость.')+'</p><button type="button" class="submarine-hold-button" onpointerdown="submarineBoost(true)" onpointerup="submarineReleaseBoost()" onpointerleave="submarineReleaseBoost()" onpointercancel="submarineReleaseBoost()" oncontextmenu="return false">'+(p.boosting?tr('Удерживайте!'):tr('Нажмите и удерживайте'))+'</button><div class="submarine-boost-meter"><i style="width:'+(S.boost||0)+'%"></i></div><b>'+(S.boost||0)+'%</b></section>';
+ }else{
+  if(p.role==='instructor'){
+   body='<section class="submarine-player-card submarine-instructor-card"><span class="submarine-eyebrow">'+tr('ЭТАП 3 · ИНСТРУКТОР')+'</span><div class="submarine-instructor-symbol">'+esc(p.symbol||'◉')+'</div><h1>'+tr('Опишите символ своей команде')+'</h1><p>'+tr('Не называйте его напрямую и не показывайте экран. Объясните словами, чтобы участники выбрали правильный символ.')+'</p><div class="submarine-dive-progress">'+tr('Команда')+': '+(p.diveCorrect||0)+'/'+(p.diveThreshold||0)+' · '+tr('Этап')+': '+(p.diveRound||0)+'/'+(p.diveTarget||5)+'</div></section>';
+  }else{
+   const symbols=(p.options||[]).map(x=>'<button type="button" class="submarine-symbol-option" '+(p.diveAnswered?'disabled':'')+' onclick="submarineDiveAnswer(\\''+x+'\\')">'+x+'</button>').join('');
+   body='<section class="submarine-player-card submarine-crew-card"><span class="submarine-eyebrow">'+tr('ЭТАП 3 · КОМАНДА')+'</span><h1>'+tr('Слушайте инструктора и выберите описанный символ')+'</h1><p>'+tr('Инструктор видит цель на своём экране и объясняет её голосом.')+'</p><div class="submarine-symbol-grid">'+symbols+'</div>'+(p.diveAnswered?'<p class="submarine-feedback is-good">'+tr('Верно! Ожидаем остальных участников команды.')+'</p>':'')+'<div class="submarine-dive-progress">'+tr('Верных выборов команды')+': '+(p.diveCorrect||0)+'/'+(p.diveThreshold||0)+' · '+tr('Этап')+': '+(p.diveRound||0)+'/'+(p.diveTarget||5)+'</div></section>';
+  }
+ }
+ a.innerHTML='<main class="submarine-screen submarine-player-screen">'+head+submarineHudHtml()+body+'</main>';
+}
+function submarineSubmitAnswer(values){
+ if(!S||S.stage!=='quiz'||!S.me)return;
+ const a=[...new Set([].concat(values).map(Number))].filter(Number.isInteger);
+ if(!a.length)return;
+ act('answer',a,{qn:S.me.qn});sel=[];
+}
+function submarineBoost(active){
+ if(!S||S.stage!=='boost'||!S.me)return;
+ if(active){
+  if(submarineBoostHeld)return;
+  submarineBoostHeld=true;act('boost-start');
+  window.addEventListener('pointerup',submarineReleaseBoost,{once:true});
+  window.addEventListener('blur',submarineReleaseBoost,{once:true});
+ }else submarineReleaseBoost();
+}
+function submarineDiveAnswer(symbol){
+ if(!S||S.stage!=='dive'||!S.me||S.me.role!=='crew'||S.me.diveAnswered)return;
+ act('dive-answer',symbol);
+}
+
 function host(a){
  const q=S.q,N=S.rows.length,KM=S.mode==='kingdoms',SUB=S.mode==='submarine';
  const dl='<button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button>';
