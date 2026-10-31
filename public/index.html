@@ -103,7 +103,7 @@ function startGameAudioLoop(mode){
   gameAudioLoopTimer=setInterval(()=>{
    if(!gameAudioEnabled||view!=="game"||!S||!["question","playing"].includes(S.state)||(S.me&&S.me.answered&&S.state==="question")){stopGameAudioLoop();return}
    const step=gameAudioLoopStep++%16,note=melody[step];
-   gameAudioNote(note,.23,0,"triangle",step===3||step===11?.014:.011);
+   gameAudioNote(note,.23,0,"triangle",(step===3||step===11)?.014:.011);
    if(bass[step])gameAudioNote(bass[step],.42,.012,"sine",.015);
    if(chords[step])chords[step].forEach((freq,i)=>gameAudioNote(freq,.96,i*.025,"sine",.0045));
    if(step===3||step===7||step===11||step===15)gameAudioNote(note*2,.14,.095,"sine",.006);
