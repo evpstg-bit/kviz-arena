@@ -184,7 +184,7 @@ function gameAudioControlHtml(){
  return '<div class="game-audio-control"><div class="game-audio-toolbar"><div class="game-audio-panel"><label class="game-audio-volume-control"><span>'+tr("Громкость")+'</span><input id="game-audio-volume" type="range" min="0" max="100" step="1" value="'+Math.round(gameAudioVolume*100)+'" aria-label="'+tr("Громкость мелодий")+'" oninput="setGameAudioVolume(this.value)"><output id="game-audio-volume-value">'+Math.round(gameAudioVolume*100)+'%</output></label></div><button type="button" class="game-audio-icon-button '+(gameAudioEnabled?"is-on":"is-off")+'" onclick="toggleGameAudio()" aria-label="'+label+'" aria-pressed="'+(gameAudioEnabled?"true":"false")+'" title="'+label+'">'+gameAudioIconSvg(!gameAudioEnabled)+'</button></div></div>';
 }
 
-let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.17.17'},
+let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.17.18'},
  TOKEN='',USER=null,authTab='login',AF={login:'',pass:'',pass2:'',code:'',name:''},authChallenge='',authCode='',securityStatus=null,securityMsg='',securityPassword='',securityCode='',securitySetup=null,securityRecoveryCodes=null,prePin='',preName='',qrJoinMode=false,participantOnly=false,showQR=false,qrFull=false,lobbySettingsOpen=false,
  LIB=null,FOLDERS=[],selectedFolderId='*',libSort='manual',folderDialog=null,launchModeDialog=false,launchModeQuizId='',quizLoadPending=false,libMsg='',libInfo='',libSearch='',libFilter='all',activeQuizId='',editorId='',editorQuiz=null,editorMsg='',editorIsNew=false,editorFolderId='',libraryLaunchMode='classic',modeLaunchPending=false,sel=[],fbSeen=-2,fbUntil=0,banUntil=0,bnSeen=-1,vApp=null,lastHTML='',lastKey='',down=0,pend=0;
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
@@ -338,10 +338,17 @@ function connect(){
  };
 }
 function goAuth(){cabinetNavSeq++;view='auth';msg='';authTab='login';authChallenge='';authCode='';render()}
+function switchAuthTab(tab){
+ if(!['login','register'].includes(tab)||authChallenge)return;
+ if(tab==='register'&&!INFO.regOpen)return;
+ authTab=tab;msg='';AF.pass='';AF.pass2='';AF.code='';render();
+}
 async function submitAuth(){
- const reg=false;authTab='login';msg='';
+ const reg=authTab==='register';msg='';
  if(authChallenge)return submitAuthSecondFactor();
+ if(reg&&!INFO.regOpen){msg='Регистрация новых преподавателей временно закрыта.';return render()}
  if(reg&&AF.pass!==AF.pass2){msg='Пароли не совпадают';return render()}
+ if(reg&&AF.pass.length<10){msg='Пароль должен содержать от 10 до 100 символов.';return render()}
  const r=await api(reg?'auth/register':'auth/login',{login:AF.login,pass:AF.pass,name:AF.name,code:AF.code});
  if(r.error){msg=r.error;return render()}
  if(r.twoFactorRequired&&r.challenge){
@@ -359,11 +366,16 @@ function cancelAuthChallenge(){authChallenge='';authCode='';msg='';AF.pass='';re
 async function logout(){if(TEACHER_SANDBOX_ACTIVE){dpBack();return}cabinetNavSeq++;await api('auth/logout',{token:TOKEN});TOKEN='';USER=null;saveToken();LIB=null;securityStatus=null;securitySetup=null;securityRecoveryCodes=null;view='home';render()}
 function authView(a){
  const form=authChallenge
-  ? `<div class="auth-security-prompt"><div class="auth-security-symbol" aria-hidden="true">✦</div><h2>${tr('Подтверждение входа')}</h2><p class="mut">${tr('Введите одноразовый код из Google Authenticator или резервный код.')}</p><label class="field-label" for="auth-otp-code">${tr('Код приложения или резервный код')}</label><input id="auth-otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="29" placeholder="123456" value="${esc(authCode)}" oninput="authCode=this.value" onkeydown="if(event.key==='Enter')submitAuthSecondFactor()"><p class="bad auth-error" role="alert">${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuthSecondFactor()">${tr('Подтвердить код')} <span aria-hidden="true">→</span></button><button class="sec auth-back-button" type="button" onclick="cancelAuthChallenge()">${tr('Назад ко входу')}</button></div>`
-  : `<label class="field-label" for="auth-login">${tr('Логин')}</label><input id="auth-login" type="text" placeholder="${tr('Логин')}" autocomplete="username" value="${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">${tr('Пароль')}</label><input id="auth-password" type="password" placeholder="${tr('Пароль')}" autocomplete="current-password" value="${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuth()">${tr('Войти')} <span aria-hidden="true">→</span></button>`;
- a.innerHTML=`<header class="app-topbar auth-topbar site-app-topbar">${brandMarkup(tr('Платформа интеллектуальных игр'))}${simpleHeaderControls(true,'auth')}</header>
- <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> ${tr('КАБИНЕТ ПРЕПОДАВАТЕЛЯ')}</div><h1 class="auth-promo-title">${tr('Меньше настройки.')}<br><span>${tr('Больше игры.')}</span></h1><p class="auth-promo-copy">${tr('Запускайте готовые викторины для участников.')}</p><div class="minimal-auth-note"><span>01</span><span>${tr('Войдите в кабинет')}</span></div><div class="minimal-auth-note"><span>02</span><span>${tr('Выберите тест')}</span></div><div class="minimal-auth-note"><span>03</span><span>${tr('Запустите игру и поделитесь PIN-кодом')}</span></div></div>
- <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">${tr('ДОБРО ПОЖАЛОВАТЬ')}</span><h2>${authChallenge?tr('Подтверждение входа'):tr('Вход в кабинет')}</h2><p class="mut">${authChallenge?tr('Для завершения входа подтвердите, что это вы.'):tr('Введите логин и пароль администратора.')}</p></div><div class="card auth-card">${form}</div></div></section>`;
+  ? \`<div class="auth-security-prompt"><div class="auth-security-symbol" aria-hidden="true">✦</div><h2>\${tr('Подтверждение входа')}</h2><p class="mut">\${tr('Введите одноразовый код из Google Authenticator или резервный код.')}</p><label class="field-label" for="auth-otp-code">\${tr('Код приложения или резервный код')}</label><input id="auth-otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="29" placeholder="123456" value="\${esc(authCode)}" oninput="authCode=this.value" onkeydown="if(event.key==='Enter')submitAuthSecondFactor()"><p class="bad auth-error" role="alert">\${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuthSecondFactor()">\${tr('Подтвердить код')} <span aria-hidden="true">→</span></button><button class="sec auth-back-button" type="button" onclick="cancelAuthChallenge()">\${tr('Назад ко входу')}</button></div>\`
+  : authTab==='register'
+   ? \`<label class="field-label" for="auth-name">\${tr('Ваше имя')}</label><input id="auth-name" type="text" maxlength="40" autocomplete="name" placeholder="\${tr('Как к вам обращаться')}" value="\${esc(AF.name)}" oninput="AF.name=this.value"><label class="field-label" for="auth-login">\${tr('Логин')}</label><input id="auth-login" type="text" maxlength="40" autocomplete="username" placeholder="\${tr('Придумайте логин')}" value="\${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">\${tr('Пароль')}</label><input id="auth-password" type="password" minlength="10" maxlength="100" autocomplete="new-password" placeholder="\${tr('Не менее 10 символов')}" value="\${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><label class="field-label" for="auth-password-repeat">\${tr('Повторите пароль')}</label><input id="auth-password-repeat" type="password" minlength="10" maxlength="100" autocomplete="new-password" value="\${esc(AF.pass2)}" oninput="AF.pass2=this.value" onkeydown="if(event.key==='Enter')submitAuth()">\${INFO.needInvite?'<label class="field-label" for="auth-invite-code">'+tr('Код приглашения')+'</label><input id="auth-invite-code" type="password" autocomplete="off" value="'+esc(AF.code)+'" oninput="AF.code=this.value">':''}<p class="mut auth-registration-note">\${tr('После регистрации откроется ваш личный кабинет. Отчёты игр будут доступны только в вашем аккаунте.')}</p><p class="bad auth-error" role="alert">\${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuth()">\${tr('Создать аккаунт')} <span aria-hidden="true">→</span></button>\`
+   : \`<label class="field-label" for="auth-login">\${tr('Логин')}</label><input id="auth-login" type="text" placeholder="\${tr('Логин')}" autocomplete="username" value="\${esc(AF.login)}" oninput="AF.login=this.value"><label class="field-label" for="auth-password">\${tr('Пароль')}</label><input id="auth-password" type="password" placeholder="\${tr('Пароль')}" autocomplete="current-password" value="\${esc(AF.pass)}" oninput="AF.pass=this.value" onkeydown="if(event.key==='Enter')submitAuth()"><p class="bad auth-error" role="alert">\${esc(tr(msg))}</p><button class="btn-primary auth-submit" onclick="submitAuth()">\${tr('Войти')} <span aria-hidden="true">→</span></button>\`;
+ const switcher=authChallenge||!INFO.regOpen?'':authTab==='register'
+  ? \`<p class="auth-mode-switch">\${tr('Уже есть аккаунт?')} <button type="button" class="sec" onclick="switchAuthTab('login')">\${tr('Войти')}</button></p>\`
+  : \`<p class="auth-mode-switch">\${tr('Впервые на платформе?')} <button type="button" class="sec" onclick="switchAuthTab('register')">\${tr('Зарегистрироваться')}</button></p>\`;
+ a.innerHTML=\`<header class="app-topbar auth-topbar site-app-topbar">\${brandMarkup(tr('Платформа интеллектуальных игр'))}\${simpleHeaderControls(true,'auth')}</header>
+ <section class="auth-layout minimal-auth-layout"><div class="auth-promo minimal-auth-promo"><div class="eyebrow"><span class="eyebrow-dot"></span> \${tr('КАБИНЕТ ПРЕПОДАВАТЕЛЯ')}</div><h1 class="auth-promo-title">\${tr('Меньше настройки.')}<br><span>\${tr('Больше игры.')}</span></h1><p class="auth-promo-copy">\${tr('Запускайте готовые викторины для участников.')}</p><div class="minimal-auth-note"><span>01</span><span>\${tr('Войдите в кабинет')}</span></div><div class="minimal-auth-note"><span>02</span><span>\${tr('Выберите тест')}</span></div><div class="minimal-auth-note"><span>03</span><span>\${tr('Запустите игру и поделитесь PIN-кодом')}</span></div></div>
+ <div class="auth-form-wrap"><div class="auth-form-heading"><span class="section-kicker">\${tr('ДОБРО ПОЖАЛОВАТЬ')}</span><h2>\${authChallenge?tr('Подтверждение входа'):authTab==='register'?tr('Регистрация преподавателя'):tr('Вход в кабинет')}</h2><p class="mut">\${authChallenge?tr('Для завершения входа подтвердите, что это вы.'):authTab==='register'?tr('Создайте отдельный аккаунт преподавателя с личным кабинетом.'):tr('Введите логин и пароль для входа в кабинет преподавателя.')}</p></div><div class="card auth-card">\${form}\${switcher}</div></div></section>\`;
 }
 
 
@@ -2260,6 +2272,39 @@ Object.assign(UI_TRANSLATIONS.en,{'Экспортировать выбранны
 Object.assign(UI_TRANSLATIONS.zh,{'Экспортировать выбранные':'导出所选报告','Выберите отчёты для экспорта или удаления.':'选择要导出或删除的报告。','Для экспорта можно выбрать не более 100 отчётов за раз.':'每次最多可导出 100 份报告。','Не удалось экспортировать выбранные отчёты. Проверьте соединение и повторите попытку.':'无法导出所选报告。请检查网络连接并重试。','Экспортировано отчётов:':'已导出报告：','Подготовка экспорта…':'正在准备导出…','Варианты ответов':'答案选项'});
 Object.assign(UI_TRANSLATIONS.en,{'АРЕНА КОРОЛЕВСТВ':'KINGDOM ARENA','Время раунда':'ROUND TIME','Битва за территорию':'Battle for territory','Ставьте флаги рядом со своей территорией':'Place flags beside your territory','Окружите крепость соперника':'Surround the enemy stronghold','Крепость захвачена':'STRONGHOLD CAPTURED','Команда получает трофей.':'Your team earns a trophy.','Начинается раунд':'Round begins','Свободная территория':'Neutral territory','Захваченные клетки':'Captured tiles','Крепость':'Stronghold','Игроки не подключены':'No players connected','Трофеи':'Trophies','Игра окончена':'Game over','Битва за территорию':'Battle for territory','клеток':'tiles','участников':'players','Победили':'Winners:','Свободная территория':'Neutral territory','В игре':'LIVE','Новая игра':'New game','Скачать результаты (Excel)':'Download results (Excel)'});
 Object.assign(UI_TRANSLATIONS.zh,{'АРЕНА КОРОЛЕВСТВ':'王国竞技场','Время раунда':'回合时间','Битва за территорию':'领土争夺战','Ставьте флаги рядом со своей территорией':'在己方领土旁放置旗帜','Окружите крепость соперника':'包围对手的城堡','Крепость захвачена':'城堡已被攻占','Команда получает трофей.':'队伍获得一座奖杯。','Начинается раунд':'即将开始回合','Свободная территория':'中立领土','Захваченные клетки':'已占领格子','Крепость':'城堡','Игроки не подключены':'暂无玩家连接','Трофеи':'奖杯','Игра окончена':'游戏结束','клеток':'格子','участников':'名队员','Победили':'获胜队伍：','В игре':'进行中','Новая игра':'新游戏','Скачать результаты (Excel)':'下载结果（Excel）'});
+
+Object.assign(UI_TRANSLATIONS.en,{
+ 'Регистрация преподавателя':'Teacher registration','Создайте отдельный аккаунт преподавателя с личным кабинетом.':'Create a separate teacher account with a personal dashboard.',
+ 'Введите логин и пароль для входа в кабинет преподавателя.':'Enter your teacher account login and password.',
+ 'Ваше имя':'Your name','Как к вам обращаться':'How should we address you?','Придумайте логин':'Choose a login',
+ 'Не менее 10 символов':'At least 10 characters','Повторите пароль':'Repeat password','Код приглашения':'Invitation code',
+ 'После регистрации откроется ваш личный кабинет. Отчёты игр будут доступны только в вашем аккаунте.':'After registration, your personal dashboard will open. Game reports will only be visible in your account.',
+ 'Создать аккаунт':'Create account','Уже есть аккаунт?':'Already have an account?','Впервые на платформе?':'New to the platform?','Зарегистрироваться':'Register',
+ 'Пароль должен содержать от 10 до 100 символов.':'Password must contain 10–100 characters.',
+ 'Укажите имя преподавателя (не менее 2 символов).':'Enter a teacher name (at least 2 characters).',
+ 'Регистрация новых преподавателей временно закрыта.':'New teacher registration is temporarily closed.',
+ 'Неверный код приглашения.':'Invalid invitation code.','Такой логин уже занят':'This login is already taken',
+ 'Слишком много попыток регистрации. Попробуйте позже.':'Too many registration attempts. Try again later.',
+ 'Слишком много попыток регистрации. Попробуйте через 15 минут.':'Too many registration attempts. Try again in 15 minutes.',
+ 'Не удалось сохранить аккаунт. Попробуйте позже.':'Could not save the account. Please try again later.',
+ 'Не удалось открыть постоянное хранилище аккаунтов. Регистрация временно недоступна; проверьте GITHUB_TOKEN и GITHUB_REPOSITORY в Render.':'Account storage is unavailable. Registration is temporarily disabled; check the Render storage settings.'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'Регистрация преподавателя':'教师注册','Создайте отдельный аккаунт преподавателя с личным кабинетом.':'创建一个拥有独立个人面板的教师账户。',
+ 'Введите логин и пароль для входа в кабинет преподавателя.':'输入教师账户的登录名和密码。',
+ 'Ваше имя':'姓名','Как к вам обращаться':'如何称呼您？','Придумайте логин':'设置登录名',
+ 'Не менее 10 символов':'至少 10 个字符','Повторите пароль':'重复密码','Код приглашения':'邀请码',
+ 'После регистрации откроется ваш личный кабинет. Отчёты игр будут доступны только в вашем аккаунте.':'注册后将打开您的个人面板。游戏报告仅在您的账户中可见。',
+ 'Создать аккаунт':'创建账户','Уже есть аккаунт?':'已有账户？','Впервые на платформе?':'首次使用平台？','Зарегистрироваться':'注册',
+ 'Пароль должен содержать от 10 до 100 символов.':'密码长度必须为 10–100 个字符。',
+ 'Укажите имя преподавателя (не менее 2 символов).':'请输入教师姓名（至少 2 个字符）。',
+ 'Регистрация новых преподавателей временно закрыта.':'教师注册暂时关闭。',
+ 'Неверный код приглашения.':'邀请码无效。','Такой логин уже занят':'该登录名已被使用',
+ 'Слишком много попыток регистрации. Попробуйте позже.':'注册尝试过多，请稍后再试。',
+ 'Слишком много попыток регистрации. Попробуйте через 15 минут.':'注册尝试过多，请 15 分钟后重试。',
+ 'Не удалось сохранить аккаунт. Попробуйте позже.':'无法保存账户，请稍后重试。',
+ 'Не удалось открыть постоянное хранилище аккаунтов. Регистрация временно недоступна; проверьте GITHUB_TOKEN и GITHUB_REPOSITORY в Render.':'无法访问账户存储。注册暂时不可用，请检查 Render 存储设置。'
+});
 
 function tr(text){
  const lang=currentUiLanguage(); if(lang==='ru')return String(text);
