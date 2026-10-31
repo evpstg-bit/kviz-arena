@@ -1756,6 +1756,19 @@ body.participant-only-active .game-audio-control { display: none !important; }
   transform: scale(1.06);
   background: rgba(20, 25, 42, .98);
 }
+.game-fullscreen-exit-icon {
+  display: block;
+  width: 23px;
+  height: 23px;
+  overflow: visible;
+}
+.game-fullscreen-exit-icon path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .game-fullscreen-exit:focus-visible {
   outline: 3px solid #fff;
   outline-offset: 3px;
