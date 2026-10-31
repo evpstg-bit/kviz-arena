@@ -1846,7 +1846,7 @@ function submarineHost(a){
   return;
  }
  const rows=(S.rows||[]).map(p=>'<article class="submarine-host-player"><span class="submarine-player-avatar">'+esc((p.name||'?').slice(0,1).toUpperCase())+'</span><span><b>'+esc(p.name)+'</b><small>'+(p.online?tr('В сети'):tr('Не в сети'))+' · '+(p.correctN||0)+' '+tr('верных ответов')+'</small></span><strong>'+(p.boosting?'⚡ ':'')+(p.role==='instructor'?tr('Инструктор'):tr('Команда'))+'</strong></article>').join('');
- const groupRows=(S.instructors||[]).map((g,i)=>'<div class="submarine-group-status"><b>'+tr('Группа')+' '+(i+1)+'</b><span>'+tr('Этап')+': '+Math.min(g.round||0,g.goal||5)+'/'+(g.goal||5)+'</span><strong>'+(g.done?tr('Готово'):(g.correct||0)+'/'+g.threshold)+'</strong></div>').join('');
+ const groupRows=(S.instructors||[]).map((g,i)=>'<div class="submarine-group-status"><b>'+esc(g.name||tr('Инструктор'))+'</b><span>'+tr('Группа')+' '+(i+1)+' · '+tr('Этап')+': '+Math.min(g.round||0,g.goal||5)+'/'+(g.goal||5)+'</span><strong>'+(g.done?tr('Готово'):(g.correct||0)+'/'+g.threshold)+'</strong></div>').join('');
  let phase='';
  if(S.stage==='quiz')phase='<div class="submarine-phase-card"><span class="submarine-phase-icon">⚡</span><h1>'+tr('Отвечайте, чтобы зарядить двигатель')+'</h1><p>'+tr('Каждый правильный ответ участников добавляет общий заряд. Вопросы могут повторяться — не прекращайте отвечать.')+'</p><div class="submarine-charge-large">'+(S.charge||0)+'<small> / '+(S.chargeTarget||0)+'</small></div></div>';
  else if(S.stage==='boost')phase='<div class="submarine-phase-card is-boost"><span class="submarine-phase-icon">🚀</span><h1>'+tr('Удерживайте ускорение!')+'</h1><p>'+tr('Попросите всех участников нажать и удерживать кнопку на своих устройствах. Чем больше участников ускоряет субмарину одновременно, тем быстрее она наберёт ход.')+'</p><div class="submarine-boost-big">'+(S.boost||0)+'%</div><div class="submarine-phase-progress"><i style="width:'+(S.boost||0)+'%"></i></div></div>';
@@ -2848,6 +2848,14 @@ Object.assign(UI_TRANSLATIONS.zh,{
  'Инструктор видит цель на своём экране и объясняет её голосом.':'指导员会看到目标，并通过语音进行描述。',
  'ЭТАП 3 · КОМАНДА':'阶段 3 · 队员','Верно! Ожидаем остальных участников команды.':'正确！等待队友完成选择。',
  'Верных выборов команды':'团队正确选择','Спасибо, что помогли экипажу!':'感谢你帮助船员完成任务！'
+});
+
+
+Object.assign(UI_TRANSLATIONS.en,{
+ 'верных ответов':'correct answers','в сети':'online','не в сети':'offline','КРАСНАЯ ТРЕВОГА':'RED ALERT'
+});
+Object.assign(UI_TRANSLATIONS.zh,{
+ 'верных ответов':'正确答案','в сети':'在线','не в сети':'离线','КРАСНАЯ ТРЕВОГА':'红色警报'
 });
 
 })();
