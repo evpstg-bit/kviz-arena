@@ -58,7 +58,7 @@ function developerConfig(){
   const login=String(process.env.DEVELOPER_LOGIN||'').trim();
   const password=String(process.env.DEVELOPER_PASSWORD||'');
   const sessionSecret=String(process.env.DEVELOPER_SESSION_SECRET||'');
-  if(!login||password.length<6||sessionSecret.length<32)return null;
+  if(!login||password.length<16||sessionSecret.length<32)return null;
   return{login,password,sessionSecret};
 }
 function developerSecureEqual(a,b){
@@ -95,7 +95,7 @@ function readAdminConfig(){
   const password=String(process.env.ADMIN_PASSWORD||'');
   const name=String(process.env.ADMIN_NAME||login).trim().slice(0,40);
   if(!login||password.length<16){
-    console.error('Не настроен администратор: задайте ADMIN_LOGIN и ADMIN_PASSWORD (не короче 6 символов) в секретных переменных Render.');
+    console.error('Не настроен администратор: задайте ADMIN_LOGIN и ADMIN_PASSWORD (не короче 16 символов) в секретных переменных Render.');
     return null;
   }
   return{login,password,name:name||login};
