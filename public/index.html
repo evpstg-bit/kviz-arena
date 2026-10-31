@@ -13,7 +13,8 @@
 <link rel="stylesheet" href="/liquid-glass.css?v=1.17.17">
 <link rel="stylesheet" href="/responsive-v2.css?v=1.17.17">
 <link rel="stylesheet" href="/lobby.css?v=1.17.17">
-<link rel="stylesheet" href="/kingdoms.css?v=1.17.17">
+<link rel="stylesheet" href="/kingdoms.css?v=1.17.19">
+<link rel="stylesheet" href="/submarine.css?v=1.17.19">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script>
 /* Boot safety net: never leave users on an endless loading label. */
@@ -44,9 +45,9 @@ const KINGDOM_PALETTE=[
  {color:'#237a42',light:'#5ec27b',dark:'#155a30',border:'#b8edc7',rook:'#dcffe5'},
  {color:'#9b6a07',light:'#f0c653',dark:'#805707',border:'#ffe7a0',rook:'#fff2c5'}
 ];
-const DEFAULT_PLATFORM_SETTINGS={version:1,general:{defaultQuestionTime:20,maxPlayers:100,supportThreshold:60,autoOpenReports:true,showCorrectAnswerAfterQuestion:true},modes:{classic:{enabled:true,basePoints:1000,speedBonus:true},kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2}}};
+const DEFAULT_PLATFORM_SETTINGS={version:1,general:{defaultQuestionTime:20,maxPlayers:100,supportThreshold:60,autoOpenReports:true,showCorrectAnswerAfterQuestion:true},modes:{classic:{enabled:true,basePoints:1000,speedBonus:true},kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2},submarine:{enabled:true,durationMinutes:5}}};
 let CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS)),settingsMsg='',settingsSaving=false,settingsSource='local',settingsNotice='';
-function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))}}}}
+function normalizeClientSettings(v){const d=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));if(!v||typeof v!=='object')return d;const k=v.modes&&v.modes.kingdoms||{},u=v.modes&&v.modes.submarine||{};return{version:1,general:{...d.general,...(v.general||{})},modes:{classic:{...d.modes.classic,...(v.modes&&v.modes.classic||{})},kingdoms:{...d.modes.kingdoms,...k,kingdomCount:Math.min(4,Math.max(2,Math.round(Number(k.kingdomCount)||2)))},submarine:{...d.modes.submarine,...u,durationMinutes:Math.min(20,Math.max(5,Math.round(Number(u.durationMinutes)||5)))}}}}
 function changeSetting(group,key,value,mode='general'){if(mode==='mode')CLIENT_SETTINGS.modes[group][key]=value;else CLIENT_SETTINGS.general[key]=value;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -213,8 +214,8 @@ function applyTheme(theme,persist=true){
 }
 function toggleTheme(){const next=document.documentElement.classList.contains('dark')?'light':'dark';applyTheme(next,true)}
 applyTheme(document.documentElement.classList.contains('dark')?'dark':'light',false);try{document.documentElement.lang=localStorage.getItem('kviz_ui_lang')==='zh'?'zh-CN':localStorage.getItem('kviz_ui_lang')==='en'?'en':'ru'}catch(e){}
-try{libraryLaunchMode=localStorage.getItem('kviz-launch-mode')==='kingdoms'?'kingdoms':'classic'}catch(e){}
-function setLaunchMode(mode){const next=mode==='kingdoms'?'kingdoms':'classic';if(!CLIENT_SETTINGS.modes[next].enabled)return;libraryLaunchMode=next;try{localStorage.setItem('kviz-launch-mode',libraryLaunchMode)}catch(e){}render()}
+try{libraryLaunchMode=['kingdoms','submarine'].includes(localStorage.getItem('kviz-launch-mode'))?localStorage.getItem('kviz-launch-mode'):'classic'}catch(e){}
+function setLaunchMode(mode){const next=['classic','kingdoms','submarine'].includes(mode)?mode:'classic';if(!CLIENT_SETTINGS.modes[next].enabled)return;libraryLaunchMode=next;try{localStorage.setItem('kviz-launch-mode',libraryLaunchMode)}catch(e){}render()}
 function actionIcon(name){const paths={play:'<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L9 17l-4 1 1-4Z"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'};return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`}
 const api=(p,o)=>TEACHER_SANDBOX_ACTIVE?Promise.resolve(dpApi(p,o||{})):fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o),signal:AbortSignal.timeout(6000)}).then(r=>r.json()).catch(()=>({error:'Нет связи с сервером'}));
 const act=(type,a,x)=>api('action',{pin,id:me,type,a,...(x||{})});
@@ -305,7 +306,7 @@ function connect(){
   }
   S=incomingS;gameRole=S.host?'host':'player';if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
-  const shouldAutoOpenReport=(S.mode==='kingdoms'&&S.state==='final')||(CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&!(S.mode==='classic'&&S.state==='final'));
+  const shouldAutoOpenReport=(S.mode==='kingdoms'&&S.state==='final')||(S.mode==='submarine'&&S.state==='final')||(CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&!(S.mode==='classic'&&S.state==='final'));
   if(S.host&&shouldAutoOpenReport&&S.reportId){
    if(autoReportSeen!==S.reportId){
     const reportId=S.reportId;autoReportSeen=reportId;autoReportPending=reportId;
@@ -619,7 +620,7 @@ function securityPage(a){
  a.innerHTML=`${head}<section class="auth-security-page"><div class="auth-security-heading"><span class="section-kicker">${tr('ЗАЩИТА АККАУНТА')}</span><h1>${tr('Безопасность аккаунта')}<span class="title-period">.</span></h1><p>${tr('Защитите вход в кабинет дополнительным одноразовым кодом.')}</p></div>${content}</section>`;
 }
 async function start(selectedMode){
- if(!['classic','kingdoms'].includes(selectedMode)||modeLaunchPending)return;if(!CLIENT_SETTINGS.modes[selectedMode].enabled){libMsg=tr('Этот режим отключён в общих настройках платформы.');launchModeDialog=false;render();return}
+ if(!['classic','kingdoms','submarine'].includes(selectedMode)||modeLaunchPending)return;if(!CLIENT_SETTINGS.modes[selectedMode].enabled){libMsg=tr('Этот режим отключён в общих настройках платформы.');launchModeDialog=false;render();return}
  const sourceId=activeQuizId;
  if(!sourceId||!quiz||!Array.isArray(quiz.q)){launchModeDialog=false;launchModeQuizId='';libMsg='Тест не загружен. Откройте его из библиотеки и попробуйте снова.';view='lib';render();return}
  const qs=[];
@@ -726,7 +727,7 @@ function launchModeDialogHtml(){
  if(!launchModeDialog||view!=='lib')return '';
  const title=quiz&&activeQuizId===launchModeQuizId?quiz.title:'',count=quiz&&Array.isArray(quiz.q)?quiz.q.length:0;
  const disabled=modeLaunchPending?'disabled':'';
- return `<div class="mode-choice-overlay" role="presentation" onclick="if(event.target===this)closeLaunchModeDialog()"><section class="mode-choice-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="mode-choice-title"><button type="button" class="mode-choice-close" aria-label="${tr('Отмена')}" title="${tr('Отмена')}" onclick="closeLaunchModeDialog()" ${disabled}>×</button><span class="section-kicker">${tr('ПЕРЕД ЗАПУСКОМ')}</span><h2 id="mode-choice-title">${tr('Выберите режим игры')}</h2><p class="mode-choice-intro">${tr('Тест готов. Выберите правила для этой игровой сессии — вопросы и ответы останутся прежними.')}</p><div class="mode-choice-quiz-meta"><span>${tr('Тест:')} <b data-user-content="true">${esc(title)}</b></span><span>${count} ${tr('вопросов')}</span></div><div class="mode-choice-options">${CLIENT_SETTINGS.modes.classic.enabled?`<button id="mode-choice-classic" type="button" class="mode-choice-card" onclick="start('classic')" ${disabled}><span class="mode-choice-symbol classic-symbol" aria-hidden="true">${actionIcon('play')}</span><span class="mode-choice-copy"><strong>Classic</strong><small>${tr('Обычная викторина с таймером, очками и рейтингом участников.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button>`:''}${CLIENT_SETTINGS.modes.kingdoms.enabled?`<button type="button" class="mode-choice-card" onclick="start('kingdoms')" ${disabled}><span class="mode-choice-symbol kingdoms-symbol" aria-hidden="true">▦</span><span class="mode-choice-copy"><strong>Color Kingdoms</strong><small>${tr('Командное сражение за территорию: ответы помогают захватывать клетки и флаги.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button>`:''}</div><p class="mode-choice-footnote">${tr('Режим не сохраняется в тесте и выбирается заново при каждом запуске.')}</p>${modeLaunchPending?`<div class="mode-choice-loading" role="status"><span class="mode-choice-spinner"></span>${tr('Создаём игровую комнату…')}</div>`:''}</section></div>`;
+ return `<div class="mode-choice-overlay" role="presentation" onclick="if(event.target===this)closeLaunchModeDialog()"><section class="mode-choice-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="mode-choice-title"><button type="button" class="mode-choice-close" aria-label="${tr('Отмена')}" title="${tr('Отмена')}" onclick="closeLaunchModeDialog()" ${disabled}>×</button><span class="section-kicker">${tr('ПЕРЕД ЗАПУСКОМ')}</span><h2 id="mode-choice-title">${tr('Выберите режим игры')}</h2><p class="mode-choice-intro">${tr('Тест готов. Выберите правила для этой игровой сессии — вопросы и ответы останутся прежними.')}</p><div class="mode-choice-quiz-meta"><span>${tr('Тест:')} <b data-user-content="true">${esc(title)}</b></span><span>${count} ${tr('вопросов')}</span></div><div class="mode-choice-options">${CLIENT_SETTINGS.modes.classic.enabled?`<button id="mode-choice-classic" type="button" class="mode-choice-card" onclick="start('classic')" ${disabled}><span class="mode-choice-symbol classic-symbol" aria-hidden="true">${actionIcon('play')}</span><span class="mode-choice-copy"><strong>Classic</strong><small>${tr('Обычная викторина с таймером, очками и рейтингом участников.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button>`:''}${CLIENT_SETTINGS.modes.kingdoms.enabled?`<button type="button" class="mode-choice-card" onclick="start('kingdoms')" ${disabled}><span class="mode-choice-symbol kingdoms-symbol" aria-hidden="true">▦</span><span class="mode-choice-copy"><strong>Color Kingdoms</strong><small>${tr('Командное сражение за территорию: ответы помогают захватывать клетки и флаги.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button>`:''}${CLIENT_SETTINGS.modes.submarine.enabled?`<button type="button" class="mode-choice-card submarine-mode-card" onclick="start('submarine')" ${disabled}><span class="mode-choice-symbol submarine-symbol" aria-hidden="true">◉</span><span class="mode-choice-copy"><strong>Submarine Squad</strong><small>${tr('Совместная экспедиция: отвечайте, ускоряйте субмарину и проходите погружение по голосовым подсказкам.')}</small></span><span class="mode-choice-arrow" aria-hidden="true">→</span></button>`:''}</div><p class="mode-choice-footnote">${tr('Режим не сохраняется в тесте и выбирается заново при каждом запуске.')}</p>${modeLaunchPending?`<div class="mode-choice-loading" role="status"><span class="mode-choice-spinner"></span>${tr('Создаём игровую комнату…')}</div>`:''}</section></div>`;
 }
 function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
 async function exportLib(){
@@ -998,11 +999,11 @@ async function openSettings(){
  if(r.error){settingsMsg=r.error;settingsSource='local'}else{CLIENT_SETTINGS=normalizeClientSettings(r.settings);settingsSource=r.source||'local';settingsNotice=r.notice||''}
  view='settings';render();
 }
-function saveSettingsField(id,value){const map={defaultQuestionTime:['general','defaultQuestionTime','general'],maxPlayers:['general','maxPlayers','general'],supportThreshold:['general','supportThreshold','general'],classicBasePoints:['classic','basePoints','mode'],kingdomsDuration:['kingdoms','durationMinutes','mode'],kingdomsFlagNeed:['kingdoms','correctAnswersForFlag','mode'],kingdomsCount:['kingdoms','kingdomCount','mode']};const x=map[id];if(!x)return;changeSetting(x[0],x[1],Number(value),x[2]);}
+function saveSettingsField(id,value){const map={defaultQuestionTime:['general','defaultQuestionTime','general'],maxPlayers:['general','maxPlayers','general'],supportThreshold:['general','supportThreshold','general'],classicBasePoints:['classic','basePoints','mode'],kingdomsDuration:['kingdoms','durationMinutes','mode'],kingdomsFlagNeed:['kingdoms','correctAnswersForFlag','mode'],kingdomsCount:['kingdoms','kingdomCount','mode'],submarineDuration:['submarine','durationMinutes','mode']};const x=map[id];if(!x)return;changeSetting(x[0],x[1],Number(value),x[2]);}
 function defaultSettingsForm(){CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));settingsMsg=tr('Значения сброшены в форме. Нажмите «Сохранить настройки», чтобы применить их.');settingsNotice='';render()}
 async function savePlatformSettings(){
- if(TEACHER_SANDBOX_ACTIVE){if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}settingsSaving=true;settingsMsg='';render();TS_SETTINGS=normalizeClientSettings(CLIENT_SETTINGS);const saved=await capi('settings/save',{settings:TS_SETTINGS});settingsSaving=false;if(saved.error){settingsMsg=saved.error;return render()}CLIENT_SETTINGS=normalizeClientSettings(saved.settings);settingsSource='demo';settingsNotice='Изменения сохранены только в тестовом стенде. Рабочие настройки не меняются.';settingsMsg='Настройки предпросмотра сохранены.';return render()}
- if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}
+ if(TEACHER_SANDBOX_ACTIVE){if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled&&!CLIENT_SETTINGS.modes.submarine.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}settingsSaving=true;settingsMsg='';render();TS_SETTINGS=normalizeClientSettings(CLIENT_SETTINGS);const saved=await capi('settings/save',{settings:TS_SETTINGS});settingsSaving=false;if(saved.error){settingsMsg=saved.error;return render()}CLIENT_SETTINGS=normalizeClientSettings(saved.settings);settingsSource='demo';settingsNotice='Изменения сохранены только в тестовом стенде. Рабочие настройки не меняются.';settingsMsg='Настройки предпросмотра сохранены.';return render()}
+ if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled&&!CLIENT_SETTINGS.modes.submarine.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}
  settingsSaving=true;settingsMsg='';render();const nav=++cabinetNavSeq;
  const r=await capi('settings/save',{settings:CLIENT_SETTINGS});settingsSaving=false;
  if(nav!==cabinetNavSeq||!USER)return;
@@ -1020,7 +1021,7 @@ function settingsPage(a){
   a.innerHTML=`${cabinetHeader('settings',tr('Кабинет преподавателя'))}<section class="platform-settings-page"><div class="platform-settings-heading"><div><span class="section-kicker">${tr('НАСТРОЙКИ АККАУНТА')}</span><h1 class="page-title">${tr('Настройки')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('Управляйте параметрами безопасности своего аккаунта.')}</p></div></div>${accountSecuritySettingsSection()}</section>`;
   return;
  }
- const s=CLIENT_SETTINGS,g=s.general,c=s.modes.classic,k=s.modes.kingdoms;
+ const s=CLIENT_SETTINGS,g=s.general,c=s.modes.classic,k=s.modes.kingdoms,u=s.modes.submarine;
  const toggle=(id,label,checked,handler,help='')=>`<label class="platform-setting-toggle" for="${id}"><span class="platform-setting-toggle-copy"><b>${tr(label)}</b>${help?`<small>${tr(help)}</small>`:''}</span><input id="${id}" type="checkbox" ${checked?'checked':''} onchange="${handler}"><span class="platform-switch" aria-hidden="true"></span></label>`;
  const field=(id,label,value,min,max,step,unit,handler)=>`<label class="platform-setting-field" for="${id}"><span>${tr(label)}</span><span class="platform-setting-input-wrap"><input id="${id}" type="number" min="${min}" max="${max}" step="${step||1}" value="${value}" onchange="${handler}"><small>${tr(unit||'')}</small></span></label>`;
  a.innerHTML=`${cabinetHeader('settings',tr('Кабинет преподавателя'))}
@@ -1029,6 +1030,8 @@ function settingsPage(a){
  <section class="platform-settings-section"><div class="platform-settings-section-head"><div><span class="section-kicker">01 / ${tr('ИГРА')}</span><h2>${tr('Игровые режимы')}</h2><p>${tr('Включайте нужные режимы и задавайте единые правила для всех тестов.')}</p></div></div><div class="platform-mode-settings-grid">
  <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon classic">▶</span><div><h3>Classic</h3><p>${tr('Викторина с таймером, баллами и рейтингом участников.')}</p></div></div>${toggle('settings-classic-enabled','Режим доступен при запуске',c.enabled,"changeSetting('classic','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-classic-points','Максимум баллов за правильный ответ',c.basePoints,100,3000,100,'баллов',"saveSettingsField('classicBasePoints',this.value)")}${toggle('settings-classic-speed','Бонус за скорость',c.speedBonus,"changeSetting('classic','speedBonus',this.checked,'mode')",'При включении быстрый ответ приносит больше баллов.')}</article>
  <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon kingdoms">▦</span><div><h3>Color Kingdoms</h3><p>${tr('Командный режим с захватом клеток и флагов.')}</p></div></div>${toggle('settings-kingdoms-enabled','Режим доступен при запуске',k.enabled,"changeSetting('kingdoms','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-kingdoms-duration','Длительность матча',k.durationMinutes,5,20,1,'мин.',"saveSettingsField('kingdomsDuration',this.value)")}${field('settings-kingdoms-need','Правильных ответов для получения флага',k.correctAnswersForFlag,1,5,1,'ответов',"saveSettingsField('kingdomsFlagNeed',this.value)")}${field('settings-kingdoms-count','Количество королевств',k.kingdomCount||2,2,4,1,'королевства',"saveSettingsField('kingdomsCount',this.value)")}</article>
+ <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon submarine">◉</span><div><h3>Submarine Squad</h3><p>${tr('Совместная экспедиция с субмариной и погружением по голосовым подсказкам.')}</p></div></div>${toggle('settings-submarine-enabled','Режим доступен при запуске',u.enabled,"changeSetting('submarine','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-submarine-duration','Длительность экспедиции',u.durationMinutes,5,20,1,'мин.',"saveSettingsField('submarineDuration',this.value)")}</article>
+ 
  </div></section>
  <section class="platform-settings-section"><div class="platform-settings-section-head"><div><span class="section-kicker">02 / ${tr('ПЛАТФОРМА')}</span><h2>${tr('Общие настройки')}</h2><p>${tr('Параметры по умолчанию и поведение отчётов.')}</p></div></div><div class="platform-general-settings-grid">
  ${field('settings-default-time','Время по умолчанию для новых тестов и вопросов',g.defaultQuestionTime,5,120,5,'сек.',"saveSettingsField('defaultQuestionTime',this.value)")}
@@ -1789,17 +1792,19 @@ async function startHostedGame(){
  if(r&&r.code){if(await fullscreenRequest)exitGameFullscreen();msg=r.error||'Не удалось запустить игру';render()}
 }
 function hostBar(){
- const KM=S.mode==='kingdoms';
- return (S.state==='lobby'?'':`<div class="c mut" style="margin-top:20px">Можно подключиться и сейчас: ${esc(joinUrl())} · PIN ${S.pin}</div>${showQR?qrBox(260):''}`)+`<div class="row justify-center" style="margin-top:16px">${S.state==='lobby'?'':`${KM&&S.state==='playing'?'<button class="sec" onclick="finishNow()">🏁 Подвести итоги</button>':''}<button class="sec" onclick="showQR=!showQR;render()">📱 QR-код</button><button class="sec" onclick="act('lock')">${S.locked?'🔓 Открыть вход':'🔒 Закрыть вход'}</button>`}<button class="sec" onclick="endGame()">Завершить игру</button></div>`;
+ const KM=S.mode==='kingdoms',SUB=S.mode==='submarine';
+ return (S.state==='lobby'?'':`<div class="c mut" style="margin-top:20px">Можно подключиться и сейчас: ${esc(joinUrl())} · PIN ${S.pin}</div>${showQR?qrBox(260):''}`)+`<div class="row justify-center" style="margin-top:16px">${S.state==='lobby'?'':`${(KM||SUB)&&S.state==='playing'?'<button class="sec" onclick="finishNow()">🏁 Подвести итоги</button>':''}<button class="sec" onclick="showQR=!showQR;render()">📱 QR-код</button><button class="sec" onclick="act('lock')">${S.locked?'🔓 Открыть вход':'🔒 Закрыть вход'}</button>`}<button class="sec" onclick="endGame()">Завершить игру</button></div>`;
 }
 function lobbyModeSettingsHtml(){
  if(!S||!S.host||S.state!=='lobby'){lobbySettingsOpen=false;return '';}
- const cfg=S.lobbySettings||{},classic=cfg.classic||{basePoints:1000,speedBonus:true},kingdoms=cfg.kingdoms||{durationMinutes:S.dur||5,correctAnswersForFlag:S.need||3,kingdomCount:S.kingdomCount||2};
- const title=S.mode==='kingdoms'?'Color Kingdoms':'Classic';
+ const cfg=S.lobbySettings||{},classic=cfg.classic||{basePoints:1000,speedBonus:true},kingdoms=cfg.kingdoms||{durationMinutes:S.dur||5,correctAnswersForFlag:S.need||3,kingdomCount:S.kingdomCount||2},submarine=cfg.submarine||{durationMinutes:S.durationMinutes||5};
+ const title=S.mode==='submarine'?'Submarine Squad':S.mode==='kingdoms'?'Color Kingdoms':'Classic';
  const trigger=`<div class="lobby-mode-settings-trigger"><button type="button" class="lobby-mode-settings-open" aria-label="${tr('Настройки партии')}" title="${tr('Настройки партии')}" aria-haspopup="dialog" aria-expanded="${lobbySettingsOpen?'true':'false'}" onclick="lobbySettingsOpen=true;render()"><span aria-hidden="true" class="lobby-settings-icon"><svg class="lobby-settings-svg" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true" focusable="false"><text x="16" y="25" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="28" fill="currentColor" stroke="none">⚙</text></svg></span></button></div>`;
  if(!lobbySettingsOpen)return trigger;
  let fields='';
- if(S.mode==='kingdoms'){
+ if(S.mode==='submarine'){
+  fields=`<label class="lobby-mode-setting-field" for="lobby-submarine-duration"><span>${tr('Длительность экспедиции')}</span><span class="lobby-mode-setting-input"><input id="lobby-submarine-duration" type="number" min="5" max="20" step="1" value="${submarine.durationMinutes}" onchange="saveLobbySettings()"><small>${tr('мин.')}</small></span></label>`;
+ }else if(S.mode==='kingdoms'){
   fields=`<label class="lobby-mode-setting-field" for="lobby-kingdom-duration"><span>${tr('Длительность матча')}</span><span class="lobby-mode-setting-input"><input id="lobby-kingdom-duration" type="number" min="5" max="20" step="1" value="${kingdoms.durationMinutes}" onchange="saveLobbySettings()"><small>${tr('мин.')}</small></span></label><label class="lobby-mode-setting-field" for="lobby-kingdom-need"><span>${tr('Правильных ответов для получения флага')}</span><span class="lobby-mode-setting-input"><input id="lobby-kingdom-need" type="number" min="1" max="5" step="1" value="${kingdoms.correctAnswersForFlag}" onchange="saveLobbySettings()"><small>${tr('ответов')}</small></span></label><label class="lobby-mode-setting-field" for="lobby-kingdom-count"><span>${tr('Количество королевств')}</span><select id="lobby-kingdom-count" onchange="saveLobbySettings()"><option value="2" ${Number(kingdoms.kingdomCount)===2?'selected':''}>2</option><option value="3" ${Number(kingdoms.kingdomCount)===3?'selected':''}>3</option><option value="4" ${Number(kingdoms.kingdomCount)===4?'selected':''}>4</option></select></label>`;
  }else{
   fields=`<label class="lobby-mode-setting-field" for="lobby-classic-points"><span>${tr('Максимум баллов за правильный ответ')}</span><span class="lobby-mode-setting-input"><input id="lobby-classic-points" type="number" min="100" max="3000" step="100" value="${classic.basePoints}" onchange="saveLobbySettings()"><small>${tr('баллов')}</small></span></label><label class="lobby-mode-setting-toggle" for="lobby-classic-speed"><span><b>${tr('Бонус за скорость')}</b><small>${tr('Быстрый ответ приносит больше баллов.')}</small></span><input id="lobby-classic-speed" type="checkbox" ${classic.speedBonus?'checked':''} onchange="saveLobbySettings()"></label>`;
@@ -1809,7 +1814,9 @@ function lobbyModeSettingsHtml(){
 async function saveLobbySettings(){
  if(!S||!S.host||S.state!=='lobby')return;
  let settings;
- if(S.mode==='kingdoms'){
+ if(S.mode==='submarine'){
+  settings={submarine:{durationMinutes:Number($('lobby-submarine-duration')?.value)}};
+ }else if(S.mode==='kingdoms'){
   settings={kingdoms:{
    durationMinutes:Number($('lobby-kingdom-duration')?.value),
    correctAnswersForFlag:Number($('lobby-kingdom-need')?.value),
@@ -1825,9 +1832,9 @@ async function saveLobbySettings(){
  if(r&&r.error){msg=r.error;render()}
 }
 function host(a){
- const q=S.q,N=S.rows.length,KM=S.mode==='kingdoms';
+ const q=S.q,N=S.rows.length,KM=S.mode==='kingdoms',SUB=S.mode==='submarine';
  const dl='<button class="sec" onclick="report()">📊 Скачать результаты (Excel)</button>';
- const mode=KM?`Color Kingdoms — ${S.lobbySettings?.kingdoms?.kingdomCount||S.kingdomCount||2} ${tr('королевства')}, ${S.dur} ${tr('мин.')}, флаг за ${S.need} ${tr('ответов')}`:'Classic';
+ const mode=SUB?`Submarine Squad — ${S.lobbySettings?.submarine?.durationMinutes||S.dur||5} ${tr('мин.')}`:KM?`Color Kingdoms — ${S.lobbySettings?.kingdoms?.kingdomCount||S.kingdomCount||2} ${tr('королевства')}, ${S.dur} ${tr('мин.')}, флаг за ${S.need} ${tr('ответов')}`:'Classic';
  if(S.state==='lobby')return a.innerHTML=`<div class="c lobby-screen lobby-host-screen">
  <header class="lobby-intro">
   <span class="lobby-status-pill"><span class="lobby-status-dot" aria-hidden="true"></span>Ожидаем участников…</span>
@@ -1860,14 +1867,14 @@ function host(a){
  <section class="lobby-participants-panel">
   <div class="lobby-section-heading">
    <div><h3>Участники</h3><p>Ожидаем участников…</p></div>
-   <div class="lobby-player-counter"><strong>${N}</strong><span>/ 100</span></div>
+   <div class="lobby-player-counter"><strong>${N}</strong><span>/ ${SUB?30:100}</span></div>
   </div>
   <div class="chips lobby-player-chips">${S.rows.map(p=>`<span class="chip"><span data-user-content="true">${esc(p.name)}</span><button type="button" class="player-kick" title="Исключить участника" aria-label="${tr('Исключить')} ${esc(p.name)}" onclick="kick('${p.id}')">✕</button></span>`).join('')||'<span class="lobby-empty-message">Ожидаем участников…</span>'}</div>
  </section>
  ${msg?`<p class="bad lobby-settings-error" role="alert">${esc(msg)}</p>`:''}
  <footer class="lobby-footer">
   <div class="lobby-footer-actions">${lobbyModeSettingsHtml()}
-   <button class="lobby-start-button" ${N?'':'disabled'} onclick="startHostedGame()">Начать игру</button>
+   ${SUB&&N<2?`<p class="submarine-lobby-hint">${tr('Для запуска Submarine Squad нужно минимум два участника. Максимум — 30.')}</p>`:''}<button class="lobby-start-button" ${SUB?N>=2?'':'disabled':N?'':'disabled'} onclick="startHostedGame()">Начать игру</button>
   </div>
  </footer>
  </div>`;
@@ -1919,7 +1926,7 @@ function gameCountdownHtml(){
 function player(a){
  const p=S.me||{name:"",score:0,rank:0};
  const head=`<div class="row justify-between lobby-player-topbar"><b>${esc(p.name)}</b><b>${p.score} ${tr("очков")}</b></div>`;
- if(S.state==="lobby")return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>${tr("Вы в игре!")}</h1><p>${tr("Ваше имя на экране ведущего. Ждём начала…")}</p>${S.mode==="kingdoms"?`<p class="lobby-team-hint">${tr("Режим Color Kingdoms: команда назначится при старте")}</p>`:""}</div></div>`;
+ if(S.state==="lobby")return a.innerHTML=`<div class="lobby-player-screen">${head}<div class="lobby-player-waiting"><div class="lobby-waiting-orbit" aria-hidden="true"><span></span></div><h1>${tr("Вы в игре!")}</h1><p>${tr("Ваше имя на экране ведущего. Ждём начала…")}</p>${S.mode==="kingdoms"?`<p class="lobby-team-hint">${tr("Режим Color Kingdoms: команда назначится при старте")}</p>`:S.mode==="submarine"?`<p class="lobby-team-hint">${tr('Вместе отвечайте и помогайте субмарине уйти от погони.')}</p>`:""}</div></div>`;
  if(S.state==="question"){
   if(p.answered)return a.innerHTML=head+participantAnswerFeedbackHtml(p);
   const mu=!!(S.q&&S.q.multi);
@@ -2010,7 +2017,7 @@ function draw(){
  if(S.state==='kicked'){if(es)es.close();if(gameRole==='player'||participantOnly){markParticipantOnly();return participantEndScreen(a,tr('Вас исключили из игры'))}clearSess();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Вас исключили из игры</h1><button onclick="location.reload()">На главную</button></div>'}
  if(S.state==='ended'){if(es)es.close();if(gameRole==='player'||participantOnly){markParticipantOnly();return participantEndScreen(a,tr('Игра завершена ведущим'))}clearSess();return a.innerHTML='<div class="c" style="margin-top:60px"><h1>Игра завершена ведущим</h1><button onclick="location.reload()">На главную</button></div>'}
  if(S.state==="countdown")a.innerHTML=gameCountdownHtml();
- else if(S.mode==='kingdoms'&&S.state!=='lobby')S.host?hostK(a):playerK(a);else S.host?host(a):player(a);
+ else if(S.mode==='submarine'&&S.state!=='lobby')S.host?submarineHost(a):submarinePlayer(a);else if(S.mode==='kingdoms'&&S.state!=='lobby')S.host?hostK(a):playerK(a);else S.host?host(a):player(a);
  if(S.host&&S.mode==="classic"&&S.state==="results"&&S.resultsPhase==="leaderboard")a.insertAdjacentHTML("beforeend",classicTeacherRankingPopupHtml());
  if(S.host&&qrFull)a.insertAdjacentHTML('beforeend',qrOverlay());
  if(S.host&&S.state!=='final'&&S.state!=='countdown'){
@@ -2038,7 +2045,8 @@ function tick(){
   return;
  }
  let left,tot;
- if(S.mode==='kingdoms'&&S.state==='playing'){left=Math.max(0,tEnd-Date.now());tot=S.dur;if($('tm')){$('tm').textContent=fmt(left);$('tm').classList.toggle('is-urgent',left<=10000)}}
+ if(S.mode==='submarine'&&S.state==='playing'){left=Math.max(0,tEnd-Date.now());tot=Math.max(1,(S.durationMinutes||5)*60000);const clock=$('submarine-clock');if(clock)clock.textContent=fmt(left);const bar=$('submarine-time-bar');if(bar)bar.style.width=(left/tot*100)+'%';return}
+ else if(S.mode==='kingdoms'&&S.state==='playing'){left=Math.max(0,tEnd-Date.now());tot=S.dur;if($('tm')){$('tm').textContent=fmt(left);$('tm').classList.toggle('is-urgent',left<=10000)}}
  else if(S.state==='question'){left=Math.max(0,S.T*1000-(Date.now()-t0));tot=S.T*1000;if($('tm'))$('tm').textContent=Math.ceil(left/1000)}
  else return;
  if(!(S.me&&S.me.answered))gameAudioUrgentTick(left);else stopGameAudioLoop();
