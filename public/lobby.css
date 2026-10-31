@@ -1436,3 +1436,23 @@
   .classic-ranking-popup-backdrop, .classic-ranking-popup-card { animation: none !important; }
   .classic-ranking-popup-progress span { animation-duration: .01ms !important; }
 }
+
+/* Game soundtrack control — visible for host and participants. */
+.game-audio-control { position:fixed; right:max(14px,env(safe-area-inset-right)); bottom:max(14px,env(safe-area-inset-bottom)); z-index:1800; pointer-events:none; }
+.game-audio-control button {
+ display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:42px; padding:9px 14px;
+ color:var(--text-main); background:color-mix(in srgb,var(--surface) 90%,transparent);
+ border:1px solid var(--line); border-radius:999px; box-shadow:0 8px 26px rgba(12,16,32,.18);
+ -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-size:.86rem; font-weight:750; cursor:pointer;
+ pointer-events:auto; transition:background .16s ease,transform .16s ease,opacity .16s ease;
+}
+.game-audio-control button:hover { transform:translateY(-1px); }
+.game-audio-control button.is-on { border-color:color-mix(in srgb,var(--accent) 42%,var(--line)); }
+.game-audio-control button.is-off { opacity:.78; }
+.game-audio-control button span { font-size:1.25rem; line-height:1; }
+.game-audio-control button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+@media(max-width:600px) {
+ .game-audio-control { right:max(10px,env(safe-area-inset-right)); bottom:max(10px,env(safe-area-inset-bottom)); }
+ .game-audio-control button { min-height:40px; padding:8px 12px; font-size:.8rem; }
+}
+@media(prefers-reduced-motion:reduce) { .game-audio-control button { transition:none; } }
