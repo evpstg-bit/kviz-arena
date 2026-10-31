@@ -846,15 +846,15 @@ function toResults(g){
   if(g.state!=='question')return;
   clearTimeout(g.timer);
   g.state='results';
-  // Phase 1: let the teacher show the highlighted correct answer for ten seconds.
+  // Phase 1: let the teacher show the highlighted correct answer for six seconds.
   g.resultsPhase='answer';
-  g.resultEndsAt=Date.now()+10000;
+  g.resultEndsAt=Date.now()+6000;
   push(g);
   g.timer=setTimeout(()=>{
     if(g.state!=='results')return;
     // Phase 2: show the Top-10 popup only after the answer-review period.
     g.resultsPhase='leaderboard';
-    g.resultEndsAt=Date.now()+10000;
+    g.resultEndsAt=Date.now()+6000;
     push(g);
     g.timer=setTimeout(()=>{
       if(g.state!=='results')return;
@@ -866,8 +866,8 @@ function toResults(g){
       }
       g.qi++;
       startQ(g);
-    },10000);
-  },10000);
+    },6000);
+  },6000);
 }
 
 // ---- Color Kingdoms: six-neighbour hex map and 2–4 kingdoms ----
