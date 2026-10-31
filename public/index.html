@@ -305,7 +305,8 @@ function connect(){
   }
   S=incomingS;gameRole=S.host?'host':'player';if(gameRole==='player')markParticipantOnly();try{sessionStorage.setItem('qs',JSON.stringify({pin,id:me,role:gameRole}))}catch(_){}t0=Date.now()-(S.elapsed||0);if(S.left!==undefined)tEnd=Date.now()+S.left;
   if(S.state!=='question'&&S.state!=='playing')sel=[];
-  if(S.host&&CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&S.reportId&&!(S.mode==='classic'&&S.state==='final')){
+  const shouldAutoOpenReport=(S.mode==='kingdoms'&&S.state==='final')||(CLIENT_SETTINGS.general.autoOpenReports&&['final','ended'].includes(S.state)&&!(S.mode==='classic'&&S.state==='final'));
+  if(S.host&&shouldAutoOpenReport&&S.reportId){
    if(autoReportSeen!==S.reportId){
     const reportId=S.reportId;autoReportSeen=reportId;autoReportPending=reportId;
     openReportDetail(reportId,true).finally(()=>{if(autoReportPending===reportId)autoReportPending=''});
