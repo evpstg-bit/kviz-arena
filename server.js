@@ -1629,7 +1629,8 @@ http.createServer(async(req,res)=>{
 }).listen(PORT,'0.0.0.0',()=>{
   console.log('Квиз-арена запущена: http://localhost:'+PORT);
   Object.values(os.networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).forEach(i=>console.log('В локальной сети:  http://'+i.address+':'+PORT));
-  console.log(USERS.length?'Аккаунтов: '+USERS.length+(INVITE?' (регистрация по коду приглашения)':' (регистрация закрыта)'):'Аккаунтов пока нет — первый созданный аккаунт станет администратором.');
+  const registrationClosed=String(process.env.TEACHER_REGISTRATION_CLOSED||'').toLowerCase()==='true';
+  console.log(USERS.length?'Аккаунтов: '+USERS.length+(registrationClosed?' (регистрация закрыта)':INVITE?' (регистрация по коду приглашения)':' (открыта регистрация преподавателей)'):'Аккаунтов пока нет — регистрация преподавателей доступна; администратор задаётся через ADMIN_LOGIN и ADMIN_PASSWORD.');
 });
 setInterval(()=>{
   for(const[k,g]of games)if(Date.now()-g.born>6*3600e3){clearTimeout(g.timer);clearTimeout(g.pend);g.clients.forEach(c=>c.res.end());games.delete(k)}
