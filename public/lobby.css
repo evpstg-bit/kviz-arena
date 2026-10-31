@@ -1487,3 +1487,96 @@
  .game-audio-toolbar { gap:8px; padding:9px 11px; }
  .game-audio-volume-control { gap:8px; }
 }
+
+/* Compact teacher-only audio control: the volume slider expands on hover or keyboard/touch focus. */
+.game-audio-control {
+  width: auto !important;
+  max-width: calc(100vw - 20px);
+  pointer-events: none;
+}
+.game-audio-toolbar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0 !important;
+  width: auto !important;
+  padding: 5px !important;
+  border-radius: 999px !important;
+}
+.game-audio-control .game-audio-toolbar button.game-audio-toggle-button {
+  order: 2;
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  align-self: center;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 50%;
+}
+.game-audio-toggle-button svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+.game-audio-volume-control {
+  order: 1;
+  display: grid !important;
+  grid-template-columns: auto minmax(72px, 1fr) 38px;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 0;
+  max-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(8px);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: width .22s ease, max-width .22s ease, opacity .16s ease, transform .22s ease, padding .22s ease, visibility .16s ease;
+}
+.game-audio-volume-control input[type="range"] {
+  min-width: 72px;
+}
+.game-audio-control:hover .game-audio-volume-control,
+.game-audio-control:focus-within .game-audio-volume-control {
+  width: 236px;
+  max-width: calc(100vw - 84px);
+  padding: 0 10px 0 8px;
+  overflow: visible;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+body.participant-only-active .game-audio-control {
+  display: none !important;
+}
+@media (max-width: 600px) {
+  .game-audio-control .game-audio-toolbar button.game-audio-toggle-button {
+    flex-basis: 40px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+  .game-audio-control:hover .game-audio-volume-control,
+  .game-audio-control:focus-within .game-audio-volume-control {
+    width: 212px;
+    max-width: calc(100vw - 76px);
+    grid-template-columns: auto minmax(52px, 1fr) 34px;
+    gap: 6px;
+    padding-right: 8px;
+    padding-left: 7px;
+    font-size: .72rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-audio-volume-control { transition: none !important; }
+}
