@@ -50,7 +50,7 @@ let USERS=readJ('users.json',[]),SESS=readJ('sessions.json',{}),BUILTINQ=[];
 let BUILTIN_GITHUB_HYDRATED=false,BUILTIN_GITHUB_HYDRATION=null;
 const hashPw=(pw,salt)=>crypto.scryptSync(String(pw),salt,32).toString('hex');
 const checkPw=(u,pw)=>{try{return crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'))}catch(e){return false}};
-const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin});
+const pubUser=u=>({login:u.login,name:u.name,admin:!!u.admin,role:u.admin?'admin':'teacher'});
 
 const DEVELOPER_SESSIONS=new Map(),DEVELOPER_LOGIN_FAILS=new Map();
 const DEVELOPER_SESSION_TTL=12*60*60*1000;
@@ -91,12 +91,14 @@ function developerUserFromToken(token){
 // Постоянный администратор берётся из файла проекта, а не из временной папки DATA_DIR.
 // Подписанная сессия этого аккаунта остаётся действительной после перезапуска Render.
 function readAdminConfig(){
-  try{
-    const c=JSON.parse(fs.readFileSync(path.join(__dirname,'admin-credentials.json'),'utf8'));
-    const login=String(c.login||'').trim(),password=String(c.password||'');
-    if(!login||!password)throw new Error('нужны непустые login и password');
-    return{login,password,name:String(c.name||login).slice(0,40)};
-  }catch(e){console.error('Не удалось загрузить admin-credentials.json:',e.message);return null}
+  const login=String(process.env.ADMIN_LOGIN||'').trim();
+  const password=String(process.env.ADMIN_PASSWORD||'');
+  const name=String(process.env.ADMIN_NAME||login).trim().slice(0,40);
+  if(!login||password.length<16){
+    console.error('Не настроен администратор: задайте ADMIN_LOGIN и ADMIN_PASSWORD (не короче 16 символов) в секретных переменных Render.');
+    return null;
+  }
+  return{login,password,name:name||login};
 }
 const ADMIN_CONFIG=readAdminConfig();
 const ADMIN_ID=ADMIN_CONFIG?'config-admin-'+crypto.createHash('sha256').update(ADMIN_CONFIG.login.toLowerCase()).digest('hex').slice(0,12):null;
@@ -149,7 +151,7 @@ function newSession(u,mfaVerified=false){
   const mine=Object.keys(SESS).filter(k=>SESS[k].uid===u.id);if(mine.length>20)mine.slice(0,mine.length-20).forEach(k=>delete SESS[k]);
   writeJ('sessions.json',SESS);return t;
 }
-const FAILS=new Map();
+const FAILS=new Map(),REGISTRATION_FAILS=new Map();
 let AUTH_SECURITY_STATE={version:1,users:{},epochs:{}},AUTH_SECURITY_READY=false,AUTH_SECURITY_PERSISTENT=false,AUTH_SECURITY_PROMISE=null,AUTH_SECURITY_ERROR='';
 const TOTP_SETUP_PENDING=new Map(),TOTP_LOGIN_CHALLENGES=new Map(),TOTP_FAILS=new Map();
 
@@ -157,7 +159,7 @@ const TOTP_SETUP_PENDING=new Map(),TOTP_LOGIN_CHALLENGES=new Map(),TOTP_FAILS=ne
 if(process.argv[2]==='--users'){console.log(USERS.length?USERS.map(u=>u.login+(u.admin?' (администратор)':'')).join('\n'):'Аккаунтов пока нет.');process.exit(0)}
 if(process.argv[2]==='--reset-password'){
   const u=USERS.find(x=>x.login.toLowerCase()===String(process.argv[3]).toLowerCase()),np=process.argv[4]||'';
-  if(u&&u.configManaged){console.log('Этот аккаунт управляется файлом admin-credentials.json. Измените пароль в этом файле и повторно разверните проект.');process.exit(1)}
+  if(u&&u.configManaged){console.log('Этот аккаунт управляется переменными ADMIN_LOGIN и ADMIN_PASSWORD в Render.');process.exit(1)}
   if(!u||np.length<6){console.log('Использование: node server.js --reset-password ЛОГИН НОВЫЙ_ПАРОЛЬ  (пароль не короче 6 символов)\nСписок логинов: node server.js --users');process.exit(1)}
   u.salt=crypto.randomBytes(16).toString('hex');u.hash=hashPw(np,u.salt);Object.keys(SESS).forEach(k=>{if(SESS[k].uid===u.id)delete SESS[k]});
   writeJ('users.json',USERS);writeJ('sessions.json',SESS);console.log('Пароль пользователя «'+u.login+'» изменён.');process.exit(0);
@@ -579,6 +581,81 @@ async function persistAuthSecurityMutation(mutate){
     await reportsApiJson(update,'Не удалось обновить защищённое хранилище настроек');
   }
   throw new Error('Настройки безопасности одновременно изменились. Повторите операцию.');
+}
+
+function normalizeTeacherAccountList(value){
+  const raw=Array.isArray(value)?value:(value&&Array.isArray(value.users)?value.users:[]);
+  const users=[],ids=new Set(),logins=new Set();
+  for(const item of raw){
+    if(!item||typeof item!=='object')continue;
+    const id=String(item.id||''),login=str(item.login,40).trim(),salt=String(item.salt||''),hash=String(item.hash||'');
+    const key=login.toLocaleLowerCase();
+    if(!/^[A-Za-z0-9_-]{1,80}$/.test(id)||!/^[\p{L}\p{N}_.@-]{3,40}$/u.test(login)||
+       !/^[a-f0-9]{32}$/i.test(salt)||!/^[a-f0-9]{64}$/i.test(hash)||ids.has(id)||logins.has(key))continue;
+    ids.add(id);logins.add(key);
+    users.push({id,login,name:str(item.name,40).trim()||login,salt,hash,admin:false,created:Number(item.created)||Date.now()});
+  }
+  return users;
+}
+let TEACHER_ACCOUNTS_READY=false,TEACHER_ACCOUNTS_PROMISE=null,TEACHER_ACCOUNTS_ERROR='';
+async function readTeacherAccountsAt(cfg,ref){
+  const r=await reportsGithubFetch(cfg,'contents/teacher-accounts.enc.json?ref='+encodeURIComponent(ref));
+  if(r.status===404)return{users:[],sha:null};
+  const data=await reportsApiJson(r,'Не удалось прочитать зашифрованное хранилище аккаунтов преподавателей');
+  if(!data.content)throw new Error('Хранилище аккаунтов преподавателей пусто или недоступно');
+  const raw=Buffer.from(String(data.content).replace(/\s/g,''),'base64').toString('utf8');
+  const decoded=decryptReportPayload(raw,cfg);
+  if(!decoded||!Array.isArray(decoded.users))throw new Error('В зашифрованном хранилище аккаунтов отсутствует список пользователей');
+  return{users:normalizeTeacherAccountList(decoded.users),sha:data.sha||null};
+}
+async function mutateTeacherAccountStore(mutator,message){
+  const cfg=reportsStoreConfig();
+  if(!cfg)throw new Error('Постоянное хранилище аккаунтов не настроено. Проверьте GITHUB_TOKEN и GITHUB_REPOSITORY в Render.');
+  for(let attempt=0;attempt<4;attempt++){
+    const branchRef=await githubEnsureReportsBranch(cfg),parent=branchRef.object.sha;
+    const current=await readTeacherAccountsAt(cfg,parent);
+    const outcome=mutator(current.users.map(user=>({...user})))||{};
+    const next=normalizeTeacherAccountList(outcome.users===undefined?current.users:outcome.users);
+    if(outcome.noChange)return{users:current.users,...(outcome.data||{}),duplicate:!!outcome.duplicate};
+    const blobRes=await reportsGithubFetch(cfg,'git/blobs',{method:'POST',body:{content:encryptReportPayload({version:1,users:next},cfg),encoding:'utf-8'}});
+    const blob=await reportsApiJson(blobRes,'Не удалось зашифровать аккаунты преподавателей');
+    const commitRes=await reportsGithubFetch(cfg,'git/commits/'+parent);
+    const base=await reportsApiJson(commitRes,'Не удалось прочитать ветку хранения аккаунтов');
+    const treeRes=await reportsGithubFetch(cfg,'git/trees',{method:'POST',body:{base_tree:base.tree.sha,tree:[{path:'teacher-accounts.enc.json',mode:'100644',type:'blob',sha:blob.sha}]});
+    const tree=await reportsApiJson(treeRes,'Не удалось подготовить сохранение аккаунтов преподавателей');
+    const commitCreate=await reportsGithubFetch(cfg,'git/commits',{method:'POST',body:{message:String(message||'Update teacher accounts'),tree:tree.sha,parents:[parent]}});
+    const commit=await reportsApiJson(commitCreate,'Не удалось сохранить аккаунты преподавателей');
+    const update=await reportsGithubFetch(cfg,'git/refs/heads/'+encodeURIComponent(cfg.reportsBranch),{method:'PATCH',body:{sha:commit.sha,force:false}});
+    if(update.ok)return{users:next,...(outcome.data||{})};
+    if((update.status===409||update.status===422)&&attempt<3)continue;
+    await reportsApiJson(update,'Не удалось обновить зашифрованное хранилище аккаунтов');
+  }
+  throw new Error('Хранилище аккаунтов одновременно изменилось. Повторите попытку.');
+}
+async function ensureTeacherAccountsLoaded(){
+  if(TEACHER_ACCOUNTS_READY)return true;
+  if(TEACHER_ACCOUNTS_PROMISE)return TEACHER_ACCOUNTS_PROMISE;
+  TEACHER_ACCOUNTS_PROMISE=(async()=>{
+    if(!reportsStoreConfig()){
+      TEACHER_ACCOUNTS_ERROR='Для регистрации и постоянного хранения аккаунтов нужны GITHUB_TOKEN и GITHUB_REPOSITORY в Render.';
+      return false;
+    }
+    const legacy=USERS.filter(user=>user&&!user.configManaged&&!user.admin).map(user=>({...user,admin:false}));
+    const synced=await mutateTeacherAccountStore(current=>{
+      const ids=new Set(current.map(user=>user.id)),logins=new Set(current.map(user=>user.login.toLowerCase()));
+      const additions=legacy.filter(user=>!ids.has(String(user.id))&&!logins.has(String(user.login||'').toLowerCase()));
+      return{users:[...current,...additions],noChange:additions.length===0};
+    },'Migrate and synchronize teacher accounts');
+    USERS=[...USERS.filter(user=>user&&user.configManaged),...synced.users];
+    writeJ('users.json',USERS);
+    TEACHER_ACCOUNTS_READY=true;TEACHER_ACCOUNTS_ERROR='';
+    return true;
+  })().catch(e=>{
+    TEACHER_ACCOUNTS_READY=false;TEACHER_ACCOUNTS_ERROR=e.message||'Не удалось загрузить аккаунты преподавателей';
+    console.error('Не удалось загрузить аккаунты преподавателей:',TEACHER_ACCOUNTS_ERROR);
+    return false;
+  }).finally(()=>{TEACHER_ACCOUNTS_PROMISE=null});
+  return TEACHER_ACCOUNTS_PROMISE;
 }
 function cleanupAuthTransientMaps(){
   const now=Date.now();
@@ -1037,7 +1114,7 @@ http.createServer(async(req,res)=>{
     const hydration=hydrateAppSettingsFromGitHub();
     await Promise.race([hydration,new Promise(resolve=>setTimeout(resolve,1200))]);
     const urls=Object.values(os.networkInterfaces()).flat().filter(i=>(i.family==='IPv4'||i.family===4)&&!i.internal).map(i=>'http://'+i.address+':'+PORT);
-    return json(res,{urls,hasUsers:USERS.length>0,regOpen:USERS.length===0||!!INVITE,needInvite:USERS.length>0&&!!INVITE,settings:APP_SETTINGS,version:APP_VERSION});
+    return json(res,{urls,hasUsers:USERS.length>0,regOpen:String(process.env.TEACHER_REGISTRATION_CLOSED||'').toLowerCase()!=='true',needInvite:!!INVITE,settings:APP_SETTINGS,version:APP_VERSION});
   }
   if(req.method!=='POST')return json(res,{},404);
   const b=await body(req),werr=()=>json(res,{error:'Не удалось записать файл на сервере (проверьте права на папку data)'},500);
@@ -1114,15 +1191,37 @@ http.createServer(async(req,res)=>{
     const loaded=await ensureAuthSecurityLoaded();
     if(!loaded)return json(res,{error:'Не удалось загрузить настройки безопасности. Повторите попытку позже.'},503);
     const op=u.pathname.slice(10);
+    const accountsLoaded=await ensureTeacherAccountsLoaded();
     if(op==='register'){
-      const login=str(b.login,40).trim(),pw=String(b.pass||'');
+      if(String(process.env.TEACHER_REGISTRATION_CLOSED||'').toLowerCase()==='true')return json(res,{error:'Регистрация новых преподавателей временно закрыта.'},403);
+      if(!accountsLoaded)return json(res,{error:'Не удалось открыть постоянное хранилище аккаунтов. Регистрация временно недоступна; проверьте GITHUB_TOKEN и GITHUB_REPOSITORY в Render.'},503);
+      const ip=authRequestIp(req),now=Date.now(),limit=REGISTRATION_FAILS.get(ip);
+      if(limit&&limit.until>now)return json(res,{error:'Слишком много попыток регистрации. Попробуйте позже.'},429);
+      const windowState=limit&&now-limit.started<15*60000?limit:{n:0,started:now,until:0};
+      windowState.n++;
+      if(windowState.n>5){windowState.until=now+15*60000;REGISTRATION_FAILS.set(ip,windowState);return json(res,{error:'Слишком много попыток регистрации. Попробуйте через 15 минут.'},429)}
+      REGISTRATION_FAILS.set(ip,windowState);
+      const login=str(b.login,40).trim(),pw=String(b.pass||''),name=str(b.name,40).trim();
       if(!/^[\p{L}\p{N}_.@-]{3,40}$/u.test(login))return json(res,{error:'Логин: 3–40 символов (буквы, цифры, _ . - @)'},400);
-      if(pw.length<6||pw.length>100)return json(res,{error:'Пароль должен быть не короче 6 символов'},400);
-      if(USERS.length&&(!INVITE||b.code!==INVITE))return json(res,{error:INVITE?'Неверный код приглашения':'Регистрация закрыта: аккаунт администратора уже создан. Чтобы разрешить новые регистрации, задайте INVITE_CODE при запуске сервера'},403);
+      if(name.length<2)return json(res,{error:'Укажите имя преподавателя (не менее 2 символов).'},400);
+      if(pw.length<10||pw.length>100)return json(res,{error:'Пароль должен содержать от 10 до 100 символов.'},400);
+      if(INVITE&&b.code!==INVITE)return json(res,{error:'Неверный код приглашения.'},403);
       if(USERS.some(x=>x.login.toLowerCase()===login.toLowerCase()))return json(res,{error:'Такой логин уже занят'},400);
-      const salt=crypto.randomBytes(16).toString('hex'),nu={id:rid(),login,name:str(b.name,40).trim()||login,salt,hash:hashPw(pw,salt),admin:!USERS.length,created:Date.now()};
-      USERS.push(nu);
-      if(!writeJ('users.json',USERS)){USERS.pop();return werr()}
+      const salt=crypto.randomBytes(16).toString('hex'),nu={id:rid(),login,name,salt,hash:hashPw(pw,salt),admin:false,created:Date.now()};
+      let stored;
+      try{
+        stored=await mutateTeacherAccountStore(current=>{
+          if(current.some(x=>x.login.toLowerCase()===login.toLowerCase()))return{users:current,noChange:true,duplicate:true};
+          return{users:[...current,nu],data:{created:true}};
+        },'Register teacher account');
+      }catch(e){
+        console.error('Не удалось сохранить новый аккаунт преподавателя:',e.message);
+        return json(res,{error:'Не удалось сохранить аккаунт. Попробуйте позже.'},503);
+      }
+      if(stored.duplicate)return json(res,{error:'Такой логин уже занят'},409);
+      USERS=[...USERS.filter(x=>x&&x.configManaged),...stored.users];
+      writeJ('users.json',USERS);
+      REGISTRATION_FAILS.delete(ip);
       return json(res,{token:newSession(nu),user:pubUser(nu)});
     }
     if(op==='login'){
