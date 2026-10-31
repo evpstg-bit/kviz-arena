@@ -15,7 +15,8 @@ const DEFAULT_APP_SETTINGS={
   general:{defaultQuestionTime:20,maxPlayers:100,supportThreshold:60,autoOpenReports:true,showCorrectAnswerAfterQuestion:true},
   modes:{
     classic:{enabled:true,basePoints:1000,speedBonus:true},
-    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2}
+    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2},
+    submarine:{enabled:true,durationMinutes:5}
   }
 };
 const clampInt=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.min(max,Math.max(min,Math.round(Number(value)))):fallback;
@@ -25,6 +26,7 @@ function normalizeAppSettings(value){
   const m=v.modes&&typeof v.modes==='object'?v.modes:{};
   const c=m.classic&&typeof m.classic==='object'?m.classic:{};
   const k=m.kingdoms&&typeof m.kingdoms==='object'?m.kingdoms:{};
+  const sub=m.submarine&&typeof m.submarine==='object'?m.submarine:{};
   return{version:1,general:{
     defaultQuestionTime:clampInt(g.defaultQuestionTime,5,120,20),
     maxPlayers:clampInt(g.maxPlayers,2,100,100),
@@ -33,7 +35,8 @@ function normalizeAppSettings(value){
     showCorrectAnswerAfterQuestion:g.showCorrectAnswerAfterQuestion!==false
   },modes:{
     classic:{enabled:c.enabled!==false,basePoints:clampInt(c.basePoints,100,3000,1000),speedBonus:c.speedBonus!==false},
-    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3),kingdomCount:clampInt(k.kingdomCount,2,4,2)}
+    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3),kingdomCount:clampInt(k.kingdomCount,2,4,2)},
+     submarine:{enabled:sub.enabled!==false,durationMinutes:clampInt(sub.durationMinutes,5,20,5)}
   }};
 }
 function readAppSettingsFile(){try{return normalizeAppSettings(JSON.parse(fs.readFileSync(path.join(__dirname,'app-settings.json'),'utf8')))}catch(e){return normalizeAppSettings(DEFAULT_APP_SETTINGS)}}
@@ -796,12 +799,19 @@ function newPlayer(g,name){
     Object.assign(p,{team:0,prog:0,flags:0,placed:0,correctN:0,answeredN:0,qn:0,fb:null,queue:[],qi:0,cur:0});
     if(g.kb){const count=clampInt(g.kb.kingdomCount,2,4,2);p.team=leastPopulatedKingdom(g,count);initQ(g,p)}
   }
+  if(g.mode==='submarine')Object.assign(p,{subQn:0,answeredN:0,correctN:0,boosting:false,sbFeedback:null,sbRole:'crew',sbGroupId:'',sbDiveAnswered:false,sbDiveOptions:[],queue:[],qi:0,cur:0});
   return p;
 }
 function removePlayer(g,id,msg){
   const p=g.players.get(id);if(!p)return;
   g.left.push({id,name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:Array.isArray(p.log)?p.log.map(l=>({...l,a:Array.isArray(l.a)?[...l.a]:[]})):[]});
   g.players.delete(id);
+  if(g.mode==='submarine'&&g.state==='playing'&&g.sb){
+    const group=g.sb.groups?.find(x=>x.id===p.sbGroupId);
+    if(group&&group.instructorId===id)restartSubLevel(g);
+    else if(group){group.players=group.players.filter(x=>x!==id);group.threshold=Math.max(1,Math.ceil(group.players.length*.6));if(!group.players.length)group.done=true;if(g.sb.groups.every(x=>x.done))completeSubLevel(g)}
+    if(g.state==='playing'&&g.players.size<2)finishSubmarine(g);
+  }
   [...g.clients].filter(c=>c.id===id).forEach(c=>{if(msg)safeSseWrite(g,c,msg);try{if(!c.res.destroyed&&!c.res.writableEnded)c.res.end()}catch(e){}g.clients.delete(c)});
   if(g.state==='question'&&g.players.size&&[...g.players.values()].every(x=>x.lastQ===g.qi))toResults(g);else push(g);
 }
@@ -841,7 +851,7 @@ function makeGameReport(g,{incomplete=false}={}){
   const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:successPercent(correctCount,answers),flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
   const accuracies=participants.map(p=>g.mode==='classic'?(questions.length?p.correctCount/questions.length*100:0):(p.answeredCount?p.correctCount/p.answeredCount*100:0));
   const completedAt=Date.now(),startedAt=Number(g.startedAt)||Number(g.born)||completedAt,playedSeconds=Math.max(0,Math.round((completedAt-startedAt)/1000));
-  return{id:'report-'+g.pin+'-'+completedAt.toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),startedAt,completedAt,incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:successPercent(totalCorrect,g.mode==='classic'?totalPossible:totalAnswers),averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,playedSeconds,winner:g.kb?g.kb.winner:null}};
+  return{id:'report-'+g.pin+'-'+completedAt.toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':g.mode==='submarine'?'Submarine Squad':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),startedAt,completedAt,incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:successPercent(totalCorrect,g.mode==='classic'?totalPossible:totalAnswers),averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,playedSeconds,winner:g.kb?g.kb.winner:null,submarine:g.sb?{levelsCompleted:g.sb.levelsCompleted||0,failedLevels:g.sb.failedLevels||0,totalCorrect:g.sb.totalCorrect||0,totalWrong:g.sb.totalWrong||0}:null}};
 }
 async function saveGameReport(g,options={}){
   if(g.reportSavePromise)return g.reportSavePromise;
@@ -904,7 +914,7 @@ function startCountdown(g){
     if(g.state!=='countdown')return;
     g.countdownEndsAt=0;
     try{
-      if(g.mode==='kingdoms')startK(g);else startQ(g);
+      if(g.mode==='kingdoms')startK(g);else if(g.mode==='submarine')startSubmarine(g);else startQ(g);
     }catch(e){
       console.error('Не удалось запустить игру после отсчёта '+g.pin+':',e.stack||e.message);
       clearTimeout(g.timer);g.timer=null;g.kb=null;g.qi=0;g.countdownEndsAt=0;g.state='lobby';push(g);
@@ -1056,7 +1066,114 @@ function viewK(g,id,C){
   }
   return v;
 }
-function viewAny(g,id,R,C){return g.mode==='kingdoms'&&g.kb&&g.state!=='lobby'?viewK(g,id,C||commonK(g,R)):view(g,id,R)}
+
+// ---- Submarine Squad: shared escape mission and voice-led symbol dive ----
+const SUB_SYMBOLS=['🐚','🐠','🪼','🦀','🐙','🪸','⭐','🦑','🐬','🦈','🌊','⚓'];
+function nextSubSymbol(){return SUB_SYMBOLS[Math.floor(Math.random()*SUB_SYMBOLS.length)]}
+function subSymbolOptions(target){return shuffle([target,...shuffle(SUB_SYMBOLS.filter(x=>x!==target)).slice(0,3)]);}
+function resetSubDiveGroup(g,group){
+  group.symbol=nextSubSymbol();group.correct=0;group.done=false;
+  group.players.forEach(id=>{const p=g.players.get(id);if(p){p.sbDiveOptions=subSymbolOptions(group.symbol);p.sbDiveAnswered=false}});
+}
+function setupSubDive(g){
+  const sb=g.sb,ids=shuffle([...g.players.keys()]);
+  if(ids.length<2){sb.stage='quiz';return}
+  const instructorIds=ids.splice(0,ids.length>=12?2:1);
+  sb.groups=instructorIds.map((id,index)=>({id:'sub-group-'+index,instructorId:id,players:[],symbol:'',round:0,correct:0,threshold:1,done:false}));
+  ids.forEach((id,index)=>sb.groups[index%sb.groups.length].players.push(id));
+  sb.groups.forEach(group=>{
+    group.threshold=Math.max(1,Math.ceil(group.players.length*.6));
+    const instructor=g.players.get(group.instructorId);
+    if(instructor){instructor.sbRole='instructor';instructor.sbGroupId=group.id;instructor.sbDiveAnswered=false;instructor.sbDiveOptions=[]}
+    group.players.forEach(id=>{const p=g.players.get(id);if(p){p.sbRole='crew';p.sbGroupId=group.id;p.sbDiveAnswered=false}});
+    resetSubDiveGroup(g,group);
+  });
+  sb.stage='dive';sb.diveRound=0;sb.boost=100;sb.lastTick=Date.now();push(g);
+}
+function restartSubLevel(g){
+  const sb=g.sb;if(!sb)return;
+  sb.failedLevels++;sb.stage='quiz';sb.fish=12;sb.charge=0;sb.boost=0;sb.groups=[];
+  sb.chargeTarget=Math.max(5,g.players.size*2);
+  g.players.forEach(p=>{p.boosting=false;p.sbRole='crew';p.sbGroupId='';p.sbDiveAnswered=false;p.sbDiveOptions=[]});
+  push(g);
+}
+function completeSubLevel(g){
+  const sb=g.sb;if(!sb)return;
+  sb.levelsCompleted++;sb.level++;sb.stage='quiz';sb.charge=0;sb.boost=0;sb.fish=Math.max(0,sb.fish-38);sb.groups=[];
+  sb.chargeTarget=Math.max(5,g.players.size*2);
+  g.players.forEach(p=>{p.boosting=false;p.sbRole='crew';p.sbGroupId='';p.sbDiveAnswered=false;p.sbDiveOptions=[]});
+  push(g);
+}
+function tickSubmarine(g){
+  const sb=g.sb;if(!sb||g.state!=='playing')return;
+  const now=Date.now(),dt=Math.min(1.5,Math.max(0,(now-(sb.lastTick||now))/1000));sb.lastTick=now;
+  if(now>=sb.endsAt){finishSubmarine(g);return}
+  const boosters=[...g.players.values()].filter(p=>p.boosting).length;
+  if(sb.stage==='quiz')sb.fish=Math.min(100,sb.fish+dt*.28);
+  else if(sb.stage==='boost'){
+    sb.boost=Math.min(100,sb.boost+dt*7*Math.min(4,boosters));
+    sb.fish=Math.min(100,sb.fish+dt*(boosters?0.1:.34));
+    if(sb.boost>=100){setupSubDive(g);return}
+  }else if(sb.stage==='dive')sb.fish=Math.min(100,sb.fish+dt*.22);
+  if(sb.fish>=100){restartSubLevel(g);return}
+  if(now-(sb.lastPushAt||0)>=750){sb.lastPushAt=now;push(g)}
+}
+function startSubmarine(g){
+  if(g.players.size<2)throw new Error('Для Submarine Squad необходимо минимум два участника.');
+  const cfg=(g.appSettings||APP_SETTINGS).modes.submarine||APP_SETTINGS.modes.submarine;
+  const durationMinutes=clampInt(g.quiz.dur,5,20,cfg.durationMinutes);
+  g.startedAt=Date.now();g.state='playing';g.countdownEndsAt=0;
+  g.players.forEach(p=>{initQ(g,p);p.subQn=0;p.answeredN=0;p.correctN=0;p.boosting=false;p.sbFeedback=null;p.score=0;p.log=[]});
+  g.sb={stage:'quiz',level:1,durationMinutes,endsAt:Date.now()+durationMinutes*60000,fish:8,charge:0,chargeTarget:Math.max(5,g.players.size*2),boost:0,levelsCompleted:0,failedLevels:0,totalCorrect:0,totalWrong:0,diveTarget:5,diveRound:0,groups:[],lastTick:Date.now(),lastPushAt:0};
+  clearInterval(g.sbTimer);g.sbTimer=setInterval(()=>tickSubmarine(g),500);push(g);
+}
+async function finishSubmarine(g){
+  if(!g||g.state!=='playing')return;
+  clearInterval(g.sbTimer);g.sbTimer=null;g.state='final';g.sb=g.sb||{};g.sb.stage='final';g.sb.endedAt=Date.now();
+  await saveGameReport(g);push(g);
+}
+function answerSubmarine(g,p,b){
+  const sb=g.sb;if(!sb||sb.stage!=='quiz'||g.state!=='playing')return false;
+  const qq=g.quiz.q[p.cur],sel=[...new Set([].concat(b.a).map(Number))].filter(Number.isInteger).sort((x,y)=>x-y);
+  if(Number(b.qn)!==Number(p.subQn)||!sel.length||!sel.every(x=>x>=0&&x<qq.a.length))return false;
+  const ok=same(sel,qq.cs);p.answeredN++;if(ok){p.correctN++;p.score+=100;sb.totalCorrect++;sb.charge++}else sb.totalWrong++;
+  if(p.log.length<1000)p.log.push({qi:p.cur,a:sel,ok,pts:ok?100:0,ms:0});
+  p.sbFeedback={id:p.subQn,ok,at:Date.now()};p.subQn++;nextQ(g,p);
+  if(sb.charge>=sb.chargeTarget){sb.stage='boost';sb.boost=0;g.players.forEach(x=>x.boosting=false)}
+  push(g);return true;
+}
+function answerSubDive(g,p,symbol){
+  const sb=g.sb;if(!sb||sb.stage!=='dive'||p.sbRole!=='crew'||p.sbDiveAnswered)return false;
+  const group=sb.groups.find(x=>x.id===p.sbGroupId);if(!group||group.done)return false;
+  if(String(symbol)!==group.symbol){sb.diveWrong=(Number(sb.diveWrong)||0)+1;return false}
+  p.sbDiveAnswered=true;group.correct++;
+  if(group.correct>=group.threshold){
+    group.round++;group.correct=0;
+    if(group.round>=sb.diveTarget)group.done=true;else resetSubDiveGroup(g,group);
+    sb.diveRound=Math.min(...sb.groups.map(x=>x.round));
+    if(sb.groups.every(x=>x.done)){completeSubLevel(g);return true}
+  }
+  push(g);return true;
+}
+function viewSubmarine(g,id,R){
+  const host=id===g.hostId,sb=g.sb||{},now=Date.now();
+  const v={state:g.state,mode:'submarine',pin:g.pin,title:g.quiz.title,host,stage:sb.stage||'lobby',left:sb.endsAt?Math.max(0,sb.endsAt-now):0,durationMinutes:sb.durationMinutes||g.quiz.dur||5,level:sb.level||1,fish:Math.round(sb.fish||0),charge:sb.charge||0,chargeTarget:sb.chargeTarget||Math.max(5,g.players.size*2),boost:Math.round(sb.boost||0),levelsCompleted:sb.levelsCompleted||0,failedLevels:sb.failedLevels||0,totalCorrect:sb.totalCorrect||0,totalWrong:sb.totalWrong||0,diveTarget:sb.diveTarget||5,reportId:g.reportId||null,locked:!!g.locked,total:g.quiz.q.length,online:R.filter(p=>playerOnline(g,p.id)).length};
+  if(host){
+    if(g.state==='lobby')v.lobbySettings={submarine:{durationMinutes:g.quiz.dur||((g.appSettings||APP_SETTINGS).modes.submarine.durationMinutes)}};
+    v.rows=R.map(p=>({id:p.id,name:p.name,score:p.score||0,correctN:p.correctN||0,answeredN:p.answeredN||0,online:playerOnline(g,p.id),boosting:!!p.boosting,role:p.sbRole||'',diveRound:sb.groups?.find(x=>x.id===p.sbGroupId)?.round||0}));
+    if(sb.groups)v.instructors=sb.groups.map(group=>({name:g.players.get(group.instructorId)?.name||'Инструктор',round:group.round,goal:sb.diveTarget,done:group.done,members:group.players.length,correct:group.correct,threshold:group.threshold}));
+    if(g.state==='final')v.finalRows=R.slice().sort((a,b)=>(b.correctN-a.correctN)||(b.score-a.score)).map((p,i)=>({rank:i+1,name:p.name,score:p.score,correct:p.correctN}));
+  }else{
+    const p=g.players.get(id);if(p){
+      const group=sb.groups?.find(x=>x.id===p.sbGroupId);
+      v.me={name:p.name,score:p.score||0,correct:p.correctN||0,answered:p.answeredN||0,qn:p.subQn||0,boosting:!!p.boosting,role:p.sbRole||'crew',symbol:p.sbRole==='instructor'?(group?.symbol||''):null,options:p.sbDiveOptions||[],diveAnswered:!!p.sbDiveAnswered,diveRound:group?.round||0,diveTarget:sb.diveTarget||5,diveMembers:group?.players.length||0,diveCorrect:group?.correct||0,diveThreshold:group?.threshold||0,diveWrong:p.sbDiveWrong||0,fb:p.sbFeedback&&now-p.sbFeedback.at<1600?{id:p.sbFeedback.id,ok:p.sbFeedback.ok}:null};
+      if(sb.stage==='quiz'&&p.cur!==undefined){const qq=g.quiz.q[p.cur];v.q={t:qq.t,a:[...qq.a],multi:qq.cs.length>1}}
+    }
+  }
+  return v;
+}
+
+function viewAny(g,id,R,C){if(g.mode==='submarine')return viewSubmarine(g,id,R);return g.mode==='kingdoms'&&g.kb&&g.state!=='lobby'?viewK(g,id,C||commonK(g,R)):view(g,id,R)}
 function safeSseWrite(g,c,payload){
   const res=c&&c.res;
   if(!res||res.destroyed||res.writableEnded){if(g&&g.clients)g.clients.delete(c);return false}
@@ -1082,7 +1199,7 @@ const sched=g=>{if(g.pend)return;g.pend=setTimeout(()=>{g.pend=0;push(g)},180)};
 // ================= HTTP =================
 function body(req){return new Promise(r=>{let d='';req.on('data',c=>{d+=c;if(d.length>2e6)req.destroy()});req.on('end',()=>{try{r(JSON.parse(d))}catch{r({})}})})}
 const json=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o))};
-const LIBFILES={'/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css','/ui.css':'ui.css','/liquid-glass.css':'liquid-glass.css','/responsive-v2.css':'responsive-v2.css','/lobby.css':'lobby.css','/kingdoms.css':'kingdoms.css','/favicon.svg':'favicon.svg','/favicon.png':'favicon.png','/favicon.ico':'favicon.ico','/apple-touch-icon.png':'apple-touch-icon.png'};
+const LIBFILES={'/submarine.css':'submarine.css','/xlsx.js':'xlsx.mini.min.js','/qr.js':'qrcode.js','/tailwind.css':'tailwind.css','/ui.css':'ui.css','/liquid-glass.css':'liquid-glass.css','/responsive-v2.css':'responsive-v2.css','/lobby.css':'lobby.css','/kingdoms.css':'kingdoms.css','/favicon.svg':'favicon.svg','/favicon.png':'favicon.png','/favicon.ico':'favicon.ico','/apple-touch-icon.png':'apple-touch-icon.png'};
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x');
@@ -1168,7 +1285,7 @@ http.createServer(async(req,res)=>{
       }
       if(op==='save'){
         const next=normalizeAppSettings(b.settings);
-        if(!next.modes.classic.enabled&&!next.modes.kingdoms.enabled)return json(res,{error:'Включите хотя бы один игровой режим.'},400);
+        if(!next.modes.classic.enabled&&!next.modes.kingdoms.enabled&&!next.modes.submarine.enabled)return json(res,{error:'Включите хотя бы один игровой режим.'},400);
         if(cfg){
           for(let attempt=0;attempt<3;attempt++){
             const remote=await githubReadAppSettings(cfg),wr=await githubWriteAppSettings(cfg,remote.sha,next,'Update platform settings');
@@ -1533,11 +1650,12 @@ http.createServer(async(req,res)=>{
     const me=userOf(b.token);if(!me)return json(res,{error:'Войдите в личный кабинет, чтобы запустить игру',code:401},401);
     const source=BUILTINQ.find(x=>x.id===b.sourceId);if(!source)return json(res,{error:'Можно запускать только тесты из библиотеки проекта.'},403);
     const requestedMode=String(b.mode||'');
-    if(!['classic','kingdoms'].includes(requestedMode))return json(res,{error:'Выберите режим игры перед запуском теста.'},400);
+    if(!['classic','kingdoms','submarine'].includes(requestedMode))return json(res,{error:'Выберите режим игры перед запуском теста.'},400);
     const modeSettings=APP_SETTINGS.modes[requestedMode];if(!modeSettings||!modeSettings.enabled)return json(res,{error:'Этот режим отключён в общих настройках платформы.'},403);
     const quiz=parseQuiz(source.quiz);if(!quiz)return json(res,{error:'Тест некорректен. Проверьте библиотеку тестов.'},400);
     quiz.mode=requestedMode;
     if(requestedMode==='kingdoms'){quiz.dur=APP_SETTINGS.modes.kingdoms.durationMinutes;quiz.need=APP_SETTINGS.modes.kingdoms.correctAnswersForFlag;}
+    if(requestedMode==='submarine')quiz.dur=APP_SETTINGS.modes.submarine.durationMinutes;
     const gameSettings=JSON.parse(JSON.stringify(APP_SETTINGS));
     let pin;do pin=String(Math.floor(100000+Math.random()*900000));while(games.has(pin));
     const g={pin,hostId:rid(),owner:me.id,sourceId:source.id,quiz,state:'lobby',mode:requestedMode,appSettings:gameSettings,qi:0,qStart:Date.now(),players:new Map(),left:[],clients:new Set(),born:Date.now()};
@@ -1549,12 +1667,13 @@ http.createServer(async(req,res)=>{
   if(!g)return json(res,{error:'Игра не найдена'},404);
   if(u.pathname==='/api/join'){
     const name=str(b.name,16).trim();
-    const playerLimit=(g.appSettings||APP_SETTINGS).general.maxPlayers;if(g.players.size>=playerLimit)return json(res,{error:'Игра заполнена (максимум '+playerLimit+' игроков)'},400);
+    const playerLimit=Math.min((g.appSettings||APP_SETTINGS).general.maxPlayers,g.mode==='submarine'?30:100);if(g.players.size>=playerLimit)return json(res,{error:'Игра заполнена (максимум '+playerLimit+' игроков)'},400);
     if(!name)return json(res,{error:'Введите имя'},400);
     if(g.state==='final'||g.state==='ended')return json(res,{error:'Игра уже завершена'},400);
+    if(g.mode==='submarine'&&g.sb&&g.sb.stage==='dive')return json(res,{error:'Во время погружения новые участники не подключаются.'},400);
     if(g.locked)return json(res,{error:'Ведущий закрыл вход в игру'},400);
     if([...g.players.values()].some(p=>p.name.toLowerCase()===name.toLowerCase()))return json(res,{error:'Это имя занято'},400);
-    const id=rid();g.players.set(id,newPlayer(g,name));push(g);return json(res,{id});
+    const id=rid(),player=newPlayer(g,name);g.players.set(id,player);if(g.mode==='submarine'&&g.sb)initQ(g,player);if(g.mode==='submarine'&&g.sb)g.sb.chargeTarget=Math.max(5,g.players.size*2);push(g);return json(res,{id});
   }
   if(u.pathname==='/api/report'){
     if(b.id!==g.hostId)return json(res,{error:'Нет доступа'},403);
@@ -1563,7 +1682,7 @@ http.createServer(async(req,res)=>{
       players:[...g.players.values(),...g.left].map(p=>({name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:p.log}))});
   }
   if(u.pathname==='/api/action'){
-    const host=b.id===g.hostId,p=g.players.get(b.id),KM=g.mode==='kingdoms';
+    const host=b.id===g.hostId,p=g.players.get(b.id),KM=g.mode==='kingdoms',SUB=g.mode==='submarine';
     // Handle moderation before the mode-specific action chain, so kicking works
     // the same way in the lobby, Classic and Color Kingdoms.
     if(b.type==='kick'){
@@ -1585,6 +1704,10 @@ http.createServer(async(req,res)=>{
         next.modes.kingdoms.correctAnswersForFlag=clampInt(value.correctAnswersForFlag,1,5,next.modes.kingdoms.correctAnswersForFlag);
         next.modes.kingdoms.kingdomCount=clampInt(value.kingdomCount,2,4,next.modes.kingdoms.kingdomCount);
         g.quiz.dur=next.modes.kingdoms.durationMinutes;g.quiz.need=next.modes.kingdoms.correctAnswersForFlag;
+      }else if(SUB){
+        const value=incoming.submarine&&typeof incoming.submarine==='object'?incoming.submarine:{};
+        next.modes.submarine.durationMinutes=clampInt(value.durationMinutes,5,20,next.modes.submarine.durationMinutes);
+        g.quiz.dur=next.modes.submarine.durationMinutes;
       }else{
         const value=incoming.classic&&typeof incoming.classic==='object'?incoming.classic:{};
         next.modes.classic.basePoints=clampInt(value.basePoints,100,3000,next.modes.classic.basePoints);
@@ -1592,21 +1715,30 @@ http.createServer(async(req,res)=>{
       }
       g.appSettings=next;push(g);return json(res,{ok:1});
     }
+    if(host&&b.type==='start'&&g.state==='lobby'&&SUB&&g.players.size<2)return json(res,{error:'Для Submarine Squad необходимо минимум два участника.'},400);
     if(host&&b.type==='start'&&g.state==='lobby'&&g.players.size){
       try{
         g.qi=0;startCountdown(g);
       }catch(e){
         console.error('Не удалось запустить игру '+g.pin+' ('+g.mode+'):',e.stack||e.message);
         clearTimeout(g.timer);g.timer=null;
-        if(KM){g.kb=null;g.state='lobby'}else{g.state='lobby';g.qi=0}
+        if(KM){g.kb=null;g.state='lobby'}else{clearInterval(g.sbTimer);g.sbTimer=null;g.sb=null;g.state='lobby';g.qi=0}
         return json(res,{error:'Не удалось запустить игру. Комната сохранена; попробуйте ещё раз. Подробности записаны в журнал сервера.'},500);
       }
     }
-    else if(host&&b.type==='skip'){if(KM)await finishK(g);else toResults(g)}
+    else if(host&&b.type==='skip'){if(KM)await finishK(g);else if(SUB)await finishSubmarine(g);else toResults(g)}
     else if(host&&b.type==='lock'){g.locked=!g.locked;push(g)}
     else if(host&&!KM&&b.type==='next'&&g.state==='results'){
       // Kept as a no-op for stale clients: Classic advances automatically after the ranking overlay.
       return json(res,{ok:1,autoAdvance:true});
+    }else if(p&&SUB&&g.state==='playing'&&b.type==='answer'){
+      answerSubmarine(g,p,b);
+    }else if(p&&SUB&&g.state==='playing'&&b.type==='boost-start'&&g.sb?.stage==='boost'){
+      p.boosting=true;push(g);
+    }else if(p&&SUB&&g.state==='playing'&&b.type==='boost-stop'&&g.sb?.stage==='boost'){
+      p.boosting=false;push(g);
+    }else if(p&&SUB&&g.state==='playing'&&b.type==='dive-answer'&&g.sb?.stage==='dive'){
+      const accepted=answerSubDive(g,p,b.a);if(!accepted){p.sbDiveWrong=(Number(p.sbDiveWrong)||0)+1;pushOne(g,b.id)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='answer'){
       if(answerK(g,p,b)){pushOne(g,b.id);sched(g)}
     }else if(p&&KM&&g.state==='playing'&&b.type==='place'){
@@ -1620,7 +1752,7 @@ http.createServer(async(req,res)=>{
       }
     }else if(p&&b.type==='leave')removePlayer(g,b.id);
     else if(host&&b.type==='end'){
-      await saveGameReport(g,{incomplete:g.state!=='final'});g.state='ended';clearTimeout(g.timer);clearTimeout(g.pend);push(g);
+      await saveGameReport(g,{incomplete:g.state!=='final'});g.state='ended';clearTimeout(g.timer);clearInterval(g.sbTimer);clearTimeout(g.pend);push(g);
       setTimeout(()=>{g.clients.forEach(c=>c.res.end());games.delete(g.pin)},1500);
     }
     return json(res,{ok:1});
