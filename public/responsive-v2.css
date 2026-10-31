@@ -626,3 +626,180 @@ html.dark .report-metric-duration .report-metric-icon,html.dark .report-metric-d
 #app .report-ai-noresponses{margin:10px 0 0!important;padding:8px 9px;color:var(--text-soft);background:var(--surface-soft);border-radius:8px;font-size:.68rem}
 @media(max-width:1050px){#app .report-ai-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#app .report-ai-recommendations{grid-column:1/-1}}
 @media(max-width:650px){#app .report-ai-analysis{padding:14px;border-radius:15px}#app .report-ai-heading{flex-direction:column;gap:10px}#app .report-ai-overview{grid-template-columns:1fr;gap:12px;padding:13px}#app .report-ai-score{padding:0 0 12px;border-right:0;border-bottom:1px solid var(--line)}#app .report-ai-grid{grid-template-columns:1fr}#app .report-ai-recommendations{grid-column:auto}#app .report-ai-card{padding:13px}#app .report-ai-rec-meta{flex-direction:column;gap:5px}}
+
+/* v1.17.12 — Kahoot-inspired animated final podium. */
+.classic-final-podium {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  padding: 12px 0 2px;
+  perspective: 900px;
+}
+.classic-final-podium::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 10%;
+  right: 10%;
+  bottom: 0;
+  height: 76%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(119, 94, 231, .14), rgba(119, 94, 231, 0) 70%);
+  filter: blur(12px);
+  pointer-events: none;
+}
+.classic-final-podium-item {
+  position: relative;
+  z-index: 1;
+  transform-style: preserve-3d;
+}
+.classic-final-podium-item[data-place="1"] { z-index: 2; }
+.classic-final-podium-item[data-place="3"] { --podium-delay: 0ms; }
+.classic-final-podium-item[data-place="2"] { --podium-delay: 750ms; }
+.classic-final-podium-item[data-place="1"] { --podium-delay: 1500ms; }
+.classic-final-podium-block {
+  position: relative;
+  box-sizing: border-box;
+  transform-origin: center bottom;
+  transform: scaleY(0);
+  animation: final-podium-rise .82s cubic-bezier(.18,.9,.25,1.18) both;
+  animation-delay: var(--podium-delay, 0ms);
+  overflow: hidden;
+}
+.classic-final-podium-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 42%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.34), transparent);
+  transform: skewX(-18deg);
+  animation: final-podium-shine .9s ease-out both;
+  animation-delay: calc(var(--podium-delay, 0ms) + .45s);
+  pointer-events: none;
+}
+.classic-final-podium-item[data-place="1"] .classic-final-podium-block {
+  box-shadow: 0 16px 34px rgba(183, 130, 23, .27), inset 0 1px 0 rgba(255,255,255,.45);
+}
+.classic-final-podium-place {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 0 5px;
+  border: 1px solid rgba(255,255,255,.62);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255,255,255,.2);
+  font-size: .78rem;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.25), 0 2px 7px rgba(0,0,0,.12);
+}
+.classic-final-podium-block strong {
+  display: block;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 9px rgba(0,0,0,.13);
+}
+.classic-final-medal {
+  opacity: 0;
+  transform: translateY(24px) scale(.45) rotate(-14deg);
+  transform-origin: center bottom;
+  animation: final-podium-medal-pop .62s cubic-bezier(.18,.9,.25,1.35) both;
+  animation-delay: calc(var(--podium-delay, 0ms) + .34s);
+}
+.classic-final-player-name {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: final-podium-name-in .48s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay: calc(var(--podium-delay, 0ms) + .24s);
+}
+.classic-final-podium-item[data-place="1"] .classic-final-medal {
+  filter: drop-shadow(0 5px 10px rgba(214, 153, 30, .32));
+}
+.classic-final-podium-item[data-place="1"] .classic-final-podium-block::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 14px 14px 4px 4px;
+  pointer-events: none;
+}
+.classic-final-podium-confetti {
+  position: absolute;
+  z-index: 0;
+  top: -6px;
+  left: 0;
+  width: 100%;
+  height: 145px;
+  overflow: visible;
+  pointer-events: none;
+}
+.classic-final-podium-confetti i {
+  position: absolute;
+  top: -18px;
+  left: calc(var(--confetti-x) * 1%);
+  display: block;
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  background: hsl(var(--confetti-hue) 92% 60%);
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  animation: final-podium-confetti-burst 1.9s cubic-bezier(.18,.65,.35,1) both;
+  animation-delay: calc(1.45s + var(--confetti-delay));
+  pointer-events: none;
+}
+.classic-final-podium-confetti i:nth-child(3n) {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.classic-final-podium-confetti i:nth-child(3n + 1) {
+  width: 5px;
+  height: 14px;
+}
+@keyframes final-podium-rise {
+  0% { opacity: .35; transform: scaleY(0); }
+  72% { opacity: 1; transform: scaleY(1.06); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+@keyframes final-podium-medal-pop {
+  0% { opacity: 0; transform: translateY(24px) scale(.45) rotate(-14deg); }
+  70% { opacity: 1; transform: translateY(-5px) scale(1.16) rotate(4deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+@keyframes final-podium-name-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes final-podium-shine {
+  0% { left: -70%; opacity: 0; }
+  12% { opacity: 1; }
+  100% { left: 145%; opacity: 0; }
+}
+@keyframes final-podium-confetti-burst {
+  0% { opacity: 0; transform: translate3d(0,-12px,0) rotate(0) scale(.5); }
+  18% { opacity: .95; }
+  100% { opacity: 0; transform: translate3d(var(--confetti-drift),145px,0) rotate(470deg) scale(.82); }
+}
+@media(max-width:520px) {
+  .classic-final-podium { padding-top: 8px; }
+  .classic-final-podium-confetti { height: 110px; }
+  .classic-final-podium-confetti i { width: 5px; height: 9px; }
+  .classic-final-podium-place { width: 22px; height: 22px; margin-bottom: 4px; font-size: .7rem; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .classic-final-podium-block,
+  .classic-final-medal,
+  .classic-final-player-name,
+  .classic-final-podium-block::before,
+  .classic-final-podium-confetti i {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .classic-final-podium-block { transform: none !important; }
+}
