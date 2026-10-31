@@ -3,17 +3,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Квиз-арена</title>
 <meta name="theme-color" content="#7163ed">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.17.11">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.17.11">
-<link rel="shortcut icon" href="/favicon.ico?v=1.17.11">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.17.11">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.17.12">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1.17.12">
+<link rel="shortcut icon" href="/favicon.ico?v=1.17.12">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1.17.12">
 <script>try{if(localStorage.getItem('kviz-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <link rel="stylesheet" href="/tailwind.css">
-<link rel="stylesheet" href="/ui.css?v=1.17.11">
-<link rel="stylesheet" href="/liquid-glass.css?v=1.17.11">
-<link rel="stylesheet" href="/responsive-v2.css?v=1.17.11">
-<link rel="stylesheet" href="/lobby.css?v=1.17.11">
-<link rel="stylesheet" href="/kingdoms.css?v=1.17.11">
+<link rel="stylesheet" href="/ui.css?v=1.17.12">
+<link rel="stylesheet" href="/liquid-glass.css?v=1.17.12">
+<link rel="stylesheet" href="/responsive-v2.css?v=1.17.12">
+<link rel="stylesheet" href="/lobby.css?v=1.17.12">
+<link rel="stylesheet" href="/kingdoms.css?v=1.17.12">
 </head><body><div id="app"><p class="c mut">Загрузка…</p></div>
 <script>
 /* Boot safety net: never leave users on an endless loading label. */
@@ -190,7 +190,7 @@ let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={url
 let classicRankingProgressKey='',classicRankingProgressDuration=3000;
 let classicPlayerFeedback=null,classicPlayerFeedbackTimer=null;
 const classicCountupSeen=new WeakMap();
-let DEVELOPER_MODE=/^\/developer\/?$/.test(location.pathname),DEVELOPER_TOKEN='',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.17.11',status:'online'};
+let DEVELOPER_MODE=/^\1.17.12'',DEVELOPER_USER=null,DEVELOPER_FORM={login:'',password:''},DEVELOPER_MSG='',DEVELOPER_BUSY=false,DEVELOPER_INFO={version:'1.17.11',status:'online'};
 
 let REPORT_LIST=null,ACTIVE_REPORT=null,activeReportId='',reportTab='summary',participantTab='all',reportQuestionSort='none',reportParticipantSort='rank',reportParticipantDetailRank=0,reportLoadError='',autoReportSeen='',autoReportPending='';
 let reportSearch='',reportPeriod='all',reportSort='date-desc',reportFrom='',reportTo='',reportMode='all',reportStatus='all';
@@ -585,7 +585,7 @@ function renderSecurityQr(){
  }catch(e){el.innerHTML='<span class="mut">'+tr('QR-код недоступен. Введите секретный ключ вручную.')+'</span>'}
 }
 async function copySecurityRecoveryCodes(){
- const value=(securityRecoveryCodes||[]).join('\n');if(!value)return;
+ const value=(securityRecoveryCodes||[]).join('\1.17.12');if(!value)return;
  try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(value);securityMsg=tr('Резервные коды скопированы.');render();return}}catch(e){}
  window.prompt(tr('Скопируйте и сохраните резервные коды'),value);
 }
@@ -638,7 +638,7 @@ async function start(selectedMode){
 async function join(){
  const p=(qrJoinMode?prePin:($('jp')?.value||'')).trim(),n=($('jn')?.value||'').trim();
  if(!qrJoinMode)prePin=p;preName=n;
- if(!/^\d{6}$/.test(p)){msg='Неверный PIN';return render()}
+ if(!/^\1.17.12'Неверный PIN';return render()}
  if(!n){msg='Имя обязательно';return render()}
  let r;
  try{r=await api('join',{pin:p,name:n})}catch(e){msg='Нет связи с сервером';return render()}
@@ -743,25 +743,19 @@ function excelCorrectIndices(value,rawAnswers,answers){
  for(const token of tokens){
   let rawIndex=-1;
   if(/^[A-D]$/i.test(token))rawIndex=token.toUpperCase().charCodeAt(0)-65;
-  else if(/^\d+$/.test(token)){const n=Number(token);rawIndex=n>=1&&n<=rawAnswers.length?n-1:(n===0?0:-1)}
-  else {const found=rawAnswers.findIndex(a=>String(a??'').trim().toLocaleLowerCase('ru-RU')===token.toLocaleLowerCase('ru-RU'));rawIndex=found}
+  else if(/^\1.17.12'').trim().toLocaleLowerCase('ru-RU')===token.toLocaleLowerCase('ru-RU'));rawIndex=found}
   if(rawIndex>=0&&rawIndex<rawAnswers.length){const oldText=String(rawAnswers[rawIndex]??'').trim();const newIndex=answers.indexOf(oldText);if(newIndex>=0&&!indexes.includes(newIndex))indexes.push(newIndex)}
  }
  return indexes.sort((a,b)=>a-b);
 }
 async function parseXlsxFile(file){
  if(typeof XLSX==='undefined')throw new Error('Библиотека Excel не загрузилась. Обновите страницу и попробуйте снова.');
- const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),tests=[],issues=[],base=file.name.replace(/\.(xlsx|xls)$/i,'').replace(/[_-]+/g,' ').trim()||'Импортированный тест';
+ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),tests=[],issues=[],base=file.name.replace(/\1.17.12'').replace(/[_-]+/g,' ').trim()||'Импортированный тест';
  for(const sheetName of wb.SheetNames){
   const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:'',raw:true});
   let hi=-1,headers=[],qi=-1,ans=[],ti=-1,ci=-1;
   for(let r=0;r<Math.min(rows.length,80);r++){
-   const h=(rows[r]||[]).map(normHead),question=headerIndex(h,[/\bquestion\b/,/вопрос/]);
-   const answers=h.map((x,i)=>({x,i})).filter(o=>/(answer|option|ответ|вариант)\s*[1-4]/.test(o.x));
-   const correct=headerIndex(h,[/correct answer/,/правильн/,/верн.{0,8}ответ/,/ключ ответ/]);
-   if(question>=0&&answers.length>=2&&correct>=0){hi=r;headers=h;qi=question;ans=answers.sort((a,b)=>{const na=Number((a.x.match(/[1-4]/)||[])[0]||99),nb=Number((b.x.match(/[1-4]/)||[])[0]||99);return na-nb||a.i-b.i}).map(o=>o.i);ti=headerIndex(h,[/time limit/,/^time$/, /время/,/лимит времени/]);ci=correct;break}
-  }
-  if(hi<0){issues.push('Лист «'+sheetName+'»: не найдены колонки «Question/Вопрос», варианты ответов и «Correct answer(s)/Правильные ответы».');continue}
+   const h=(rows[r]||[]).map(normHead),question=headerIndex(h,[/\1.17.12'Лист «'+sheetName+'»: не найдены колонки «Question/Вопрос», варианты ответов и «Correct answer(s)/Правильные ответы».');continue}
   const questions=[];
   for(let ri=hi+1;ri<rows.length;ri++){
    const row=rows[ri]||[],question=String(row[qi]??'').trim();if(!question)continue;
@@ -773,9 +767,7 @@ async function parseXlsxFile(file){
    if(questions.length>=100){issues.push('Лист «'+sheetName+'»: импортированы только первые 100 вопросов.');break}
   }
   if(!questions.length){issues.push('Лист «'+sheetName+'»: нет корректных вопросов.');continue}
-  const generic=/^(sheet|worksheet|лист|листья)\s*\d*$/i.test(sheetName);
-  let title=wb.SheetNames.length===1||generic?base:sheetName;
-  if(wb.SheetNames.length>1&&generic)title=base+' — '+sheetName;
+  const generic=/^(sheet|worksheet|лист|листья)\1.17.12' — '+sheetName;
   tests.push({title:title.slice(0,80),T:questions[0].T||CLIENT_SETTINGS.general.defaultQuestionTime,mode:'choose',dur:5,need:3,q:questions});
  }
  if(!tests.length)throw new Error(issues.slice(0,5).join(' ')||'В Excel не найдено ни одного корректного теста.');
@@ -805,7 +797,7 @@ async function importRepoTests(inp){
  try{
   if(files.length>20)throw new Error('За один раз можно выбрать не более 20 файлов.');
   for(let fi=0;fi<files.length;fi++){
-   const f=files[fi],fileLabel=f.name||('Файл '+(fi+1)),isXlsx=/\.(xlsx|xls)$/i.test(fileLabel),isJson=/\.json$/i.test(fileLabel)||f.type==='application/json';
+   const f=files[fi],fileLabel=f.name||('Файл '+(fi+1)),isXlsx=/\1.17.12'application/json';
    try{
     if(isXlsx){
      const result=await parseXlsxFile(f);
@@ -817,7 +809,7 @@ async function importRepoTests(inp){
      if(source.length>200)throw new Error('В файле больше 200 тестов.');
      const folderMap={};
      if(files.length>1&&!targetFolderId){
-      const fileStem=fileLabel.replace(/\.json$/i,'').replace(/[_-]+/g,' ').trim()||('Файл '+(fi+1));
+      const fileStem=fileLabel.replace(/\1.17.12'').replace(/[_-]+/g,' ').trim()||('Файл '+(fi+1));
       rawFolders.forEach((folder,index)=>{
        const oldId=String(folder&&folder.id||'folder-'+(index+1));
        const newId=('batch'+fi+'_'+oldId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,80);
@@ -1253,13 +1245,7 @@ async function openReportDetail(id,automatic=false){
 }
 function reportTimestamp(r){
  const raw=r&&r.completedAt;
- let n=typeof raw==='string'&&!/^\d+(?:\.\d+)?$/.test(raw)?Date.parse(raw):Number(raw);
- if(!Number.isFinite(n)||n<=0)return 0;
- return n<1e12?n*1000:n;
-}
-function reportDateKey(ts){
- const d=new Date(ts);
- if(!Number.isFinite(d.getTime()))return 'unknown';
+ let n=typeof raw==='string'&&!/^\1.17.12'unknown';
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 }
 function reportDateHeading(key){
@@ -1569,10 +1555,31 @@ function exportReportXlsx(){
  add('Participants',[['Место','Участник','Очки','Правильно','Неправильно','Пропуски','Успешность','Статус'],...r.participants.map(p=>[p.rank,p.name,r.mode==='kingdoms'?p.placed:p.score,p.correctCount,p.incorrectCount,p.unansweredCount===null?'—':p.unansweredCount,pc(p.correctCount,r.mode==='classic'?r.questionCount:p.answeredCount),p.removed?'Вышел или исключён':''])]);
  add('Questions',[['№','Вопрос','Правильный ответ','Ответов','Правильных','Неправильных','Успешность'],...r.questions.map(q=>[q.index,q.t,q.correctText.join(' / '),q.responseCount,q.correctCount,q.incorrectCount,pc(q.correctCount,r.mode==='classic'?r.participantCount:q.responseCount)])]);
  if(r.teams.length)add('Teams',[['Команда','Участников','Очки','Флаги','Клетки','Правильных','Неправильных','Точность'],...r.teams.map(t=>[t.name,t.members,t.points,t.flags,t.tiles,t.correctCount,t.incorrectCount,pc(t.correctCount,t.answers)])]);
- XLSX.writeFile(wb,'report-'+String(r.title||'quiz').replace(/[^\p{L}\p{N}-]+/gu,'-').slice(0,40)+'-'+r.pin+'.xlsx');
+ XLSX.writeFile(wb,'report-'+String(r.title||'quiz').replace(/[^\1.17.12'-').slice(0,40)+'-'+r.pin+'.xlsx');
 }
 
-function podium(rows){const t=rows.slice(0,3),m=["🥇","🥈","🥉"];return `<div class="classic-final-podium">${[1,0,2].filter(i=>t[i]).map(i=>`<div class="classic-final-podium-item" data-place="${i+1}"><div class="classic-final-medal">${m[i]}</div><div class="classic-final-player-name" data-user-content="true">${esc(t[i].name||"Участник")}</div><div class="classic-final-podium-block"><strong>${Number(t[i].score)||0}</strong><span>${tr("баллов")}</span></div></div>`).join("")}</div>`;}
+function podium(rows){
+ const t=rows.slice(0,3),medals=["🥇","🥈","🥉"],sequenceDelay={1:1500,2:750,3:0};
+ const confetti=Array.from({length:18},(_,i)=>{
+  const x=(i*37+11)%96,drift=((i*29)%120)-60,delay=((i*7)%11)*.045,hue=(i*47+18)%360;
+  return '<i style="--confetti-x:'+x+';--confetti-drift:'+drift+'px;--confetti-delay:'+delay.toFixed(2)+'s;--confetti-hue:'+hue+'"></i>';
+ }).join("");
+ const items=[1,0,2].filter(i=>t[i]).map(i=>{
+  const player=t[i],place=i+1,score=Math.max(0,Number(player.score)||0);
+  const identity=String(player.id||player.name||place),key=String(S&&S.pin||pin)+"|final-podium|"+identity;
+  const delay=sequenceDelay[place]||0;
+  return `<div class="classic-final-podium-item" data-place="${place}" style="--podium-delay:${delay}ms">
+   <div class="classic-final-medal" aria-hidden="true">${medals[i]}</div>
+   <div class="classic-final-player-name" data-user-content="true">${esc(player.name||"Участник")}</div>
+   <div class="classic-final-podium-block">
+    <span class="classic-final-podium-place">${place}</span>
+    <strong><span data-countup="true" data-countup-key="${esc(key)}" data-countup-start="0" data-countup-end="${score}" data-countup-delay="${delay+260}">0</span></strong>
+    <span>${tr("баллов")}</span>
+   </div>
+  </div>`;
+ }).join("");
+ return `<div class="classic-final-podium"><div class="classic-final-podium-confetti" aria-hidden="true">${confetti}</div>${items}</div>`;
+}
 function classicFinalResults(rows,actions=""){const data=Array.isArray(rows)?rows:[],other=data.slice(3),top=data.length?podium(data):`<p class="classic-final-empty">${tr("Пока нет участников")}</p>`,rest=other.length?`<section class="classic-final-ranking-section"><header class="classic-final-ranking-header"><h2>${tr("Остальные участники")}</h2><span>${other.length}</span></header><ol class="classic-final-ranking-list">${other.map((p,i)=>`<li class="classic-final-ranking-row"><span class="classic-final-rank">${Number(p.rank)||i+4}</span><span class="classic-final-name" data-user-content="true">${esc(p.name||"Участник")}</span><strong class="classic-final-score">${Number(p.score)||0}<small>${tr("баллов")}</small></strong></li>`).join("")}</ol></section>`:"";return `<section class="classic-final-screen"><header class="classic-final-header"><span class="classic-final-kicker">🏁 ${tr("Итоги")}</span><h1>${tr("Итоги игры")}</h1><p data-user-content="true">${esc(S.title||"")}</p></header>${top}${rest}${actions?`<div class="classic-final-actions">${actions}</div>`:""}</section>`;}
 function tg2(j){sel=sel.includes(j)?sel.filter(x=>x!==j):[...sel,j];render()}
 function sendSel(){if(sel.length)act('answer',sel)}
@@ -1872,7 +1879,7 @@ function player(a){
  if(S.state==="question"){
   if(p.answered)return a.innerHTML=head+participantAnswerFeedbackHtml(p);
   const mu=!!(S.q&&S.q.multi);
-  const clickFor=j=>mu?"tg2("+j+")":"act(\'answer\'," + j + ")";
+  const clickFor=j=>mu?"tg2("+j+")":"act(\1.17.12'answer\1.17.12'," + j + ")";
   return a.innerHTML=head+`<div class="bar" style="margin-top:10px"><i id="tb"></i></div><h2 class="c">${tr("Вопрос")} ${S.qi+1}</h2>${mu?`<p class="c mut">${tr("Выберите все правильные ответы и нажмите «Ответить»")}</p>`:""}<div class="grid mt-5 grid-cols-2">${[...Array(S.q.n)].map((_,j)=>`<button class="ans a${j} h-36 justify-center text-6xl${mu&&sel.includes(j)?" sel":""}${mu&&sel.length&&!sel.includes(j)?" dim":""}" onclick="${clickFor(j)}">${SH[j]}</button>`).join("")}</div>${mu?`<div class="c" style="margin-top:14px"><button ${sel.length?"":"disabled"} onclick="sendSel()">${tr("Ответить")}</button></div>`:""}`;
  }
  if(S.state==="results"){
@@ -1888,8 +1895,7 @@ function participantEndScreen(a,headline=''){
  return a.innerHTML;
 }
 function home(a){
- if(qrJoinMode&&/^\d{6}$/.test(prePin)){
-  a.innerHTML=`<main class="qr-join-page"><section class="qr-join-card" aria-labelledby="qr-join-title"><div class="qr-join-brand"><span class="qr-join-brand-mark" aria-hidden="true">Q</span><span>Квиз-арена</span></div><span class="section-kicker">${tr('ПОДКЛЮЧЕНИЕ К ИГРЕ')}</span><h1 id="qr-join-title">${tr('Войти в игру')}</h1><p class="qr-join-description">${tr('Введите имя, чтобы присоединиться к игре.')}</p><div class="qr-join-field"><label class="field-label" for="jn">${tr('Имя в игре')}</label><input id="jn" type="text" placeholder="${tr('Ваше имя')}" maxlength="16" value="${esc(preName)}" autocomplete="nickname" autocapitalize="words" spellcheck="false" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(tr(msg))}</p><button type="button" class="btn-primary qr-join-submit" onclick="join()">${tr('Войти')} <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> ${tr('Аккаунт не нужен')}</div></section></main>`;
+ if(qrJoinMode&&/^\1.17.12'ПОДКЛЮЧЕНИЕ К ИГРЕ')}</span><h1 id="qr-join-title">${tr('Войти в игру')}</h1><p class="qr-join-description">${tr('Введите имя, чтобы присоединиться к игре.')}</p><div class="qr-join-field"><label class="field-label" for="jn">${tr('Имя в игре')}</label><input id="jn" type="text" placeholder="${tr('Ваше имя')}" maxlength="16" value="${esc(preName)}" autocomplete="nickname" autocapitalize="words" spellcheck="false" onkeydown="if(event.key==='Enter')join()"></div><p class="bad form-error" role="alert">${esc(tr(msg))}</p><button type="button" class="btn-primary qr-join-submit" onclick="join()">${tr('Войти')} <span aria-hidden="true">→</span></button><div class="entry-footnote"><span class="secure-dot"></span> ${tr('Аккаунт не нужен')}</div></section></main>`;
   return;
  }
  if(participantOnly){return participantEndScreen(a,msg||'')}
@@ -2229,26 +2235,14 @@ function tr(text){
  if(Object.prototype.hasOwnProperty.call(d,out))return d[out];
  // Translate dynamic interface captions while preserving question text, player names, and counts.
  const patterns=lang==='en' ? [
-  [/^Вопрос (\d+) \/ (\d+)$/,'Question $1 / $2'],[/^Вопрос (\d+)$/,'Question $1'],[/^Раунд (\d+)$/,'Round $1'],[/^Ответили: (\d+) \/ (\d+)$/,'Answered: $1 / $2'],[/^(\d+) \/ 100 участников$/,'$1 / 100 participants'],[/^(\d+) очков$/,'$1 points'],[/^Ваше место: (\d+)$/,'Your place: $1'],[/^Вы на (\d+) месте$/,'You are ranked $1'],[/^До флага:$/,'Until next flag:'],[/^Найдено: (\d+)$/,'Found: $1'],[/^Всего тестов: (\d+)$/,'Total quizzes: $1'],[/^Экспортировано тестов: (\d+)\..*$/,'Exported quizzes: $1.'],[/^Импортировано тестов: (\d+).*$/,'Imported quizzes: $1'],[/^Тест «(.+)» обновлён\.$/,'Quiz “$1” updated.'],[/^Удалить тест «(.+)» из библиотеки проекта\? Это изменение затронет весь проект\.$/,'Delete quiz “$1” from the project library? This affects the entire project.'],[/^Правильный ответ: (.+)$/,'Correct answer: $1'],[/^Верно ответили: (\d+) из (\d+)$/,'Correct answers: $1 of $2'],[/^(\d+) из 100 · Отметьте правильные ответы$/,'$1 of 100 · Mark the correct answers'],[/^(\d+) вопрос$/,'$1 question'],[/^(\d+) вопроса$/,'$1 questions'],[/^(\d+) вопросов$/,'$1 questions'],[/^Режим: Color Kingdoms — 2 команды, (\d+) мин\., флаг за (\d+) верн\. ответ\(а\)$/,'Mode: Color Kingdoms — 2 teams, $1 min, flag after $2 correct answer(s)'],[/^Color Kingdoms — 2 команды, (\d+) мин\., флаг за (\d+) верн\. ответ\(а\)$/,'Color Kingdoms — 2 teams, $1 min, flag after $2 correct answer(s)'],[/^Ваш вклад: 🚩 (\d+) флагов · ✓ (\d+) верных из (\d+)$/,'Your contribution: 🚩 $1 flags · ✓ $2 correct out of $3'],[/^Всего вопросов: (\d+)$/,'Total questions: $1']
+  [/^Вопрос (\1.17.12'Question $1 / $2'],[/^Вопрос (\1.17.12'Question $1'],[/^Раунд (\1.17.12'Round $1'],[/^Ответили: (\1.17.12'Answered: $1 / $2'],[/^(\1.17.12'$1 / 100 participants'],[/^(\1.17.12'$1 points'],[/^Ваше место: (\1.17.12'Your place: $1'],[/^Вы на (\1.17.12'You are ranked $1'],[/^До флага:$/,'Until next flag:'],[/^Найдено: (\1.17.12'Found: $1'],[/^Всего тестов: (\1.17.12'Total quizzes: $1'],[/^Экспортировано тестов: (\1.17.12'Exported quizzes: $1.'],[/^Импортировано тестов: (\1.17.12'Imported quizzes: $1'],[/^Тест «(.+)» обновлён\1.17.12'Quiz “$1” updated.'],[/^Удалить тест «(.+)» из библиотеки проекта\1.17.12'Delete quiz “$1” from the project library? This affects the entire project.'],[/^Правильный ответ: (.+)$/,'Correct answer: $1'],[/^Верно ответили: (\1.17.12'Correct answers: $1 of $2'],[/^(\1.17.12'$1 of 100 · Mark the correct answers'],[/^(\1.17.12'$1 question'],[/^(\1.17.12'$1 questions'],[/^(\1.17.12'$1 questions'],[/^Режим: Color Kingdoms — 2 команды, (\1.17.12'Mode: Color Kingdoms — 2 teams, $1 min, flag after $2 correct answer(s)'],[/^Color Kingdoms — 2 команды, (\1.17.12'Color Kingdoms — 2 teams, $1 min, flag after $2 correct answer(s)'],[/^Ваш вклад: 🚩 (\1.17.12'Your contribution: 🚩 $1 flags · ✓ $2 correct out of $3'],[/^Всего вопросов: (\1.17.12'Total questions: $1']
  ] : [
-  [/^Вопрос (\d+) \/ (\d+)$/,'问题 $1 / $2'],[/^Вопрос (\d+)$/,'问题 $1'],[/^Раунд (\d+)$/,'第 $1 回合'],[/^Ответили: (\d+) \/ (\d+)$/,'已作答：$1 / $2'],[/^(\d+) \/ 100 участников$/,'$1 / 100 名参与者'],[/^(\d+) очков$/,'$1 分'],[/^Ваше место: (\d+)$/,'您的排名：$1'],[/^Вы на (\d+) месте$/,'您的排名是第 $1 名'],[/^Найдено: (\d+)$/,'找到：$1'],[/^Всего тестов: (\d+)$/,'测验总数：$1'],[/^Экспортировано тестов: (\d+)\..*$/,'已导出测验：$1。'],[/^Импортировано тестов: (\d+).*$/,'已导入测验：$1'],[/^Тест «(.+)» обновлён\.$/,'测验“$1”已更新。'],[/^Удалить тест «(.+)» из библиотеки проекта\? Это изменение затронет весь проект\.$/,'要从项目题库中删除测验“$1”吗？这会影响整个项目。'],[/^Правильный ответ: (.+)$/,'正确答案：$1'],[/^Верно ответили: (\d+) из (\d+)$/,'答对人数：$1 / $2'],[/^(\d+) из 100 · Отметьте правильные ответы$/,'$1 / 100 · 勾选正确答案'],[/^(\d+) вопрос$/,'$1 个问题'],[/^(\d+) вопроса$/,'$1 个问题'],[/^(\d+) вопросов$/,'$1 个问题'],[/^Режим: Color Kingdoms — 2 команды, (\d+) мин\., флаг за (\d+) верн\. ответ\(а\)$/,'模式：彩色王国 — 两支队伍，$1 分钟，答对 $2 题可获得旗帜'],[/^Color Kingdoms — 2 команды, (\d+) мин\., флаг за (\d+) верн\. ответ\(а\)$/,'彩色王国 — 两支队伍，$1 分钟，答对 $2 题可获得旗帜'],[/^Ваш вклад: 🚩 (\d+) флагов · ✓ (\d+) верных из (\d+)$/,'您的贡献：🚩 $1 面旗帜 · ✓ $2 / $3 题答对'],[/^Всего вопросов: (\d+)$/,'问题总数：$1']
+  [/^Вопрос (\1.17.12'问题 $1 / $2'],[/^Вопрос (\1.17.12'问题 $1'],[/^Раунд (\1.17.12'第 $1 回合'],[/^Ответили: (\1.17.12'已作答：$1 / $2'],[/^(\1.17.12'$1 / 100 名参与者'],[/^(\1.17.12'$1 分'],[/^Ваше место: (\1.17.12'您的排名：$1'],[/^Вы на (\1.17.12'您的排名是第 $1 名'],[/^Найдено: (\1.17.12'找到：$1'],[/^Всего тестов: (\1.17.12'测验总数：$1'],[/^Экспортировано тестов: (\1.17.12'已导出测验：$1。'],[/^Импортировано тестов: (\1.17.12'已导入测验：$1'],[/^Тест «(.+)» обновлён\1.17.12'测验“$1”已更新。'],[/^Удалить тест «(.+)» из библиотеки проекта\1.17.12'要从项目题库中删除测验“$1”吗？这会影响整个项目。'],[/^Правильный ответ: (.+)$/,'正确答案：$1'],[/^Верно ответили: (\1.17.12'答对人数：$1 / $2'],[/^(\1.17.12'$1 / 100 · 勾选正确答案'],[/^(\1.17.12'$1 个问题'],[/^(\1.17.12'$1 个问题'],[/^(\1.17.12'$1 个问题'],[/^Режим: Color Kingdoms — 2 команды, (\1.17.12'模式：彩色王国 — 两支队伍，$1 分钟，答对 $2 题可获得旗帜'],[/^Color Kingdoms — 2 команды, (\1.17.12'彩色王国 — 两支队伍，$1 分钟，答对 $2 题可获得旗帜'],[/^Ваш вклад: 🚩 (\1.17.12'您的贡献：🚩 $1 面旗帜 · ✓ $2 / $3 题答对'],[/^Всего вопросов: (\1.17.12'问题总数：$1']
  ];
  for(const [re,val] of patterns){if(re.test(out))return out.replace(re,val)}
  // Replace complete words and phrases only. This avoids broken results such as “Allго” or “Importировать”.
  const entries=Object.entries(d).filter(([src])=>src).sort((a,b)=>b[0].length-a[0].length);
- const isWord=ch=>!!ch&&/[\p{L}\p{N}_]/u.test(ch);
- for(const [src,dst] of entries){
-  let pos=0,idx;
-  while((idx=out.indexOf(src,pos))!==-1){
-   const before=out[idx-1],after=out[idx+src.length];
-   const leftOk=!isWord(src[0])||!isWord(before),rightOk=!isWord(src[src.length-1])||!isWord(after);
-   if(leftOk&&rightOk){out=out.slice(0,idx)+dst+out.slice(idx+src.length);pos=idx+dst.length}else pos=idx+src.length;
-  }
- }
- return out;
-}
-
-Object.assign(UI_TRANSLATIONS.en,{'Сортировка':'Sort order','Порядок библиотеки':'Library order','Название: А—Я':'Title: A–Z','Название: Я—А':'Title: Z–A','Переместить выше':'Move up','Переместить ниже':'Move down','Порядок тестов сохранён в GitHub.':'Quiz order saved to GitHub.','Порядок тестов изменён в библиотеке проекта. Для сохранения после нового развёртывания зафиксируйте builtin-tests.json в репозитории.':'Quiz order changed in the project library. Commit builtin-tests.json to the repository to preserve it after redeployment.'});
+ const isWord=ch=>!!ch&&/[\1.17.12'Сортировка':'Sort order','Порядок библиотеки':'Library order','Название: А—Я':'Title: A–Z','Название: Я—А':'Title: Z–A','Переместить выше':'Move up','Переместить ниже':'Move down','Порядок тестов сохранён в GitHub.':'Quiz order saved to GitHub.','Порядок тестов изменён в библиотеке проекта. Для сохранения после нового развёртывания зафиксируйте builtin-tests.json в репозитории.':'Quiz order changed in the project library. Commit builtin-tests.json to the repository to preserve it after redeployment.'});
 Object.assign(UI_TRANSLATIONS.zh,{'Сортировка':'排序','Порядок библиотеки':'题库顺序','Название: А—Я':'标题：A–Z','Название: Я—А':'标题：Z–A','Переместить выше':'上移','Переместить ниже':'下移','Порядок тестов сохранён в GitHub.':'测验顺序已保存到 GitHub。','Порядок тестов изменён в библиотеке проекта. Для сохранения после нового развёртывания зафиксируйте builtin-tests.json в репозитории.':'测验顺序已在项目题库中更改。若要在重新部署后保留，请将 builtin-tests.json 提交到仓库。'});
 Object.assign(UI_TRANSLATIONS.en,{'Создание теста':'Create quiz','Создать тест':'Create quiz','Тест создан.':'Quiz created.','Введите название теста.':'Enter a quiz title.','Режим запуска':'Launch mode','Индивидуальный':'Individual','Командный':'Team','Режим задаётся перед запуском':'Choose the mode before launch','После нажатия «Запустить» выберите Classic или Color Kingdoms для этой игровой сессии.':'After pressing Launch, choose Classic or Color Kingdoms for this game session.','Тесты и вопросы выбранного раздела':'Quizzes and questions in this section','Запустить тест':'Launch quiz','Редактировать тест':'Edit quiz','Копировать тест':'Duplicate quiz','Библиотека пока пуста':'The library is empty','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'Create a quiz here or import an XLSX file.','БИБЛИОТЕКА':'LIBRARY'});
 Object.assign(UI_TRANSLATIONS.zh,{'Создание теста':'创建测验','Создать тест':'创建测验','Тест создан.':'测验已创建。','Введите название теста.':'请输入测验名称。','Режим запуска':'启动模式','Индивидуальный':'个人','Командный':'团队','Режим задаётся перед запуском':'启动前选择模式','После нажатия «Запустить» выберите Classic или Color Kingdoms для этой игровой сессии.':'点击“启动”后，为本次游戏选择 Classic 或 Color Kingdoms。','Тесты и вопросы выбранного раздела':'此分类中的测验和问题','Запустить тест':'启动测验','Редактировать тест':'编辑测验','Копировать тест':'复制测验','Библиотека пока пуста':'题库为空','Создайте тест прямо здесь или импортируйте готовую таблицу XLSX.':'可在此创建测验，或导入 XLSX 文件。','БИБЛИОТЕКА':'题库'});
@@ -2363,7 +2357,7 @@ function applyUiLanguage(){
  for(const n of nodes){
   if(n.parentElement?.closest('[data-user-content],.ans,.pin,script,style,textarea'))continue;
   const original=n.nodeValue;if(!original.trim())continue;
-  const leading=original.match(/^\s*/)?.[0]||'',trailing=original.match(/\s*$/)?.[0]||'';
+  const leading=original.match(/^\1.17.12'',trailing=original.match(/\1.17.12'';
   const core=original.slice(leading.length,original.length-trailing.length);
   const next=tr(core);if(next!==core)n.nodeValue=leading+next+trailing;
  }
@@ -2456,10 +2450,11 @@ function animateClassicScoreCounters(){
   classicCountupSeen.set(el,key);
   const start=Number(el.getAttribute("data-countup-start"))||0;
   const end=Number(el.getAttribute("data-countup-end"))||0;
-  const duration=850,started=performance.now();
+  const duration=850,delay=Math.max(0,Number(el.getAttribute("data-countup-delay"))||0),started=performance.now()+delay;
   el.textContent=String(Math.round(start));
   const frame=now=>{
    if(!el.isConnected)return;
+   if(now<started){requestAnimationFrame(frame);return}
    const t=Math.min(1,Math.max(0,(now-started)/duration));
    const eased=1-Math.pow(1-t,3);
    el.textContent=String(Math.round(start+(end-start)*eased));
@@ -2544,9 +2539,7 @@ if(document.addEventListener){
  try{TOKEN=localStorage.getItem('qtoken')||''}catch(e){}
  if(TOKEN){const r=await api('auth/me',{token:TOKEN});if(r.user)USER=r.user;else{TOKEN='';saveToken()}}
  try{participantOnly=sessionStorage.getItem('participant-only')==='1'}catch(e){}
- const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\d{6}$/.test(qp)){prePin=qp;qrJoinMode=true;markParticipantOnly();}
- const sv=getSess();if(sv&&(!prePin||sv.pin===prePin)){
-  const savedRole=sv.role||'';if(savedRole==='player')markParticipantOnly();let status=null;
+ const qp=new URLSearchParams(location.search).get('pin');if(qp&&/^\1.17.12'';if(savedRole==='player')markParticipantOnly();let status=null;
   try{status=await api('alive',{pin:sv.pin,id:sv.id})}catch(e){status={error:'Нет связи с сервером'}}
   if(status&&status.alive||status&&status.error){pin=String(sv.pin);me=String(sv.id);gameRole=savedRole;if(savedRole==='player')view='game';return connect()}
   clearSess();gameRole='';msg=unavailableGameMessage(savedRole);if(savedRole==='player'||(participantOnly&&!qrJoinMode))view='participant-end';
