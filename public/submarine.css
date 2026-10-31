@@ -1,0 +1,100 @@
+
+.submarine-screen{width:min(1120px,calc(100% - 32px));margin:22px auto 90px;color:var(--text,#172033);display:grid;gap:18px}
+.submarine-hud{position:relative;overflow:hidden;padding:18px 22px 20px;border:1px solid rgba(72,189,220,.24);border-radius:24px;background:radial-gradient(ellipse at 8% 0%,rgba(24,160,205,.28),transparent 45%),linear-gradient(135deg,#0c2038,#102f4b 58%,#123b55);color:#f5fbff;box-shadow:0 18px 48px rgba(9,27,48,.18)}
+.submarine-hud-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.submarine-stage-pill,.submarine-level,.submarine-clock{padding:8px 12px;border:1px solid rgba(171,231,248,.22);border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:850;letter-spacing:.08em}
+.submarine-clock{font-size:17px;letter-spacing:0;font-variant-numeric:tabular-nums}
+.submarine-waterline{height:72px;position:relative;margin:8px 0 3px;border-bottom:2px dashed rgba(165,224,242,.27);background:repeating-linear-gradient(0deg,transparent 0 17px,rgba(103,202,226,.08) 18px 19px);border-radius:12px}
+.submarine-fish,.submarine-vessel{position:absolute;top:20px;transform:translateX(-50%);font-size:34px;filter:drop-shadow(0 5px 7px rgba(0,0,0,.3));transition:left .65s ease}
+.submarine-vessel{top:27px;font-size:27px}
+.submarine-danger-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#c8eaf6;margin:4px 0 7px}
+.submarine-danger-track,.submarine-mission-metrics i,.submarine-phase-progress,.submarine-boost-meter{display:block;height:9px;border-radius:99px;overflow:hidden;background:rgba(200,236,247,.16)}
+.submarine-danger-track i,.submarine-mission-metrics em,.submarine-phase-progress i,.submarine-boost-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#36d6bd,#ffb85a);transition:width .5s ease}
+.submarine-mission-metrics{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:15px}
+.submarine-mission-metrics>div{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:12px;color:#c8eaf6}
+.submarine-mission-metrics i{grid-column:1/-1;height:6px}
+.submarine-host-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:4px 4px}
+.submarine-eyebrow{display:inline-block;color:#149bb9;font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+.submarine-host-heading h1{margin:6px 0;font-size:clamp(24px,4vw,38px);line-height:1.08;font-weight:900}
+.submarine-host-heading p{margin:6px 0;color:var(--muted,#667085);font-size:14px}
+.submarine-host-mark{display:grid;place-items:center;width:74px;height:74px;flex:0 0 auto;border-radius:23px;background:linear-gradient(135deg,#0e7490,#0f3c5b);font-size:37px;box-shadow:0 14px 28px rgba(14,116,144,.22)}
+.submarine-phase-card,.submarine-player-card,.submarine-finish-card{padding:clamp(20px,3.5vw,34px);border:1px solid var(--line,rgba(120,140,160,.18));border-radius:24px;background:var(--card,#fff);box-shadow:0 12px 35px rgba(18,38,63,.08)}
+.submarine-phase-card{text-align:center;overflow:hidden}
+.submarine-phase-icon{display:inline-grid;place-items:center;width:60px;height:60px;margin-bottom:8px;border-radius:20px;background:#e2f8fb;font-size:31px}
+.submarine-phase-card h1,.submarine-player-card h1{margin:8px 0 12px;font-size:clamp(22px,3.5vw,32px);line-height:1.16;font-weight:900}
+.submarine-phase-card p,.submarine-player-card>p{max-width:720px;margin:0 auto 16px;color:var(--muted,#667085);line-height:1.55}
+.submarine-charge-large,.submarine-boost-big{font-size:clamp(42px,8vw,66px);line-height:1;font-weight:950;color:#0785a0;font-variant-numeric:tabular-nums}
+.submarine-charge-large small{font-size:22px;color:var(--muted,#667085)}
+.submarine-boost-big{color:#a05b0d}
+.submarine-phase-progress{max-width:480px;height:14px;margin:16px auto 0;background:#f2e4ce}
+.submarine-phase-progress i{background:linear-gradient(90deg,#e7a43d,#fb6b36)}
+.submarine-group-status{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px auto 0;padding:10px 14px;max-width:560px;border:1px solid rgba(25,156,185,.16);border-radius:13px;background:rgba(17,159,188,.06);font-size:13px}
+.submarine-host-roster{padding:18px 20px;border:1px solid var(--line,rgba(120,140,160,.18));border-radius:20px;background:var(--card,#fff)}
+.submarine-host-roster>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.submarine-host-roster h2{margin:0;font-size:17px;font-weight:900}
+.submarine-host-roster>header>span{color:var(--muted,#667085);font-size:12px}
+.submarine-host-roster>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.submarine-host-player{display:flex;align-items:center;gap:10px;min-width:0;padding:11px 12px;border:1px solid var(--line,rgba(120,140,160,.15));border-radius:14px;background:var(--surface,#f8fafc)}
+.submarine-player-avatar{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border-radius:12px;background:#dff6fa;color:#087d99;font-weight:900}
+.submarine-host-player>span:nth-child(2){display:grid;min-width:0;gap:3px;flex:1}
+.submarine-host-player b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.submarine-host-player small{color:var(--muted,#667085);font-size:11px}
+.submarine-host-player strong{font-size:11px;color:#0785a0}
+.submarine-player-screen{max-width:760px;margin-top:12px}
+.submarine-player-head{display:flex;align-items:center;gap:10px;padding:12px 15px;border:1px solid var(--line,rgba(120,140,160,.18));border-radius:16px;background:var(--card,#fff)}
+.submarine-player-crest{font-size:24px}
+.submarine-player-head b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.submarine-player-head strong{font-size:13px;color:#0785a0}
+.submarine-player-card{text-align:center}
+.submarine-player-card .submarine-eyebrow{margin-bottom:12px}
+.submarine-player-progress,.submarine-dive-progress{margin:0 auto 12px;color:var(--muted,#667085);font-size:13px;font-weight:700}
+.submarine-answer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:20px}
+.submarine-answer-option{display:flex;align-items:center;gap:12px;min-height:76px;padding:13px;text-align:left;border:2px solid var(--line,rgba(120,140,160,.2));border-radius:16px;background:var(--surface,#f8fafc);color:var(--text,#172033);transition:border-color .15s,transform .15s,background .15s}
+.submarine-answer-option:active,.submarine-symbol-option:active{transform:scale(.98)}
+.submarine-answer-option>span{display:grid;place-items:center;width:32px;height:32px;flex:0 0 auto;border-radius:11px;background:#e3f4fa;color:#087d99;font-size:17px;font-weight:900}
+.submarine-answer-option b{font-size:14px;line-height:1.35}
+.submarine-answer-option.is-selected{border-color:#159bb8;background:#e9f9fc}
+.submarine-submit{margin-top:18px;min-width:180px}
+.submarine-feedback{margin:15px 0 0!important;padding:12px 14px;border-radius:13px;font-size:13px;font-weight:800}
+.submarine-feedback.is-good{background:#e4f8ed;color:#167347}
+.submarine-feedback.is-bad{background:#fff1e6;color:#a54b16}
+.submarine-boost-illustration{margin:4px 0 12px;font-size:54px}
+.submarine-hold-button{display:block;width:min(360px,100%);min-height:92px;margin:24px auto 18px;border:0;border-radius:25px;background:linear-gradient(145deg,#0e9eb8,#075b80);color:white;font-size:19px;font-weight:950;box-shadow:0 12px 24px rgba(8,111,146,.28);touch-action:none;user-select:none;-webkit-user-select:none}
+.submarine-hold-button:active{transform:scale(.97);background:linear-gradient(145deg,#087b97,#064a6b)}
+.submarine-boost-meter{max-width:400px;height:12px;margin:0 auto 9px;background:#dbeef2}
+.submarine-boost-meter i{background:linear-gradient(90deg,#16b8a2,#e3a43b)}
+.submarine-instructor-symbol{display:grid;place-items:center;width:132px;height:132px;margin:15px auto;border:1px solid rgba(23,157,186,.22);border-radius:34px;background:linear-gradient(145deg,#e6faff,#c3eef6);font-size:65px;box-shadow:0 12px 28px rgba(14,116,144,.12)}
+.submarine-symbol-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:420px;margin:22px auto}
+.submarine-symbol-option{min-height:100px;border:2px solid var(--line,rgba(120,140,160,.2));border-radius:20px;background:var(--surface,#f8fafc);font-size:42px;box-shadow:0 7px 16px rgba(18,38,63,.06)}
+.submarine-symbol-option:disabled{opacity:.55}
+.submarine-dive-progress{margin-top:18px;padding:10px 12px;border-radius:12px;background:rgba(19,157,187,.08)}
+.submarine-finish{min-height:58vh;place-items:center}
+.submarine-finish-card{width:min(620px,100%);text-align:center}
+.submarine-finish-emoji{margin:10px 0;font-size:65px}
+.submarine-finish-card h1{font-size:clamp(28px,5vw,42px);font-weight:950}
+.submarine-final-ranking{display:grid;gap:7px;max-width:400px;margin:22px auto;padding:0;list-style:none;text-align:left}
+.submarine-final-ranking li{display:flex;gap:12px;align-items:center;padding:10px 13px;border-radius:12px;background:var(--surface,#f8fafc)}
+.submarine-final-ranking li b{flex:1}
+.submarine-lobby-hint{margin:0 0 12px;color:#b65d16;font-size:13px;text-align:center}
+.platform-mode-icon.submarine,.submarine-symbol{color:#087d99}
+@media(max-width:640px){
+ .submarine-screen{width:calc(100% - 20px);margin:10px auto 78px;gap:12px}
+ .submarine-hud{padding:14px;border-radius:18px}
+ .submarine-waterline{height:56px}
+ .submarine-fish{font-size:29px}
+ .submarine-vessel{font-size:24px}
+ .submarine-host-heading{gap:8px}
+ .submarine-host-mark{width:54px;height:54px;border-radius:17px;font-size:29px}
+ .submarine-host-roster{padding:13px}
+ .submarine-host-roster>div{grid-template-columns:1fr}
+ .submarine-phase-card,.submarine-player-card,.submarine-finish-card{padding:18px;border-radius:18px}
+ .submarine-answer-grid{gap:8px}
+ .submarine-answer-option{min-height:72px;padding:9px;gap:8px}
+ .submarine-answer-option b{font-size:12px}
+ .submarine-symbol-option{min-height:88px}
+ .submarine-mission-metrics{gap:10px}
+ .submarine-mission-metrics>div{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ .submarine-fish,.submarine-vessel,.submarine-danger-track i,.submarine-mission-metrics em,.submarine-phase-progress i{transition:none}
+}
