@@ -917,7 +917,7 @@ function startCountdown(g){
       if(g.mode==='kingdoms')startK(g);else if(g.mode==='submarine')startSubmarine(g);else startQ(g);
     }catch(e){
       console.error('Не удалось запустить игру после отсчёта '+g.pin+':',e.stack||e.message);
-      clearTimeout(g.timer);g.timer=null;g.kb=null;g.qi=0;g.countdownEndsAt=0;g.state='lobby';push(g);
+      clearTimeout(g.timer);g.timer=null;clearInterval(g.sbTimer);g.sbTimer=null;g.sb=null;g.kb=null;g.qi=0;g.countdownEndsAt=0;g.state='lobby';push(g);
     }
   },5000);
   push(g);
@@ -1157,7 +1157,7 @@ function answerSubDive(g,p,symbol){
 }
 function viewSubmarine(g,id,R){
   const host=id===g.hostId,sb=g.sb||{},now=Date.now();
-  const v={state:g.state,mode:'submarine',pin:g.pin,title:g.quiz.title,host,stage:sb.stage||'lobby',left:sb.endsAt?Math.max(0,sb.endsAt-now):0,durationMinutes:sb.durationMinutes||g.quiz.dur||5,level:sb.level||1,fish:Math.round(sb.fish||0),charge:sb.charge||0,chargeTarget:sb.chargeTarget||Math.max(5,g.players.size*2),boost:Math.round(sb.boost||0),levelsCompleted:sb.levelsCompleted||0,failedLevels:sb.failedLevels||0,totalCorrect:sb.totalCorrect||0,totalWrong:sb.totalWrong||0,diveTarget:sb.diveTarget||5,reportId:g.reportId||null,locked:!!g.locked,total:g.quiz.q.length,online:R.filter(p=>playerOnline(g,p.id)).length};
+  const v={state:g.state,mode:'submarine',pin:g.pin,title:g.quiz.title,host,countdownEndsAt:g.countdownEndsAt||0,stage:sb.stage||'lobby',left:sb.endsAt?Math.max(0,sb.endsAt-now):0,durationMinutes:sb.durationMinutes||g.quiz.dur||5,level:sb.level||1,fish:Math.round(sb.fish||0),charge:sb.charge||0,chargeTarget:sb.chargeTarget||Math.max(5,g.players.size*2),boost:Math.round(sb.boost||0),levelsCompleted:sb.levelsCompleted||0,failedLevels:sb.failedLevels||0,totalCorrect:sb.totalCorrect||0,totalWrong:sb.totalWrong||0,diveTarget:sb.diveTarget||5,reportId:g.reportId||null,locked:!!g.locked,total:g.quiz.q.length,online:R.filter(p=>playerOnline(g,p.id)).length};
   if(host){
     if(g.state==='lobby')v.lobbySettings={submarine:{durationMinutes:g.quiz.dur||((g.appSettings||APP_SETTINGS).modes.submarine.durationMinutes)}};
     v.rows=R.map(p=>({id:p.id,name:p.name,score:p.score||0,correctN:p.correctN||0,answeredN:p.answeredN||0,online:playerOnline(g,p.id),boosting:!!p.boosting,role:p.sbRole||'',diveRound:sb.groups?.find(x=>x.id===p.sbGroupId)?.round||0}));
