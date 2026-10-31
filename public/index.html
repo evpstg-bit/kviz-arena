@@ -1767,7 +1767,7 @@ function exitGameFullscreen(){
 function gameFullscreenExitHtml(){
  const lang=currentUiLanguage();
  const label=lang==='en'?'Exit fullscreen':lang==='zh'?'退出全屏':'Выйти из полноэкранного режима';
- return `<button type="button" class="game-fullscreen-exit" onclick="exitGameFullscreen()" aria-label="${label}" title="${label}"><svg class="game-fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6L18 18"/><path d="M18 6L6 18"/></svg></button>`;
+ return `<button type="button" class="game-fullscreen-exit" onclick="exitGameFullscreen()" aria-label="${label}" title="${label}"><svg class="game-fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 2L22 22"/><path d="M22 2L2 22"/></svg></button>`;
 }
 async function startHostedGame(){
  const fullscreenRequest=requestGameFullscreen();
