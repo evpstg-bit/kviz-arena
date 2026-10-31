@@ -1580,3 +1580,188 @@ body.participant-only-active .game-audio-control {
 @media (prefers-reduced-motion: reduce) {
   .game-audio-volume-control { transition: none !important; }
 }
+
+/* Audio control v1.17.10: SVG opener, expandable slider and explicit mute button. */
+.game-audio-control {
+  width: auto !important;
+  max-width: calc(100vw - 16px);
+  pointer-events: auto !important;
+}
+.game-audio-toolbar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0 !important;
+  width: auto !important;
+  padding: 5px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+}
+.game-audio-panel-trigger {
+  order: 2;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 46px !important;
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+  color: #fff !important;
+  background: #6555df !important;
+  border: 2px solid #fff !important;
+  border-radius: 50% !important;
+  box-shadow: 0 3px 12px rgba(30, 24, 90, .32) !important;
+  cursor: pointer;
+}
+.game-audio-panel-trigger svg {
+  display: block !important;
+  width: 27px !important;
+  height: 27px !important;
+  min-width: 27px !important;
+  min-height: 27px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.game-audio-panel {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 0;
+  max-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(8px);
+  pointer-events: none;
+  transition: width .22s ease, max-width .22s ease, opacity .16s ease, transform .22s ease, padding .22s ease, visibility .16s ease;
+}
+.game-audio-control:hover .game-audio-panel,
+.game-audio-control:focus-within .game-audio-panel,
+.game-audio-control.is-open .game-audio-panel {
+  width: 340px;
+  max-width: calc(100vw - 82px);
+  padding: 0 10px 0 8px;
+  overflow: visible;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.game-audio-panel .game-audio-volume-control {
+  display: grid !important;
+  flex: 1 1 auto;
+  grid-template-columns: auto minmax(76px, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.game-audio-panel .game-audio-volume-control > span {
+  color: var(--text-main);
+  font-size: .78rem;
+  font-weight: 750;
+}
+.game-audio-panel .game-audio-volume-control input[type="range"] {
+  width: 100%;
+  min-width: 76px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.game-audio-panel .game-audio-volume-control output {
+  color: var(--text-soft);
+  text-align: right;
+  font-size: .76rem;
+  font-variant-numeric: tabular-nums;
+}
+.game-audio-control .game-audio-panel button.game-audio-mute-button {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: max-content;
+  min-height: 38px !important;
+  padding: 7px 10px !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #7566ef, #5746d7) !important;
+  border: 1px solid rgba(255,255,255,.38) !important;
+  border-radius: 11px !important;
+  box-shadow: 0 3px 10px rgba(70, 57, 170, .24) !important;
+  font-size: .76rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.game-audio-mute-button svg {
+  display: block !important;
+  flex: 0 0 18px;
+  width: 18px !important;
+  height: 18px !important;
+  stroke: #fff !important;
+}
+.game-audio-mute-button span { color: #fff !important; }
+.game-audio-panel-trigger:focus-visible,
+.game-audio-mute-button:focus-visible {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 3px;
+}
+body.participant-only-active .game-audio-control { display: none !important; }
+@media (max-width: 600px) {
+  .game-audio-panel-trigger {
+    flex-basis: 42px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+  }
+  .game-audio-panel-trigger svg {
+    width: 25px !important;
+    height: 25px !important;
+    min-width: 25px !important;
+    min-height: 25px !important;
+  }
+  .game-audio-control:hover .game-audio-panel,
+  .game-audio-control:focus-within .game-audio-panel,
+  .game-audio-control.is-open .game-audio-panel {
+    width: 285px;
+    max-width: calc(100vw - 74px);
+    gap: 7px;
+    padding: 0 7px 0 6px;
+  }
+  .game-audio-panel .game-audio-volume-control {
+    grid-template-columns: auto minmax(54px, 1fr) 32px;
+    gap: 5px;
+  }
+  .game-audio-panel .game-audio-volume-control > span { font-size: .7rem; }
+  .game-audio-panel .game-audio-volume-control input[type="range"] { min-width: 54px; }
+  .game-audio-panel .game-audio-volume-control output { font-size: .68rem; }
+  .game-audio-control .game-audio-panel button.game-audio-mute-button {
+    gap: 4px;
+    min-height: 34px !important;
+    padding: 6px 7px !important;
+    font-size: .68rem !important;
+  }
+  .game-audio-mute-button svg { width: 16px !important; height: 16px !important; flex-basis: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-audio-panel { transition: none !important; }
+}
