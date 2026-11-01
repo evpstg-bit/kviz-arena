@@ -11,13 +11,20 @@
     "classic": {
       "enabled": true,
       "basePoints": 1000,
-      "speedBonus": true
+      "speedBonus": true,
+      "musicTrackId": "magic-puzzle"
     },
     "kingdoms": {
       "enabled": true,
       "durationMinutes": 20,
       "correctAnswersForFlag": 3,
-      "kingdomCount": 2
+      "kingdomCount": 2,
+      "musicTrackId": "original"
+    },
+    "submarine": {
+      "enabled": true,
+      "durationMinutes": 5,
+      "musicTrackId": "original"
     }
   }
 }
