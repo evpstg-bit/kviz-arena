@@ -88,7 +88,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const GAME_AUDIO_KEY="kviz-game-audio-enabled";
 const GAME_AUDIO_VOLUME_KEY="kviz-game-audio-volume";
 let gameAudioEnabled=true,gameAudioVolume=.85,gameAudioContext=null,gameAudioMaster=null;
-let gameAudioLoopTimer=null,gameAudioLoopStep=0,gameAudioLastPhaseKey="",gameAudioLastCountdown=0,gameAudioLastUrgent=0,gameAudioUnlockedByGesture=false;
+let gameAudioLoopTimer=null,gameAudioLoopStep=0,gameAudioLastPhaseKey="",gameAudioLastCountdown=0,gameAudioLastUrgent=0,gameAudioUnlockedByGesture=false,gameAudioFile=null,gameAudioFileTrackId="",gameAudioFilePin="";
 try{gameAudioEnabled=localStorage.getItem(GAME_AUDIO_KEY)!=="0"}catch(e){}
 try{
  const savedVolume=localStorage.getItem(GAME_AUDIO_VOLUME_KEY);
@@ -120,9 +120,24 @@ function gameAudioNote(freq,duration,delay,wave,volume,slide){
  }catch(e){}
 }
 function gameAudioMelody(notes,spacing,duration,wave,volume){notes.forEach((freq,i)=>gameAudioNote(freq,duration,i*spacing,wave,volume))}
-function stopGameAudioLoop(){if(gameAudioLoopTimer){clearInterval(gameAudioLoopTimer);gameAudioLoopTimer=null}gameAudioLoopStep=0}
-function startGameAudioLoop(mode){
+function stopGameAudioLoop(){
+ if(gameAudioLoopTimer){clearInterval(gameAudioLoopTimer);gameAudioLoopTimer=null}
+ if(gameAudioFile){try{gameAudioFile.pause();gameAudioFile.currentTime=0}catch(e){}}
+ gameAudioFile=null;gameAudioFileTrackId="";gameAudioFilePin="";gameAudioLoopStep=0;
+}
+function startGameAudioLoop(mode,musicTrackId='original',pinValue=''){
  stopGameAudioLoop();if(!gameAudioEnabled)return;
+ const trackId=String(musicTrackId||'original');
+ if(trackId==='none')return;
+ if(trackId!=='original'){
+  const track=MUSIC_TRACK_BY_ID[trackId];if(!track)return;
+  try{
+   gameAudioFile=new Audio(track.src);gameAudioFile.preload='auto';gameAudioFile.loop=true;gameAudioFile.volume=gameAudioVolume;
+   gameAudioFileTrackId=trackId;gameAudioFilePin=String(pinValue||'');
+   const playing=gameAudioFile.play();if(playing&&typeof playing.catch==='function')playing.catch(()=>{});
+  }catch(e){console.warn('Не удалось запустить фоновую композицию:',e)}
+  return;
+ }
  const kingdom=mode==="kingdoms";
  if(kingdom){
   // Original Color Kingdoms theme: a bright D–A–G–D progression with a two-bar lead.
@@ -166,7 +181,7 @@ function startGameAudioLoop(mode){
  },300);
 }
 function playGameAudioCue(kind){
- if(!gameAudioEnabled)return;
+ if(!gameAudioEnabled||(S&&S.musicTrackId&&S.musicTrackId!=='original'))return;
  switch(kind){
   case "countdown":{
    const notes={5:392,4:440,3:523.25,2:587.33,1:783.99};
@@ -186,11 +201,11 @@ function playGameAudioCue(kind){
  }
 }
 function gameAudioCountdownTick(remaining){
- if(!gameAudioEnabled||remaining===gameAudioLastCountdown)return;
+ if(!gameAudioEnabled||(S&&S.musicTrackId&&S.musicTrackId!=='original')||remaining===gameAudioLastCountdown)return;
  gameAudioLastCountdown=remaining;playGameAudioCue("countdown");
 }
 function gameAudioUrgentTick(left){
- if(!gameAudioEnabled)return;
+ if(!gameAudioEnabled||(S&&S.musicTrackId&&S.musicTrackId!=='original'))return;
  const remaining=Math.ceil(left/1000);
  if(remaining>0&&remaining<=5&&remaining!==gameAudioLastUrgent){gameAudioLastUrgent=remaining;playGameAudioCue("urgent")}
  else if(remaining>5)gameAudioLastUrgent=0;
@@ -198,15 +213,26 @@ function gameAudioUrgentTick(left){
 function syncGameAudio(previous,next,force){
  if(!next||view!=="game"){stopGameAudioLoop();return}
  if(!gameAudioEnabled){stopGameAudioLoop();return}
+ const trackId=String(next.musicTrackId||'original');
+ if(trackId==='none'){stopGameAudioLoop();return}
+ if(trackId!=='original'){
+  const active=['question','playing','results'].includes(next.state);
+  if(!active){stopGameAudioLoop();return}
+  if(gameAudioFile&&gameAudioFileTrackId===trackId&&gameAudioFilePin===String(next.pin||'')){
+   if(gameAudioFile.paused){const playing=gameAudioFile.play();if(playing&&typeof playing.catch==='function')playing.catch(()=>{})}
+   return;
+  }
+  startGameAudioLoop(next.mode,trackId,next.pin);return;
+ }
  const phase=next.state==="results"?(next.resultsPhase||"answer"):"",key=[next.pin,next.mode,next.state,next.qi,next.round,phase].join("|");
  if(!force&&key===gameAudioLastPhaseKey)return;
  gameAudioLastPhaseKey=key;stopGameAudioLoop();gameAudioLastUrgent=0;
  if(next.state==="countdown"){gameAudioLastCountdown=0;return}
- if(next.state==="question"){gameAudioLastCountdown=0;playGameAudioCue("questionStart");startGameAudioLoop(next.mode);return}
+ if(next.state==="question"){gameAudioLastCountdown=0;playGameAudioCue("questionStart");startGameAudioLoop(next.mode,'original',next.pin);return}
  if(next.state==="playing"){
   if(previous&&previous.state==="playing"&&Number(previous.round)!==Number(next.round))playGameAudioCue("round");
   else playGameAudioCue("questionStart");
-  startGameAudioLoop(next.mode);return;
+  startGameAudioLoop(next.mode,'original',next.pin);return;
  }
  if(next.state==="results"){
   if(next.resultsPhase==="leaderboard"){if(next.host)playGameAudioCue("leaderboard")}
@@ -224,6 +250,8 @@ function setGameAudioVolume(value){
  if(gameAudioMaster&&gameAudioContext){
   try{gameAudioMaster.gain.setTargetAtTime(gameAudioVolume,gameAudioContext.currentTime,.035)}catch(e){gameAudioMaster.gain.value=gameAudioVolume}
  }
+ if(gameAudioFile)gameAudioFile.volume=gameAudioVolume;
+ if(settingsMusicPreviewAudio)settingsMusicPreviewAudio.volume=gameAudioVolume;
  const output=$("game-audio-volume-value");
  if(output)output.textContent=Math.round(gameAudioVolume*100)+"%";
 }
