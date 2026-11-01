@@ -187,3 +187,11 @@ npm run version:sync
 ## Журнал изменений
 
 Краткая история релизов находится в [CHANGELOG.md](CHANGELOG.md). Не создавайте отдельный файл журнала для каждой небольшой правки: добавляйте заметки в существующий журнал, а подробный diff оставляйте в истории Git.
+
+## Лицензии музыкального сопровождения
+
+- **Classic:** «Melody++ Loop» — Marty Opsahl (Mega Pixel Music Lab), используется по лицензии Creative Commons Attribution 3.0. [Страница композиции и условия](https://opengameart.org/content/melody); [автор](https://soundcloud.com/megapixelmusic).
+- **Color Kingdoms:** «Pirates!» — Eric Matyas / Soundimage.org, используется по лицензии Creative Commons Attribution 4.0. [Страница композиции и условия](https://opengameart.org/content/pirates-looping).
+
+В игровом интерфейсе доступны ссылки на авторов и исходные страницы композиций. Аудиозаписи воспроизводятся как фоновые треки с повтором; синтезированные короткие звуковые сигналы для этих режимов отключены.
+
