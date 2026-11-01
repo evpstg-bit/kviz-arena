@@ -98,8 +98,8 @@ function syncGameAudio(previous,next,force){
  }
  if(!gameAudioEnabled){stopGameAudioLoop();return}
  const active=["question","playing"].includes(next.state)&&!(next.me&&next.me.answered&&next.state==="question");
- if(active){startGameAudioLoop(next.mode,next.pin);return}
- if(["final","ended"].includes(next.state)){
+ if(active&&GAME_AUDIO_TRACKS[next.mode]){startGameAudioLoop(next.mode,next.pin);return}
+ if(["final","ended"].includes(next.state)||!GAME_AUDIO_TRACKS[next.mode]){
   stopGameAudioLoop(true);gameAudioTrackMode="";gameAudioTrackPin="";return;
  }
  stopGameAudioLoop();
@@ -2627,9 +2627,8 @@ function render(){
 if(typeof addEventListener==='function'){
  document.addEventListener('pointerdown',e=>{if(cabinetMenuToggled&&!e.target.closest('.cabinet-menu-wrap'))closeCabinetMenu()},true);
  document.addEventListener('pointerdown',()=>{
-  if(!gameAudioEnabled||gameAudioUnlockedByGesture||!(view==="game"||qrJoinMode))return;
-  gameAudioUnlockedByGesture=true;unlockGameAudio();
-  if(S&&view==="game"){gameAudioLastPhaseKey="";syncGameAudio(null,S,true)}
+  if(!gameAudioEnabled||view!=="game"||!S)return;
+  syncGameAudio(null,S,true);
  },true);
  addEventListener('pointerdown',()=>{down=Date.now()},true);
  const up=()=>{down=0;if(pend){pend=0;setTimeout(render,0)}};
