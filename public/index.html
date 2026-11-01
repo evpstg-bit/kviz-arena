@@ -229,37 +229,63 @@ function gameAudioUrgentTick(left){
  if(remaining>0&&remaining<=5&&remaining!==gameAudioLastUrgent){gameAudioLastUrgent=remaining;playGameAudioCue("urgent")}
  else if(remaining>5)gameAudioLastUrgent=0;
 }
+function isQuestionMusicPhase(next){
+ if(!next)return false;
+ if(next.mode==="submarine")return next.state==="playing"&&next.stage==="quiz";
+ if(next.mode==="kingdoms"){
+  const me=next.me||{};
+  const placingFlag=Number(me.flags)>0&&Array.isArray(next.valid)&&next.valid.length>0;
+  const feedbackVisible=!!(me.fb&&fbUntil>Date.now());
+  return next.state==="playing"&&!placingFlag&&!feedbackVisible;
+ }
+ const answeredQuestion=next.state==="question"&&!next.host&&!!(next.me&&next.me.answered);
+ return next.state==="question"&&!answeredQuestion;
+}
+function gameAudioTrackForState(next){
+ if(!next)return "none";
+ if(isQuestionMusicPhase(next))return String(next.musicTrackId||"original");
+ return next.state==="playing"?"original":"none";
+}
 function syncGameAudio(previous,next,force){
  if(!next||view!=="game"||!gameAudioEnabled){stopGameAudioLoop();return}
  const trackId=String(next.musicTrackId||'original');
+ const audioTrackId=gameAudioTrackForState(next);
  const phase=next.state==="results"?(next.resultsPhase||"answer"):"";
  const answeredQuestion=next.state==="question"&&!next.host&&!!(next.me&&next.me.answered);
- const key=[next.pin,next.mode,next.state,next.qi,next.round,phase,trackId,answeredQuestion?1:0].join("|");
- const questionMusicActive=["question","playing"].includes(next.state)&&!answeredQuestion;
- const keepQuestionMusic=()=>{
-  if(!questionMusicActive||trackId==="none"){stopGameAudioLoop();return}
-  if(trackId==="original"){
+ const key=[next.pin,next.mode,next.state,next.qi,next.round,phase,trackId,audioTrackId].join("|");
+ const keepCurrentAudio=()=>{
+  if(audioTrackId==="none"){stopGameAudioLoop();return}
+  if(audioTrackId==="original"){
    if(!gameAudioLoopTimer)startGameAudioLoop(next.mode,"original",next.pin);
    return;
   }
-  if(gameAudioFile&&gameAudioFileTrackId===trackId&&gameAudioFilePin===String(next.pin||'')){
+  if(gameAudioFile&&gameAudioFileTrackId===audioTrackId&&gameAudioFilePin===String(next.pin||'')){
    if(gameAudioFile.paused){const playing=gameAudioFile.play();if(playing&&typeof playing.catch==='function')playing.catch(()=>{})}
    return;
   }
-  startGameAudioLoop(next.mode,trackId,next.pin);
+  startGameAudioLoop(next.mode,audioTrackId,next.pin);
  };
- if(!force&&key===gameAudioLastPhaseKey){keepQuestionMusic();return}
- gameAudioLastPhaseKey=key;stopGameAudioLoop();gameAudioLastUrgent=0;
+ if(!force&&key===gameAudioLastPhaseKey){keepCurrentAudio();return}
+ const keepSelectedFile=audioTrackId!=="original"&&audioTrackId!=="none"
+  &&gameAudioFile&&gameAudioFileTrackId===audioTrackId&&gameAudioFilePin===String(next.pin||'');
+ gameAudioLastPhaseKey=key;
+ if(!keepSelectedFile)stopGameAudioLoop();
+ else if(gameAudioFile.paused){const playing=gameAudioFile.play();if(playing&&typeof playing.catch==='function')playing.catch(()=>{})}
+ gameAudioLastUrgent=0;
  if(next.state==="countdown"){gameAudioLastCountdown=0;return}
  if(next.state==="question"){
-  gameAudioLastCountdown=0;playGameAudioCue("questionStart");
-  if(!answeredQuestion&&trackId!=="none")startGameAudioLoop(next.mode,trackId,next.pin);
+  gameAudioLastCountdown=0;
+  if(!answeredQuestion)playGameAudioCue("questionStart");
+  if(audioTrackId!=="none"&&!keepSelectedFile)startGameAudioLoop(next.mode,audioTrackId,next.pin);
   return;
  }
  if(next.state==="playing"){
-  if(previous&&previous.state==="playing"&&Number(previous.round)!==Number(next.round))playGameAudioCue("round");
-  else playGameAudioCue("questionStart");
-  if(trackId!=="none")startGameAudioLoop(next.mode,trackId,next.pin);
+  const roundChanged=previous&&previous.state==="playing"&&Number(previous.round)!==Number(next.round);
+  const questionChanged=previous&&previous.state==="playing"&&Number(previous.qi)!==Number(next.qi);
+  const enteringPlaying=!previous||previous.state!=="playing";
+  if(roundChanged)playGameAudioCue("round");
+  else if(enteringPlaying||questionChanged)playGameAudioCue("questionStart");
+  if(audioTrackId!=="none"&&!keepSelectedFile)startGameAudioLoop(next.mode,audioTrackId,next.pin);
   return;
  }
  if(next.state==="results"){
@@ -439,7 +465,7 @@ function connect(){
   syncGameAudio(previousS,S);
   if(S.mode==='kingdoms'){
    const fb=S.me&&S.me.fb;
-   if(fbSeen===-2)fbSeen=fb?fb.id:-1;else if(fb&&fb.id!==fbSeen){fbSeen=fb.id;playGameAudioCue(fb.ok?"correct":"incorrect");stopGameAudioLoop();fbUntil=Date.now()+(fb.ok?1100:2200);setTimeout(render,fbUntil-Date.now()+40);if(S.state==="playing"&&gameAudioEnabled)setTimeout(()=>{if(S&&view==="game"&&S.state==="playing")startGameAudioLoop(S.mode,S.musicTrackId||"original",S.pin)},1450);sel=[]}
+   if(fbSeen===-2)fbSeen=fb?fb.id:-1;else if(fb&&fb.id!==fbSeen){fbSeen=fb.id;playGameAudioCue(fb.ok?"correct":"incorrect");stopGameAudioLoop();fbUntil=Date.now()+(fb.ok?1100:2200);setTimeout(render,fbUntil-Date.now()+40);if(S.state==="playing"&&gameAudioEnabled)setTimeout(()=>{if(S&&view==="game"&&S.state==="playing")startGameAudioLoop(S.mode,gameAudioTrackForState(S),S.pin)},Math.max(0,fbUntil-Date.now()+80));sel=[]}
    if(S.banner&&S.banner.n!==bnSeen){bnSeen=S.banner.n;const ms=Math.max(0,4500-S.banner.age);banUntil=Date.now()+ms;setTimeout(render,ms+40)}
   }
   // While the final report is loading, keep the current DOM intact instead of first
