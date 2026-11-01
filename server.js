@@ -1044,7 +1044,7 @@ function answerK(g,p,b){
 function commonK(g,R){
   const kb=g.kb,now=Date.now(),count=kb.kingdomCount||2;
   const stats=Array.from({length:count},(_,t)=>{const m=R.filter(p=>p.team===t);return{k:t,name:TEAM_NAMES[t]||('Королевство '+(t+1)),tiles:kb.board.filter(o=>o===t).length,members:m.length,trophies:kb.trophies[t],correct:m.reduce((s,p)=>s+p.correctN,0),flags:m.reduce((s,p)=>s+p.placed,0)}});
-  return{state:g.state,mode:'kingdoms',pin:g.pin,title:g.quiz.title,N:kb.N,kingdomCount:count,board:kb.board,rooks:kb.rooks,hot:kb.hot,round:kb.round,need:kb.need,dur:kb.dur,reportId:g.reportId||null,
+  return{state:g.state,mode:'kingdoms',musicTrackId:((g.appSettings||APP_SETTINGS).modes.kingdoms||{}).musicTrackId||'original',pin:g.pin,title:g.quiz.title,N:kb.N,kingdomCount:count,board:kb.board,rooks:kb.rooks,hot:kb.hot,round:kb.round,need:kb.need,dur:kb.dur,reportId:g.reportId||null,
     left:g.state==='playing'?Math.max(0,kb.endsAt-now):0,stats,winner:kb.winner,roundWinner:kb.roundWinner===undefined?null:kb.roundWinner,roundWinReason:kb.roundWinReason||null,locked:!!g.locked,total:g.quiz.q.length,
     banner:kb.banner&&now-kb.banner.at<4500?{team:kb.banner.team,age:now-kb.banner.at,n:kb.round}:null,
     top:R.slice().sort((a,b)=>b.placed-a.placed||b.correctN-a.correctN).slice(0,8).map(p=>({name:p.name,team:p.team,placed:p.placed,correct:p.correctN}))};
