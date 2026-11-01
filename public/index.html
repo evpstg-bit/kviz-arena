@@ -53,70 +53,150 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 
 const GAME_AUDIO_KEY="kviz-game-audio-enabled";
 const GAME_AUDIO_VOLUME_KEY="kviz-game-audio-volume";
-const GAME_AUDIO_TRACKS={
- classic:{src:"https://opengameart.org/sites/default/files/Melody%2B%2B%20Loop.mp3",credit:"Melody++ — Marty Opsahl"},
- kingdoms:{src:"https://opengameart.org/sites/default/files/pirates_1.mp3",credit:"Pirates! — Eric Matyas"}
-};
-let gameAudioEnabled=true,gameAudioVolume=.85;
-let gameAudioTrack=null,gameAudioTrackMode="",gameAudioTrackPin="";
+let gameAudioEnabled=true,gameAudioVolume=.85,gameAudioContext=null,gameAudioMaster=null;
+let gameAudioLoopTimer=null,gameAudioLoopStep=0,gameAudioLastPhaseKey="",gameAudioLastCountdown=0,gameAudioLastUrgent=0,gameAudioUnlockedByGesture=false;
 try{gameAudioEnabled=localStorage.getItem(GAME_AUDIO_KEY)!=="0"}catch(e){}
 try{
  const savedVolume=localStorage.getItem(GAME_AUDIO_VOLUME_KEY);
  if(savedVolume!==null&&Number.isFinite(Number(savedVolume)))gameAudioVolume=Math.max(0,Math.min(1,Number(savedVolume)));
 }catch(e){}
-function stopGameAudioLoop(reset=false){
- if(!gameAudioTrack)return;
- try{gameAudioTrack.pause();if(reset)gameAudioTrack.currentTime=0}catch(e){}
+function unlockGameAudio(){
+ if(!gameAudioEnabled)return null;
+ const AudioCtor=window.AudioContext||window.webkitAudioContext;
+ if(!AudioCtor)return null;
+ try{
+  if(!gameAudioContext){
+   gameAudioContext=new AudioCtor();gameAudioMaster=gameAudioContext.createGain();
+   gameAudioMaster.gain.value=gameAudioVolume;gameAudioMaster.connect(gameAudioContext.destination);
+  }
+  if(gameAudioContext.state!=="running"&&gameAudioContext.resume)gameAudioContext.resume().catch(()=>{});
+  return gameAudioContext;
+ }catch(e){return null}
 }
-function startGameAudioLoop(mode,pinValue){
+function gameAudioNote(freq,duration,delay,wave,volume,slide){
+ const ctx=unlockGameAudio();if(!ctx||!gameAudioMaster)return;
+ try{
+  const start=ctx.currentTime+Math.max(0,Number(delay)||0),osc=ctx.createOscillator(),amp=ctx.createGain();
+  osc.type=wave||"sine";osc.frequency.setValueAtTime(Math.max(30,Number(freq)||440),start);
+  if(slide&&slide>0)osc.frequency.exponentialRampToValueAtTime(slide,start+Math.max(.04,duration*.7));
+  const peak=Math.max(.0005,Math.min(.18,(Number(volume)||.035)*1.65));
+  amp.gain.setValueAtTime(.0001,start);amp.gain.exponentialRampToValueAtTime(peak,start+.018);
+  amp.gain.exponentialRampToValueAtTime(.0001,start+Math.max(.055,duration));
+  osc.connect(amp);amp.connect(gameAudioMaster);osc.start(start);osc.stop(start+Math.max(.07,duration)+.025);
+ }catch(e){}
+}
+function gameAudioMelody(notes,spacing,duration,wave,volume){notes.forEach((freq,i)=>gameAudioNote(freq,duration,i*spacing,wave,volume))}
+function stopGameAudioLoop(){if(gameAudioLoopTimer){clearInterval(gameAudioLoopTimer);gameAudioLoopTimer=null}gameAudioLoopStep=0}
+function startGameAudioLoop(mode){
+ stopGameAudioLoop();if(!gameAudioEnabled)return;
+ const kingdom=mode==="kingdoms";
+ if(kingdom){
+  // Original Color Kingdoms theme: a bright D–A–G–D progression with a two-bar lead.
+  const melody=[293.66,369.99,440,587.33,554.37,440,369.99,329.63,392,493.88,587.33,783.99,739.99,587.33,493.88,440];
+  const bass=[73.42,null,110,null,55,null,82.41,null,98,null,146.83,null,73.42,null,110,null];
+  const chords={
+   0:[146.83,185,220],
+   4:[110,138.59,164.81],
+   8:[98,123.47,146.83],
+   12:[146.83,185,220]
+  };
+  gameAudioLoopTimer=setInterval(()=>{
+   if(!gameAudioEnabled||view!=="game"||!S||!["question","playing"].includes(S.state)||(S.me&&S.me.answered&&S.state==="question")){stopGameAudioLoop();return}
+   const step=gameAudioLoopStep++%16,note=melody[step];
+   gameAudioNote(note,.23,0,"triangle",(step===3||step===11)?.014:.011);
+   if(bass[step])gameAudioNote(bass[step],.42,.012,"sine",.015);
+   if(chords[step])chords[step].forEach((freq,i)=>gameAudioNote(freq,.96,i*.025,"sine",.0045));
+   if(step===3||step===7||step===11||step===15)gameAudioNote(note*2,.14,.095,"sine",.006);
+   if(step===2||step===6||step===10||step===14)gameAudioNote(880,.075,.045,"sine",.004);
+  },320);
+  return;
+ }
+ // Original Classic theme: an upbeat D-major motif over D–Bm–G–A.
+ const melody=[587.33,739.99,880,739.99,659.25,739.99,987.77,880,783.99,880,1174.66,987.77,880,783.99,739.99,659.25];
+ const roots=[73.42,61.74,98,110];
+ const fifths=[110,92.5,146.83,164.81];
+ const chords={
+  0:[146.83,185,220],
+  4:[123.47,146.83,185],
+  8:[98,123.47,146.83],
+  12:[110,138.59,164.81]
+ };
+ gameAudioLoopTimer=setInterval(()=>{
+  if(!gameAudioEnabled||view!=="game"||!S||!["question","playing"].includes(S.state)||(S.me&&S.me.answered&&S.state==="question")){stopGameAudioLoop();return}
+  const step=gameAudioLoopStep++%16,note=melody[step],bar=Math.floor(step/4);
+  gameAudioNote(note,.205,0,"triangle",(step===2||step===6||step===10||step===14)?.013:.0105);
+  if(step%4===0)gameAudioNote(roots[bar],.48,.008,"sine",.018);
+  if(step%4===2)gameAudioNote(fifths[bar],.27,.018,"sine",.009);
+  if(chords[step])chords[step].forEach((freq,i)=>gameAudioNote(freq,1.04,i*.028,"sine",.0038));
+  if(step===3||step===7||step===11||step===15)gameAudioNote(note*2,.12,.075,"sine",.0055);
+ },300);
+}
+function playGameAudioCue(kind){
  if(!gameAudioEnabled)return;
- const track=GAME_AUDIO_TRACKS[mode];
- if(!track)return;
- const sessionPin=String(pinValue||"");
- if(!gameAudioTrack||gameAudioTrackMode!==mode||gameAudioTrackPin!==sessionPin){
-  stopGameAudioLoop(true);
-  gameAudioTrack=new Audio(track.src);
-  gameAudioTrack.preload="auto";
-  gameAudioTrack.loop=true;
-  gameAudioTrackMode=mode;
-  gameAudioTrackPin=sessionPin;
- }
- gameAudioTrack.loop=true;
- gameAudioTrack.volume=gameAudioVolume;
- if(gameAudioTrack.paused){
-  const playAttempt=gameAudioTrack.play();
-  if(playAttempt&&typeof playAttempt.catch==="function")playAttempt.catch(()=>{});
+ switch(kind){
+  case "countdown":{
+   const notes={5:392,4:440,3:523.25,2:587.33,1:783.99};
+   gameAudioNote(notes[gameAudioLastCountdown]||523,.18,0,"sine",.055);
+   if(gameAudioLastCountdown===1)gameAudioMelody([783.99,987.77,1174.66],.11,.23,"triangle",.045);
+   break;
+  }
+  case "questionStart":gameAudioMelody([523.25,659.25,783.99,1046.5],.095,.2,"triangle",.035);break;
+  case "correct":gameAudioMelody([659.25,783.99,987.77,1174.66],.09,.22,"sine",.052);break;
+  case "incorrect":gameAudioMelody([392,349.23,293.66,220],.13,.2,"triangle",.043);break;
+  case "answerReveal":gameAudioMelody([523.25,659.25,783.99,1046.5],.14,.34,"sine",.052);break;
+  case "questionEnd":gameAudioMelody([440,392,329.63],.13,.23,"sine",.035);break;
+  case "leaderboard":gameAudioNote(130.81,.48,0,"sine",.035);gameAudioMelody([523.25,659.25,783.99,1046.5,1318.51],.12,.36,"triangle",.055);break;
+  case "round":gameAudioMelody([392,523.25,659.25,783.99],.11,.25,"triangle",.04);break;
+  case "final":gameAudioNote(130.81,.7,0,"sine",.04);gameAudioMelody([523.25,659.25,783.99,1046.5,1318.51,1567.98],.16,.42,"triangle",.06);break;
+  case "urgent":gameAudioNote(880,.095,0,"sine",.035);break;
  }
 }
-// The game uses complete recorded compositions only; no oscillator beeps or synthetic note cues.
-function playGameAudioCue(kind){}
-function gameAudioCountdownTick(remaining){}
-function gameAudioUrgentTick(left){}
+function gameAudioCountdownTick(remaining){
+ if(!gameAudioEnabled||remaining===gameAudioLastCountdown)return;
+ gameAudioLastCountdown=remaining;playGameAudioCue("countdown");
+}
+function gameAudioUrgentTick(left){
+ if(!gameAudioEnabled)return;
+ const remaining=Math.ceil(left/1000);
+ if(remaining>0&&remaining<=5&&remaining!==gameAudioLastUrgent){gameAudioLastUrgent=remaining;playGameAudioCue("urgent")}
+ else if(remaining>5)gameAudioLastUrgent=0;
+}
 function syncGameAudio(previous,next,force){
- if(!next||view!=="game"){
-  stopGameAudioLoop(true);gameAudioTrackMode="";gameAudioTrackPin="";return;
- }
+ if(!next||view!=="game"){stopGameAudioLoop();return}
  if(!gameAudioEnabled){stopGameAudioLoop();return}
- const active=["question","playing"].includes(next.state)&&!(next.me&&next.me.answered&&next.state==="question");
- if(active&&GAME_AUDIO_TRACKS[next.mode]){startGameAudioLoop(next.mode,next.pin);return}
- if(["final","ended"].includes(next.state)||!GAME_AUDIO_TRACKS[next.mode]){
-  stopGameAudioLoop(true);gameAudioTrackMode="";gameAudioTrackPin="";return;
+ const phase=next.state==="results"?(next.resultsPhase||"answer"):"",key=[next.pin,next.mode,next.state,next.qi,next.round,phase].join("|");
+ if(!force&&key===gameAudioLastPhaseKey)return;
+ gameAudioLastPhaseKey=key;stopGameAudioLoop();gameAudioLastUrgent=0;
+ if(next.state==="countdown"){gameAudioLastCountdown=0;return}
+ if(next.state==="question"){gameAudioLastCountdown=0;playGameAudioCue("questionStart");startGameAudioLoop(next.mode);return}
+ if(next.state==="playing"){
+  if(previous&&previous.state==="playing"&&Number(previous.round)!==Number(next.round))playGameAudioCue("round");
+  else playGameAudioCue("questionStart");
+  startGameAudioLoop(next.mode);return;
  }
- stopGameAudioLoop();
+ if(next.state==="results"){
+  if(next.resultsPhase==="leaderboard"){if(next.host)playGameAudioCue("leaderboard")}
+  else if(next.host)playGameAudioCue("answerReveal");
+  else playGameAudioCue("questionEnd");
+  return;
+ }
+ if(["final","ended"].includes(next.state))playGameAudioCue("final");
 }
 function setGameAudioVolume(value){
  const parsed=Number(value);
  if(!Number.isFinite(parsed))return;
  gameAudioVolume=Math.max(0,Math.min(1,parsed/100));
  try{localStorage.setItem(GAME_AUDIO_VOLUME_KEY,String(gameAudioVolume))}catch(e){}
- if(gameAudioTrack)gameAudioTrack.volume=gameAudioVolume;
+ if(gameAudioMaster&&gameAudioContext){
+  try{gameAudioMaster.gain.setTargetAtTime(gameAudioVolume,gameAudioContext.currentTime,.035)}catch(e){gameAudioMaster.gain.value=gameAudioVolume}
+ }
  const output=$("game-audio-volume-value");
  if(output)output.textContent=Math.round(gameAudioVolume*100)+"%";
 }
 function toggleGameAudio(){
  gameAudioEnabled=!gameAudioEnabled;
  try{localStorage.setItem(GAME_AUDIO_KEY,gameAudioEnabled?"1":"0")}catch(e){}
- if(gameAudioEnabled){if(S&&view==="game")syncGameAudio(null,S,true)}
+ if(gameAudioEnabled){gameAudioUnlockedByGesture=true;unlockGameAudio();gameAudioLastPhaseKey="";if(S&&view==="game")syncGameAudio(null,S,true)}
  else stopGameAudioLoop();
  const button=document.querySelector(".game-audio-icon-button");
  if(button){
@@ -135,7 +215,7 @@ function gameAudioIconSvg(muted=false){
 }
 function gameAudioControlHtml(){
  const label=gameAudioEnabled?tr("Выключить звук"):tr("Включить звук");
- return '<div class="game-audio-control"><div class="game-audio-toolbar"><div class="game-audio-panel"><label class="game-audio-volume-control"><span>'+tr("Громкость")+'</span><input id="game-audio-volume" type="range" min="0" max="100" step="1" value="'+Math.round(gameAudioVolume*100)+'" aria-label="'+tr("Громкость мелодий")+'" oninput="setGameAudioVolume(this.value)"><output id="game-audio-volume-value">'+Math.round(gameAudioVolume*100)+'%</output></label></div><button type="button" class="game-audio-icon-button '+(gameAudioEnabled?"is-on":"is-off")+'" onclick="toggleGameAudio()" aria-label="'+label+'" aria-pressed="'+(gameAudioEnabled?"true":"false")+'" title="'+label+'">'+gameAudioIconSvg(!gameAudioEnabled)+'</button></div><div class="game-audio-credits"><small>Музыка:</small> <a href="https://opengameart.org/content/melody" target="_blank" rel="noopener noreferrer">Melody++ — Marty Opsahl</a> · <a href="https://opengameart.org/content/pirates-looping" target="_blank" rel="noopener noreferrer">Pirates! — Eric Matyas</a></div></div>';
+ return '<div class="game-audio-control"><div class="game-audio-toolbar"><div class="game-audio-panel"><label class="game-audio-volume-control"><span>'+tr("Громкость")+'</span><input id="game-audio-volume" type="range" min="0" max="100" step="1" value="'+Math.round(gameAudioVolume*100)+'" aria-label="'+tr("Громкость мелодий")+'" oninput="setGameAudioVolume(this.value)"><output id="game-audio-volume-value">'+Math.round(gameAudioVolume*100)+'%</output></label></div><button type="button" class="game-audio-icon-button '+(gameAudioEnabled?"is-on":"is-off")+'" onclick="toggleGameAudio()" aria-label="'+label+'" aria-pressed="'+(gameAudioEnabled?"true":"false")+'" title="'+label+'">'+gameAudioIconSvg(!gameAudioEnabled)+'</button></div></div>';
 }
 
 let me='',pin='',S=null,view='home',msg='',info='',t0=0,tEnd=0,es=null,INFO={urls:[],hasUsers:false,regOpen:true,needInvite:false,version:'1.17.19'},
@@ -2627,8 +2707,9 @@ function render(){
 if(typeof addEventListener==='function'){
  document.addEventListener('pointerdown',e=>{if(cabinetMenuToggled&&!e.target.closest('.cabinet-menu-wrap'))closeCabinetMenu()},true);
  document.addEventListener('pointerdown',()=>{
-  if(!gameAudioEnabled||view!=="game"||!S)return;
-  syncGameAudio(null,S,true);
+  if(!gameAudioEnabled||gameAudioUnlockedByGesture||!(view==="game"||qrJoinMode))return;
+  gameAudioUnlockedByGesture=true;unlockGameAudio();
+  if(S&&view==="game"){gameAudioLastPhaseKey="";syncGameAudio(null,S,true)}
  },true);
  addEventListener('pointerdown',()=>{down=Date.now()},true);
  const up=()=>{down=0;if(pend){pend=0;setTimeout(render,0)}};
