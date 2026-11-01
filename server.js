@@ -14,9 +14,9 @@ const DEFAULT_APP_SETTINGS={
   version:1,
   general:{defaultQuestionTime:20,maxPlayers:100,supportThreshold:60,autoOpenReports:true,showCorrectAnswerAfterQuestion:true},
   modes:{
-    classic:{enabled:true,basePoints:1000,speedBonus:true},
-    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2},
-    submarine:{enabled:true,durationMinutes:5}
+    classic:{enabled:true,basePoints:1000,speedBonus:true,musicTrackId:'original'},
+    kingdoms:{enabled:true,durationMinutes:5,correctAnswersForFlag:3,kingdomCount:2,musicTrackId:'original'},
+    submarine:{enabled:true,durationMinutes:5,musicTrackId:'original'}
   }
 };
 const clampInt=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.min(max,Math.max(min,Math.round(Number(value)))):fallback;
@@ -27,6 +27,7 @@ function normalizeAppSettings(value){
   const c=m.classic&&typeof m.classic==='object'?m.classic:{};
   const k=m.kingdoms&&typeof m.kingdoms==='object'?m.kingdoms:{};
   const sub=m.submarine&&typeof m.submarine==='object'?m.submarine:{};
+  const musicTrackId=value=>{const id=String(value||'original');return /^(?:original|none|[a-z0-9-]{2,48})$/.test(id)?id:'original'};
   return{version:1,general:{
     defaultQuestionTime:clampInt(g.defaultQuestionTime,5,120,20),
     maxPlayers:clampInt(g.maxPlayers,2,100,100),
@@ -34,9 +35,9 @@ function normalizeAppSettings(value){
     autoOpenReports:g.autoOpenReports!==false,
     showCorrectAnswerAfterQuestion:g.showCorrectAnswerAfterQuestion!==false
   },modes:{
-    classic:{enabled:c.enabled!==false,basePoints:clampInt(c.basePoints,100,3000,1000),speedBonus:c.speedBonus!==false},
-    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3),kingdomCount:clampInt(k.kingdomCount,2,4,2)},
-     submarine:{enabled:sub.enabled!==false,durationMinutes:clampInt(sub.durationMinutes,5,20,5)}
+    classic:{enabled:c.enabled!==false,basePoints:clampInt(c.basePoints,100,3000,1000),speedBonus:c.speedBonus!==false,musicTrackId:musicTrackId(c.musicTrackId)},
+    kingdoms:{enabled:k.enabled!==false,durationMinutes:clampInt(k.durationMinutes,5,20,5),correctAnswersForFlag:clampInt(k.correctAnswersForFlag,1,5,3),kingdomCount:clampInt(k.kingdomCount,2,4,2),musicTrackId:musicTrackId(k.musicTrackId)},
+     submarine:{enabled:sub.enabled!==false,durationMinutes:clampInt(sub.durationMinutes,5,20,5),musicTrackId:musicTrackId(sub.musicTrackId)}
   }};
 }
 function readAppSettingsFile(){try{return normalizeAppSettings(JSON.parse(fs.readFileSync(path.join(__dirname,'app-settings.json'),'utf8')))}catch(e){return normalizeAppSettings(DEFAULT_APP_SETTINGS)}}
@@ -877,7 +878,7 @@ async function saveGameReport(g,options={}){
 // ---- Classic ----
 function view(g,id,R0){
   const R=R0||ranked(g),host=id===g.hostId,q=g.quiz.q[g.qi];
-  const v={state:g.state,resultsPhase:g.resultsPhase||'',resultEndsAt:g.resultEndsAt||0,countdownEndsAt:g.countdownEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
+  const v={state:g.state,resultsPhase:g.resultsPhase||'',resultEndsAt:g.resultEndsAt||0,countdownEndsAt:g.countdownEndsAt||0,pin:g.pin,qi:g.qi,total:g.quiz.q.length,title:g.quiz.title,T:q.T,mode:g.mode,musicTrackId:((g.appSettings||APP_SETTINGS).modes[g.mode]||{}).musicTrackId||'original',locked:!!g.locked,dur:g.quiz.dur,need:g.quiz.need,
     elapsed:Date.now()-g.qStart,host,kingdomCount:clampInt((g.appSettings||APP_SETTINGS).modes.kingdoms.kingdomCount,2,4,2),top:host?R.slice(0,10).map(p=>({id:p.id,name:p.name,score:p.score,priorScore:Number(g.roundStartScores&&g.roundStartScores[p.id]!==undefined?g.roundStartScores[p.id]:p.score)||0,roundPts:p.lastQ===g.qi?(Number(p.lastPts)||0):0})):[]};
   if(host&&g.state==='lobby'){const app=g.appSettings||APP_SETTINGS;v.lobbySettings={classic:{basePoints:app.modes.classic.basePoints,speedBonus:app.modes.classic.speedBonus},kingdoms:{durationMinutes:g.quiz.dur,correctAnswersForFlag:g.quiz.need,kingdomCount:clampInt(app.modes.kingdoms.kingdomCount,2,4,2)}}}
   if(host&&g.reportId)v.reportId=g.reportId;
@@ -1157,7 +1158,7 @@ function answerSubDive(g,p,symbol){
 }
 function viewSubmarine(g,id,R){
   const host=id===g.hostId,sb=g.sb||{},now=Date.now();
-  const v={state:g.state,mode:'submarine',pin:g.pin,title:g.quiz.title,host,countdownEndsAt:g.countdownEndsAt||0,stage:sb.stage||'lobby',left:sb.endsAt?Math.max(0,sb.endsAt-now):0,durationMinutes:sb.durationMinutes||g.quiz.dur||5,level:sb.level||1,fish:Math.round(sb.fish||0),charge:sb.charge||0,chargeTarget:sb.chargeTarget||Math.max(5,g.players.size*2),boost:Math.round(sb.boost||0),levelsCompleted:sb.levelsCompleted||0,failedLevels:sb.failedLevels||0,totalCorrect:sb.totalCorrect||0,totalWrong:sb.totalWrong||0,diveTarget:sb.diveTarget||5,reportId:g.reportId||null,locked:!!g.locked,total:g.quiz.q.length,online:R.filter(p=>playerOnline(g,p.id)).length};
+  const v={state:g.state,mode:'submarine',musicTrackId:((g.appSettings||APP_SETTINGS).modes.submarine||{}).musicTrackId||'original',pin:g.pin,title:g.quiz.title,host,countdownEndsAt:g.countdownEndsAt||0,stage:sb.stage||'lobby',left:sb.endsAt?Math.max(0,sb.endsAt-now):0,durationMinutes:sb.durationMinutes||g.quiz.dur||5,level:sb.level||1,fish:Math.round(sb.fish||0),charge:sb.charge||0,chargeTarget:sb.chargeTarget||Math.max(5,g.players.size*2),boost:Math.round(sb.boost||0),levelsCompleted:sb.levelsCompleted||0,failedLevels:sb.failedLevels||0,totalCorrect:sb.totalCorrect||0,totalWrong:sb.totalWrong||0,diveTarget:sb.diveTarget||5,reportId:g.reportId||null,locked:!!g.locked,total:g.quiz.q.length,online:R.filter(p=>playerOnline(g,p.id)).length};
   if(host){
     if(g.state==='lobby')v.lobbySettings={submarine:{durationMinutes:g.quiz.dur||((g.appSettings||APP_SETTINGS).modes.submarine.durationMinutes)}};
     v.rows=R.map(p=>({id:p.id,name:p.name,score:p.score||0,correctN:p.correctN||0,answeredN:p.answeredN||0,online:playerOnline(g,p.id),boosting:!!p.boosting,role:p.sbRole||'',diveRound:sb.groups?.find(x=>x.id===p.sbGroupId)?.round||0}));
