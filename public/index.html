@@ -1069,6 +1069,7 @@ async function openSettings(){
 function saveSettingsField(id,value){const map={defaultQuestionTime:['general','defaultQuestionTime','general'],maxPlayers:['general','maxPlayers','general'],supportThreshold:['general','supportThreshold','general'],classicBasePoints:['classic','basePoints','mode'],kingdomsDuration:['kingdoms','durationMinutes','mode'],kingdomsFlagNeed:['kingdoms','correctAnswersForFlag','mode'],kingdomsCount:['kingdoms','kingdomCount','mode'],submarineDuration:['submarine','durationMinutes','mode']};const x=map[id];if(!x)return;changeSetting(x[0],x[1],Number(value),x[2]);}
 function defaultSettingsForm(){CLIENT_SETTINGS=JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));settingsMsg=tr('Значения сброшены в форме. Нажмите «Сохранить настройки», чтобы применить их.');settingsNotice='';render()}
 async function savePlatformSettings(){
+ stopSettingsMusicPreview();
  if(TEACHER_SANDBOX_ACTIVE){if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled&&!CLIENT_SETTINGS.modes.submarine.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}settingsSaving=true;settingsMsg='';render();TS_SETTINGS=normalizeClientSettings(CLIENT_SETTINGS);const saved=await capi('settings/save',{settings:TS_SETTINGS});settingsSaving=false;if(saved.error){settingsMsg=saved.error;return render()}CLIENT_SETTINGS=normalizeClientSettings(saved.settings);settingsSource='demo';settingsNotice='Изменения сохранены только в тестовом стенде. Рабочие настройки не меняются.';settingsMsg='Настройки предпросмотра сохранены.';return render()}
  if(!CLIENT_SETTINGS.modes.classic.enabled&&!CLIENT_SETTINGS.modes.kingdoms.enabled&&!CLIENT_SETTINGS.modes.submarine.enabled){settingsMsg=tr('Включите хотя бы один игровой режим.');return render()}
  settingsSaving=true;settingsMsg='';render();const nav=++cabinetNavSeq;
@@ -1081,6 +1082,59 @@ async function savePlatformSettings(){
 }
 function accountSecuritySettingsSection(){
  return `<section class="platform-settings-section platform-account-security-section"><div class="platform-settings-section-head"><div><span class="section-kicker">03 / ${tr('ЗАЩИТА АККАУНТА')}</span><h2>${tr('Безопасность аккаунта')}</h2><p>${tr('Защитите вход в кабинет дополнительным одноразовым кодом.')}</p></div></div><article class="platform-security-setting-card"><div class="platform-security-setting-icon" aria-hidden="true">${navIcon('shield')}</div><div class="platform-security-setting-copy"><h3>${tr('Двухфакторная аутентификация')}</h3><p>${tr('Подключите Google Authenticator, управляйте подтверждением входа и резервными кодами.')}</p></div><button type="button" class="btn-primary platform-security-setting-action" onclick="openSecurity()">${tr('Управлять защитой')}</button></article></section>`;
+}
+let settingsMusicPreviewAudio=null,settingsMusicPreviewMode='';
+function stopSettingsMusicPreview(){
+ if(settingsMusicPreviewAudio){try{settingsMusicPreviewAudio.pause();settingsMusicPreviewAudio.currentTime=0}catch(e){}}
+ if(settingsMusicPreviewMode){const b=$('settings-music-preview-'+settingsMusicPreviewMode);if(b){b.textContent='▶ Прослушать';b.classList.remove('is-playing')}}
+ settingsMusicPreviewAudio=null;settingsMusicPreviewMode='';
+}
+function modeMusicDetailsHtml(id){
+ if(id==='none')return '<span>Фоновая музыка отключена для этого режима.</span>';
+ if(!id||id==='original')return '<span>Будет использоваться оригинальная мелодия «Квиз-арены».</span>';
+ const track=MUSIC_TRACK_BY_ID[id];
+ if(!track)return '<span>Выбранная композиция не найдена. Будет использована оригинальная мелодия.</span>';
+ return '<span>'+esc(track.artist)+' · '+esc(track.license)+' · '+esc(track.style)+'</span> <a href="'+esc(track.source)+'" target="_blank" rel="noopener noreferrer">Источник и условия</a>';
+}
+function updateModeMusicInfo(mode){
+ const id=CLIENT_SETTINGS.modes[mode].musicTrackId||'original';
+ const info=$('settings-music-info-'+mode),button=$('settings-music-preview-'+mode);
+ if(info)info.innerHTML=modeMusicDetailsHtml(id);
+ if(button)button.disabled=id==='original'||id==='none';
+}
+function selectModeMusicTrack(mode,value){
+ if(!CLIENT_SETTINGS.modes[mode])return;
+ CLIENT_SETTINGS.modes[mode].musicTrackId=MUSIC_TRACK_IDS.has(String(value))?String(value):'original';
+ stopSettingsMusicPreview();updateModeMusicInfo(mode);
+}
+function previewModeMusic(mode){
+ const id=CLIENT_SETTINGS.modes[mode]&&CLIENT_SETTINGS.modes[mode].musicTrackId||'original';
+ const track=MUSIC_TRACK_BY_ID[id];
+ if(!track)return;
+ if(settingsMusicPreviewMode===mode&&settingsMusicPreviewAudio&&!settingsMusicPreviewAudio.paused){stopSettingsMusicPreview();return}
+ stopSettingsMusicPreview();
+ const audio=new Audio(track.src);audio.preload='metadata';audio.volume=gameAudioVolume;
+ settingsMusicPreviewAudio=audio;settingsMusicPreviewMode=mode;
+ const button=$('settings-music-preview-'+mode);
+ if(button){button.textContent='■ Остановить';button.classList.add('is-playing');button.disabled=false}
+ audio.addEventListener('ended',stopSettingsMusicPreview,{once:true});
+ audio.addEventListener('error',()=>{
+  const info=$('settings-music-info-'+mode);
+  if(info)info.textContent='Не удалось загрузить композицию. Проверьте соединение или выберите другой трек.';
+  stopSettingsMusicPreview();
+ },{once:true});
+ const started=audio.play();
+ if(started&&typeof started.catch==='function')started.catch(()=>{
+  const info=$('settings-music-info-'+mode);
+  if(info)info.textContent='Браузер не разрешил воспроизведение. Нажмите «Прослушать» ещё раз.';
+  stopSettingsMusicPreview();
+ });
+}
+function musicSettingsPickerHtml(mode,value){
+ const id=value||'original';
+ const options='<option value="original" '+(id==='original'?'selected':'')+'>Оригинальная мелодия «Квиз-арены»</option><option value="none" '+(id==='none'?'selected':'')+'>Без фоновой музыки</option>'+MUSIC_PLAYLIST.map((track,i)=>'<option value="'+track.id+'" '+(id===track.id?'selected':'')+'>'+(i+1)+'. '+esc(track.title)+' — '+esc(track.artist)+'</option>').join('');
+ const disabled=id==='original'||id==='none'?'disabled':'';
+ return '<div class="mode-music-picker"><div class="mode-music-picker-heading"><b>Фоновая музыка</b><span>30 композиций</span></div><select class="mode-music-select" id="settings-music-'+mode+'" aria-label="Фоновая музыка для '+mode+'" onchange="selectModeMusicTrack(\''+mode+'\',this.value)">'+options+'</select><div class="mode-music-details" id="settings-music-info-'+mode+'">'+modeMusicDetailsHtml(id)+'</div><button type="button" class="mode-music-preview-button" id="settings-music-preview-'+mode+'" onclick="previewModeMusic(\''+mode+'\')" '+disabled+'>▶ Прослушать</button></div>';
 }
 function settingsPage(a){
  if(!USER)return goAuth();
@@ -1095,9 +1149,9 @@ function settingsPage(a){
  <section class="platform-settings-page"><div class="platform-settings-heading"><div><span class="section-kicker">${tr('ПАРАМЕТРЫ ПЛАТФОРМЫ')}</span><h1 class="page-title">${tr('Настройки')}<span class="title-period">.</span></h1><p class="page-subtitle">${tr('Общие правила применяются ко всем новым игровым сессиям, а не к отдельным тестам.')}</p></div><div class="settings-status-chip ${settingsSource==='github'?'is-synced':''}"><span></span>${tr(settingsSource==='github'?'Синхронизация с GitHub':'Локальные настройки')}</div></div>
  ${settingsMsg?`<div class="notice ${settingsMsg.includes('не удалось')||settingsMsg.includes('не найдена')?'notice-error':'notice-success'}" role="status">${esc(settingsMsg)}</div>`:''}${settingsNotice?`<div class="notice notice-info" role="note">${esc(settingsNotice)}</div>`:''}
  <section class="platform-settings-section"><div class="platform-settings-section-head"><div><span class="section-kicker">01 / ${tr('ИГРА')}</span><h2>${tr('Игровые режимы')}</h2><p>${tr('Включайте нужные режимы и задавайте единые правила для всех тестов.')}</p></div></div><div class="platform-mode-settings-grid">
- <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon classic">▶</span><div><h3>Classic</h3><p>${tr('Викторина с таймером, баллами и рейтингом участников.')}</p></div></div>${toggle('settings-classic-enabled','Режим доступен при запуске',c.enabled,"changeSetting('classic','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-classic-points','Максимум баллов за правильный ответ',c.basePoints,100,3000,100,'баллов',"saveSettingsField('classicBasePoints',this.value)")}${toggle('settings-classic-speed','Бонус за скорость',c.speedBonus,"changeSetting('classic','speedBonus',this.checked,'mode')",'При включении быстрый ответ приносит больше баллов.')}</article>
- <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon kingdoms">▦</span><div><h3>Color Kingdoms</h3><p>${tr('Командный режим с захватом клеток и флагов.')}</p></div></div>${toggle('settings-kingdoms-enabled','Режим доступен при запуске',k.enabled,"changeSetting('kingdoms','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-kingdoms-duration','Длительность матча',k.durationMinutes,5,20,1,'мин.',"saveSettingsField('kingdomsDuration',this.value)")}${field('settings-kingdoms-need','Правильных ответов для получения флага',k.correctAnswersForFlag,1,5,1,'ответов',"saveSettingsField('kingdomsFlagNeed',this.value)")}${field('settings-kingdoms-count','Количество королевств',k.kingdomCount||2,2,4,1,'королевства',"saveSettingsField('kingdomsCount',this.value)")}</article>
- <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon submarine">◉</span><div><h3>Submarine Squad</h3><p>${tr('Совместная экспедиция с субмариной и погружением по голосовым подсказкам.')}</p></div></div>${toggle('settings-submarine-enabled','Режим доступен при запуске',u.enabled,"changeSetting('submarine','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-submarine-duration','Длительность экспедиции',u.durationMinutes,5,20,1,'мин.',"saveSettingsField('submarineDuration',this.value)")}</article>
+ <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon classic">▶</span><div><h3>Classic</h3><p>${tr('Викторина с таймером, баллами и рейтингом участников.')}</p></div></div>${toggle('settings-classic-enabled','Режим доступен при запуске',c.enabled,"changeSetting('classic','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-classic-points','Максимум баллов за правильный ответ',c.basePoints,100,3000,100,'баллов',"saveSettingsField('classicBasePoints',this.value)")}${toggle('settings-classic-speed','Бонус за скорость',c.speedBonus,"changeSetting('classic','speedBonus',this.checked,'mode')",'При включении быстрый ответ приносит больше баллов.')}${musicSettingsPickerHtml('classic',c.musicTrackId)}</article>
+ <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon kingdoms">▦</span><div><h3>Color Kingdoms</h3><p>${tr('Командный режим с захватом клеток и флагов.')}</p></div></div>${toggle('settings-kingdoms-enabled','Режим доступен при запуске',k.enabled,"changeSetting('kingdoms','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-kingdoms-duration','Длительность матча',k.durationMinutes,5,20,1,'мин.',"saveSettingsField('kingdomsDuration',this.value)")}${field('settings-kingdoms-need','Правильных ответов для получения флага',k.correctAnswersForFlag,1,5,1,'ответов',"saveSettingsField('kingdomsFlagNeed',this.value)")}${field('settings-kingdoms-count','Количество королевств',k.kingdomCount||2,2,4,1,'королевства',"saveSettingsField('kingdomsCount',this.value)")}${musicSettingsPickerHtml('kingdoms',k.musicTrackId)}</article>
+ <article class="platform-mode-setting-card"><div class="platform-mode-card-head"><span class="platform-mode-icon submarine">◉</span><div><h3>Submarine Squad</h3><p>${tr('Совместная экспедиция с субмариной и погружением по голосовым подсказкам.')}</p></div></div>${toggle('settings-submarine-enabled','Режим доступен при запуске',u.enabled,"changeSetting('submarine','enabled',this.checked,'mode')",'Если выключить, режим не будет доступен в окне выбора запуска.')}${field('settings-submarine-duration','Длительность экспедиции',u.durationMinutes,5,20,1,'мин.',"saveSettingsField('submarineDuration',this.value)")}${musicSettingsPickerHtml('submarine',u.musicTrackId)}</article>
  
  </div></section>
  <section class="platform-settings-section"><div class="platform-settings-section-head"><div><span class="section-kicker">02 / ${tr('ПЛАТФОРМА')}</span><h2>${tr('Общие настройки')}</h2><p>${tr('Параметры по умолчанию и поведение отчётов.')}</p></div></div><div class="platform-general-settings-grid">
