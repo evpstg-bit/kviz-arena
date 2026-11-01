@@ -439,7 +439,7 @@ function connect(){
   syncGameAudio(previousS,S);
   if(S.mode==='kingdoms'){
    const fb=S.me&&S.me.fb;
-   if(fbSeen===-2)fbSeen=fb?fb.id:-1;else if(fb&&fb.id!==fbSeen){fbSeen=fb.id;playGameAudioCue(fb.ok?"correct":"incorrect");stopGameAudioLoop();fbUntil=Date.now()+(fb.ok?1100:2200);setTimeout(render,fbUntil-Date.now()+40);if(S.state==="playing"&&gameAudioEnabled)setTimeout(()=>{if(S&&view==="game"&&S.state==="playing")syncGameAudio(null,S,true)},1450);sel=[]}
+   if(fbSeen===-2)fbSeen=fb?fb.id:-1;else if(fb&&fb.id!==fbSeen){fbSeen=fb.id;playGameAudioCue(fb.ok?"correct":"incorrect");stopGameAudioLoop();fbUntil=Date.now()+(fb.ok?1100:2200);setTimeout(render,fbUntil-Date.now()+40);if(S.state==="playing"&&gameAudioEnabled)setTimeout(()=>{if(S&&view==="game"&&S.state==="playing")startGameAudioLoop(S.mode,S.musicTrackId||"original",S.pin)},1450);sel=[]}
    if(S.banner&&S.banner.n!==bnSeen){bnSeen=S.banner.n;const ms=Math.max(0,4500-S.banner.age);banUntil=Date.now()+ms;setTimeout(render,ms+40)}
   }
   // While the final report is loading, keep the current DOM intact instead of first
