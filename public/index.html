@@ -111,14 +111,25 @@ function startGameAudioLoop(mode){
   },320);
   return;
  }
- const melody=[220,261.63,329.63,392,349.23,329.63,261.63,293.66],bass=110;
+ // Original Classic theme: an upbeat D-major motif over D–Bm–G–A.
+ const melody=[587.33,739.99,880,739.99,659.25,739.99,987.77,880,783.99,880,1174.66,987.77,880,783.99,739.99,659.25];
+ const roots=[73.42,61.74,98,110];
+ const fifths=[110,92.5,146.83,164.81];
+ const chords={
+  0:[146.83,185,220],
+  4:[123.47,146.83,185],
+  8:[98,123.47,146.83],
+  12:[110,138.59,164.81]
+ };
  gameAudioLoopTimer=setInterval(()=>{
   if(!gameAudioEnabled||view!=="game"||!S||!["question","playing"].includes(S.state)||(S.me&&S.me.answered&&S.state==="question")){stopGameAudioLoop();return}
-  const step=gameAudioLoopStep++,note=melody[step%melody.length];
-  gameAudioNote(note,.24,0,"triangle",.014);
-  if(step%4===0)gameAudioNote(bass,.34,.005,"sine",.019);
-  if(step%8===7)gameAudioNote(note*2,.16,.07,"sine",.008);
- },500);
+  const step=gameAudioLoopStep++%16,note=melody[step],bar=Math.floor(step/4);
+  gameAudioNote(note,.205,0,"triangle",(step===2||step===6||step===10||step===14)?.013:.0105);
+  if(step%4===0)gameAudioNote(roots[bar],.48,.008,"sine",.018);
+  if(step%4===2)gameAudioNote(fifths[bar],.27,.018,"sine",.009);
+  if(chords[step])chords[step].forEach((freq,i)=>gameAudioNote(freq,1.04,i*.028,"sine",.0038));
+  if(step===3||step===7||step===11||step===15)gameAudioNote(note*2,.12,.075,"sine",.0055);
+ },300);
 }
 function playGameAudioCue(kind){
  if(!gameAudioEnabled)return;
