@@ -310,7 +310,8 @@ function decryptReportPayload(encoded,cfg){
 }
 function reportMeta(r){
   const questionCount=Number(r.questionCount)||0,participantCount=Number(r.participantCount)||0;
-  const accuracy=String(r.mode||'classic')==='classic'&&r.summary?successPercent(r.summary.totalCorrect,questionCount*participantCount):Number(r.summary&&r.summary.accuracy!==undefined?r.summary.accuracy:r.accuracy)||0;
+  const mode=String(r.mode||'classic'),summary=r.summary||{};
+  const accuracy=mode==='classic'&&r.summary?successPercent(summary.totalCorrect,questionCount*participantCount):mode==='kingdoms'&&r.summary?successPercent(summary.totalCorrect,summary.totalPossible!==undefined?summary.totalPossible:(Number(summary.totalAnswers)||0)+participantCount):Number(summary.accuracy!==undefined?summary.accuracy:r.accuracy)||0;
   return{id:String(r.id),pin:String(r.pin||''),sourceId:String(r.sourceId||''),ownerId:String(r.ownerId||''),title:String(r.title||''),mode:String(r.mode||'classic'),modeName:String(r.modeName||r.mode||'Classic'),completedAt:Number(r.completedAt)||Date.now(),incomplete:!!r.incomplete,questionCount,participantCount,accuracy,averageScore:Number(r.summary&&r.summary.averageScore!==undefined?r.summary.averageScore:r.averageScore)||0};
 }
 async function reportsApiJson(res,what){
@@ -805,7 +806,7 @@ function newPlayer(g,name){
 }
 function removePlayer(g,id,msg){
   const p=g.players.get(id);if(!p)return;
-  g.left.push({id,name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:Array.isArray(p.log)?p.log.map(l=>({...l,a:Array.isArray(l.a)?[...l.a]:[]})):[]});
+  g.left.push({id,name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,cur:g.kb&&Array.isArray(p.queue)&&p.queue.length?p.cur:null,queue:g.kb&&Array.isArray(p.queue)?[...p.queue]:[],log:Array.isArray(p.log)?p.log.map(l=>({...l,a:Array.isArray(l.a)?[...l.a]:[]})):[]});
   g.players.delete(id);
   if(g.mode==='submarine'&&g.state==='playing'&&g.sb){
     const group=g.sb.groups?.find(x=>x.id===p.sbGroupId);
@@ -824,35 +825,52 @@ function successPercent(correctCount,totalCount){
 }
 function makeGameReport(g,{incomplete=false}={}){
   const roster=[...g.players.entries()].map(([id,p])=>({id,...p,removed:false})).concat((g.left||[]).map(p=>({...p,removed:true,log:Array.isArray(p.log)?p.log:[]})));
+  const hasPendingKingdomQuestion=p=>g.mode==='kingdoms'&&!!g.kb&&Array.isArray(p.queue)&&p.queue.length>0&&p.cur!==undefined&&p.cur!==null&&Number.isInteger(Number(p.cur))&&Number(p.cur)>=0&&Number(p.cur)<(g.quiz.q||[]).length;
+  const pendingByQuestion=new Map();
+  if(g.mode==='kingdoms')roster.forEach(p=>{if(hasPendingKingdomQuestion(p)){const qi=Number(p.cur);pendingByQuestion.set(qi,(pendingByQuestion.get(qi)||0)+1)}});
   const classicQuestionWasPresented=qi=>!incomplete||((g.state==='question'||g.state==='results')&&Number(qi)<=Number(g.qi||0));
   const questions=(g.quiz.q||[]).map((q,qi)=>{
     const attempts=[];const respondents=new Set();
     roster.forEach(p=>(p.log||[]).forEach(l=>{if(Number(l.qi)===qi){attempts.push({name:p.name,playerId:p.id||'',ok:!!l.ok,answers:Array.isArray(l.a)?l.a:[],points:Number(l.pts)||0,ms:Number(l.ms)||0});respondents.add(p.id||p.name)}}));
     const answerCounts=q.a.map((text,ai)=>({index:ai,text,count:attempts.reduce((n,l)=>n+(l.answers.includes(ai)?1:0),0),correct:(q.cs||[]).includes(ai)}));
     const correctCount=attempts.filter(a=>a.ok).length,incorrectCount=attempts.length-correctCount;
-    const groupAccuracy=roster.length?Math.round(correctCount/roster.length*1000)/10:0;
-    const belowGroupThreshold=roster.length>0&&(correctCount/roster.length)<0.4;
     const wasPresented=g.mode==='classic'?classicQuestionWasPresented(qi):null;
+    const pendingCount=g.mode==='kingdoms'?(pendingByQuestion.get(qi)||0):0;
+    const presentedCount=g.mode==='kingdoms'?attempts.length+pendingCount:attempts.length;
+    const groupDenominator=g.mode==='kingdoms'?presentedCount:roster.length;
+    const groupAccuracy=groupDenominator?Math.round(correctCount/groupDenominator*1000)/10:0;
+    const belowGroupThreshold=groupDenominator>0&&(correctCount/groupDenominator)<0.4;
     const skippedParticipants=g.mode==='classic'&&wasPresented?roster.filter(p=>!(p.log||[]).some(l=>Number(l.qi)===qi)).map(p=>String(p.name||'Участник')):[];
-    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:successPercent(correctCount,g.mode==='classic'?roster.length:attempts.length),groupAccuracy,belowGroupThreshold,answerCounts,attempts,wasPresented,skippedCount:g.mode==='classic'?(wasPresented?skippedParticipants.length:0):null,skippedParticipants};
+    const questionDenominator=g.mode==='classic'?roster.length:g.mode==='kingdoms'?presentedCount:attempts.length;
+    return{index:qi+1,t:q.t,a:[...q.a],correct:[...q.cs],correctText:q.cs.map(i=>q.a[i]),responseCount:attempts.length,respondentCount:respondents.size,correctCount,incorrectCount,accuracy:successPercent(correctCount,questionDenominator),presentedCount:g.mode==='kingdoms'?presentedCount:null,pendingCount:g.mode==='kingdoms'?pendingCount:null,groupAccuracy,belowGroupThreshold,answerCounts,attempts,wasPresented,skippedCount:g.mode==='classic'?(wasPresented?skippedParticipants.length:0):null,skippedParticipants};
   });
   const participants=roster.map(p=>{
-    const logs=Array.isArray(p.log)?p.log:[],correctCount=logs.filter(l=>l.ok).length,incorrectCount=logs.length-correctCount;
+    const logs=Array.isArray(p.log)?p.log:[],loggedCorrect=logs.filter(l=>l.ok).length;
+    const answeredCount=Math.max(logs.length,Number(p.answeredN)||0),correctCount=Math.min(answeredCount,Math.max(loggedCorrect,Number(p.correctN)||0)),incorrectCount=Math.max(0,answeredCount-correctCount);
     const answeredQis=new Set(logs.map(l=>Number(l.qi)).filter(qi=>Number.isInteger(qi)&&qi>=0&&qi<questions.length));
     const uniqueQuestions=answeredQis.size;
     const askedQuestionCount=g.mode==='classic'?questions.filter(q=>q.wasPresented!==false).length:0;
     const classicUnanswered=g.mode==='classic'?Math.max(0,askedQuestionCount-uniqueQuestions):null;
+    const pendingQuestionIndex=hasPendingKingdomQuestion(p)?Number(p.cur):null;
+    const pendingCount=pendingQuestionIndex===null?0:1;
+    const presentedCount=g.mode==='kingdoms'?answeredCount+pendingCount:answeredCount;
     const skippedQuestionIndices=g.mode==='classic'?questions.filter(q=>q.wasPresented!==false&&!answeredQis.has(q.index-1)).map(q=>q.index):[];
-    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount:logs.length,unansweredCount:classicUnanswered,skippedQuestionIndices,accuracy:successPercent(correctCount,g.mode==='classic'?questions.length:logs.length),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
+    const accuracyDenominator=g.mode==='classic'?questions.length:g.mode==='kingdoms'?presentedCount:answeredCount;
+    return{id:p.id||'',name:String(p.name||'Участник'),score:Number(p.score)||0,team:Number.isInteger(p.team)?p.team:null,placed:Number(p.placed)||0,correctCount,incorrectCount,answeredCount,presentedCount:g.mode==='kingdoms'?presentedCount:null,pendingCount:g.mode==='kingdoms'?pendingCount:null,pendingQuestionIndex,unansweredCount:g.mode==='classic'?classicUnanswered:g.mode==='kingdoms'?pendingCount:null,skippedQuestionIndices,accuracy:successPercent(correctCount,accuracyDenominator),removed:!!p.removed,log:logs.map(l=>({qi:Number(l.qi),a:Array.isArray(l.a)?[...l.a]:[],ok:!!l.ok,pts:Number(l.pts)||0,ms:Number(l.ms)||0}))};
   }).sort((a,b)=>g.mode==='kingdoms'?(b.placed-a.placed||b.correctCount-a.correctCount||a.name.localeCompare(b.name)):(b.score-a.score||b.correctCount-a.correctCount||a.name.localeCompare(b.name)));
   participants.forEach((p,i)=>p.rank=i+1);
-  const totalAnswers=questions.reduce((n,q)=>n+q.responseCount,0),totalCorrect=questions.reduce((n,q)=>n+q.correctCount,0),totalIncorrect=questions.reduce((n,q)=>n+q.incorrectCount,0);
-  const totalPossible=g.mode==='classic'?participants.length*questions.filter(q=>q.wasPresented!==false).length:null;
+  const totalAnswers=participants.reduce((n,p)=>n+p.answeredCount,0),totalCorrect=participants.reduce((n,p)=>n+p.correctCount,0),totalIncorrect=Math.max(0,totalAnswers-totalCorrect);
+  const totalPossible=g.mode==='classic'?participants.length*questions.filter(q=>q.wasPresented!==false).length:g.mode==='kingdoms'?participants.reduce((n,p)=>n+(Number(p.presentedCount)||0),0):null;
+  const totalPending=g.mode==='kingdoms'?participants.reduce((n,p)=>n+(Number(p.pendingCount)||0),0):0;
   const teamKeys=[...new Set(participants.map(p=>p.team).filter(Number.isInteger))].sort((a,b)=>a-b);
-  const teams=teamKeys.map(k=>{const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0,answers=members.reduce((n,p)=>n+p.answeredCount,0),correctCount=members.reduce((n,p)=>n+p.correctCount,0);return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,accuracy:successPercent(correctCount,answers),flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};});
-  const accuracies=participants.map(p=>g.mode==='classic'?(questions.length?p.correctCount/questions.length*100:0):(p.answeredCount?p.correctCount/p.answeredCount*100:0));
+  const teams=teamKeys.map(k=>{
+    const members=participants.filter(p=>p.team===k),tiles=g.kb&&g.kb.board?g.kb.board.filter(x=>x===k).length:0;
+    const answers=members.reduce((n,p)=>n+p.answeredCount,0),pendingCount=members.reduce((n,p)=>n+(Number(p.pendingCount)||0),0),presentedCount=answers+pendingCount,correctCount=members.reduce((n,p)=>n+p.correctCount,0);
+    return{k,name:TEAM_NAMES[k]||('Королевство '+(k+1)),members:members.length,points:members.reduce((n,p)=>n+p.score,0),correctCount,incorrectCount:members.reduce((n,p)=>n+p.incorrectCount,0),answers,pendingCount,presentedCount,accuracy:successPercent(correctCount,presentedCount),flags:members.reduce((n,p)=>n+p.placed,0),tiles,trophies:g.kb&&g.kb.trophies?Number(g.kb.trophies[k])||0:0};
+  });
+  const accuracies=participants.map(p=>g.mode==='classic'?(questions.length?p.correctCount/questions.length*100:0):g.mode==='kingdoms'?(p.presentedCount?p.correctCount/p.presentedCount*100:0):(p.answeredCount?p.correctCount/p.answeredCount*100:0));
   const completedAt=Date.now(),startedAt=Number(g.startedAt)||Number(g.born)||completedAt,playedSeconds=Math.max(0,Math.round((completedAt-startedAt)/1000));
-  return{id:'report-'+g.pin+'-'+completedAt.toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':g.mode==='submarine'?'Submarine Squad':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),startedAt,completedAt,incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,accuracy:successPercent(totalCorrect,g.mode==='classic'?totalPossible:totalAnswers),averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):null,playedSeconds,winner:g.kb?g.kb.winner:null,submarine:g.sb?{levelsCompleted:g.sb.levelsCompleted||0,failedLevels:g.sb.failedLevels||0,totalCorrect:g.sb.totalCorrect||0,totalWrong:g.sb.totalWrong||0}:null}};
+  return{id:'report-'+g.pin+'-'+completedAt.toString(36)+'-'+rid(),pin:g.pin,sourceId:g.sourceId||'',ownerId:g.owner,title:g.quiz.title,mode:g.mode,modeName:g.mode==='kingdoms'?'Color Kingdoms':g.mode==='submarine'?'Submarine Squad':'Classic',supportThreshold:((g.appSettings||APP_SETTINGS).general.supportThreshold),startedAt,completedAt,incomplete:!!incomplete,questionCount:questions.length,participantCount:participants.length,questions,participants,teams,summary:{participantCount:participants.length,questionCount:questions.length,totalAnswers,totalCorrect,totalIncorrect,totalPossible,accuracy:successPercent(totalCorrect,totalPossible!==null?totalPossible:totalAnswers),averageScore:participants.length?Math.round(participants.reduce((n,p)=>n+p.score,0)/participants.length):0,averageParticipantAccuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):0,unanswered:g.mode==='classic'?Math.max(0,(totalPossible||0)-totalAnswers):g.mode==='kingdoms'?totalPending:null,playedSeconds,winner:g.kb?g.kb.winner:null,submarine:g.sb?{levelsCompleted:g.sb.levelsCompleted||0,failedLevels:g.sb.failedLevels||0,totalCorrect:g.sb.totalCorrect||0,totalWrong:g.sb.totalWrong||0}:null}};
 }
 async function saveGameReport(g,options={}){
   if(g.reportSavePromise)return g.reportSavePromise;
@@ -1055,7 +1073,7 @@ function viewK(g,id,C){
   if(host)v.rows=[...g.players.entries()].map(([i,p])=>({
     id:i,name:p.name,team:p.team,placed:p.placed,flags:p.placed||0,score:p.score||0,
     correct:p.correctN||0,correctN:p.correctN||0,answered:p.answeredN||0,answeredN:p.answeredN||0,
-    accuracy:successPercent(p.correctN||0,p.answeredN||0),
+    accuracy:successPercent(p.correctN||0,(p.answeredN||0)+1),presentedN:(p.answeredN||0)+1,
     online:playerOnline(g,i),lastOk:typeof p.lastAnswerOk==='boolean'?p.lastAnswerOk:null
   }));
   else{
@@ -1680,7 +1698,7 @@ http.createServer(async(req,res)=>{
     if(b.id!==g.hostId)return json(res,{error:'Нет доступа'},403);
     const R=ranked(g),K=g.mode==='kingdoms'&&g.kb;
     return json(res,{mode:g.mode,title:g.quiz.title,playedSeconds:Math.max(0,Math.round((Date.now()-(g.startedAt||g.born||Date.now()))/1000)),teams:K?commonK(g,R).stats:null,questions:g.quiz.q.map(q=>({t:q.t,a:q.a,cs:q.cs})),
-      players:[...g.players.values(),...g.left].map(p=>({name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,log:p.log}))});
+      players:[...g.players.values(),...g.left].map(p=>({name:p.name,score:p.score,team:p.team,placed:p.placed,correctN:p.correctN,answeredN:p.answeredN,pendingQuestionIndex:K&&Array.isArray(p.queue)&&p.queue.length&&Number.isInteger(Number(p.cur))?Number(p.cur):null,log:p.log}))});
   }
   if(u.pathname==='/api/action'){
     const host=b.id===g.hostId,p=g.players.get(b.id),KM=g.mode==='kingdoms',SUB=g.mode==='submarine';
